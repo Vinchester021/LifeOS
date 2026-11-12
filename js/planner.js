@@ -96,13 +96,21 @@ function renderHeader(period) {
   });
   scrollActiveLevelIntoView(document.querySelector(`.planner-levels [data-level="${level}"]`));
   byId('period-title').textContent = period.title;
-  // "November 2026" says it all; the other levels also show their dates.
+  // Under the title its dates, short ("9–15 November 2026"); "Today" is already a date.
   const range = byId('period-range');
-  range.hidden = level === 'today' || level === 'month';
-  range.textContent = `${Format.date(period.start)} – ${Format.date(period.end)}`;
+  range.textContent = level === 'today' ? '' : Format.periodRange(period.start, period.end, level === 'quarter' || level === 'year');
+  range.hidden = range.textContent === ''; // no empty line under the title (it would push the title up)
   byId('period-prev').setAttribute('aria-label', t(`planner.prev.${level}`));
   byId('period-next').setAttribute('aria-label', t(`planner.next.${level}`));
   byId('period-current').hidden = isBetween(Dates.today(), period.start, period.end);
+  setCurrentPeriodLabel(level);
+}
+
+// "To this week" / "To this month" … (the key stays in data-i18n, so a language change re-translates it).
+function setCurrentPeriodLabel(level) {
+  const label = byId('period-current-label');
+  label.dataset.i18n = `planner.toCurrent.${level}`;
+  label.textContent = t(label.dataset.i18n);
 }
 
 function renderPlanner() {

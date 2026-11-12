@@ -2003,35 +2003,6 @@ fieldset.is-invalid .choice-card {
   white-space: nowrap;
 }
 
-.period-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.period-heading {
-  flex: 1;
-  min-width: 10rem;
-}
-
-.period-range {
-  margin: 0;
-  color: var(--lifeos-text-muted);
-  font-size: 0.85rem;
-}
-
-.period-title {
-  margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
-}
-
-.period-title:focus-visible {
-  outline: none; /* focus is moved here by JS after changing the period */
-}
-
 /* Year timeline: 4 quarters, the passed part is filled, "today" is a line */
 .year-summary {
   font-weight: 500;
@@ -4423,68 +4394,6 @@ small,
   color: var(--lifeos-primary-text);
 }
 
-/* "←  November 2026  →  |  Current period" */
-.period-bar {
-  gap: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-4);
-}
-
-.period-bar .period-heading {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.period-bar .period-title {
-  font-size: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.period-bar .period-range {
-  font-size: var(--fs-small);
-}
-
-.period-arrow {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  padding: 0;
-  border-radius: var(--radius-pill);
-}
-
-.period-current {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.25rem;
-  margin-left: var(--space-3);
-  padding: 0 var(--space-3);
-  border: 0;
-  background-color: var(--tone-success-bg);
-  color: var(--tone-success-fg);
-  font-size: var(--fs-small);
-  font-weight: 600;
-}
-
-.period-current:hover,
-.period-current:focus-visible {
-  background-color: var(--lifeos-primary-soft);
-  color: var(--lifeos-primary-text);
-}
-
-/* the thin divider between the arrows and the button */
-.period-current::before {
-  content: "";
-  position: absolute;
-  top: 0.25rem;
-  bottom: 0.25rem;
-  left: calc(-1 * var(--space-3));
-  width: 1px;
-  background-color: var(--lifeos-border-strong);
-}
-
 /* Cards of all levels: the same gaps */
 .planner-stack,
 .planner-grid {
@@ -4732,13 +4641,9 @@ small,
     padding: 0 0.9rem;
   }
 
-  .period-current {
-    margin-left: 0;
-  }
+  
 
-  .period-current::before {
-    display: none;
-  }
+  
 }
 
 /* ---------- Tables (shared): a soft header row, thin lines, rounded frame ----------
@@ -5133,49 +5038,11 @@ small,
   font-weight: 600;
 }
 
-/* Toolbar: period type | ‹ 9–15 November 2026 › | Current period … Summary of the personal year */
 .prog-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
-}
-
-.prog-nav {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 3px;
-  border: 1px solid var(--lifeos-border-strong);
-  border-radius: var(--radius-pill);
-  background-color: var(--lifeos-surface);
-}
-
-.prog-nav-arrow {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  border-radius: 50%;
-  color: var(--lifeos-text);
-}
-
-.prog-nav-arrow:hover {
-  background-color: var(--lifeos-primary-soft);
-}
-
-.prog-nav-title {
-  min-width: 11rem;
-  margin: 0;
-  font-size: var(--fs-card);
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.prog-nav-title:focus-visible {
-  outline: none; /* focus is moved here after "Current period" */
 }
 
 .prog-summary-link {
@@ -5546,15 +5413,9 @@ small,
     margin-left: 0;
   }
 
-  .prog-nav {
-    flex: 1 1 100%;
-    justify-content: space-between;
-  }
+  
 
-  .prog-nav-title {
-    min-width: 0;
-    white-space: normal;
-  }
+  
 }
 
 /* ---------- Settings (settings.html, docs/design/settings.png) ---------- */
@@ -6297,6 +6158,195 @@ small,
   }
 }
 
+/* ---------- Sport: tabs without a scrollbar, week plan cards ---------- */
+
+/* The tabs scroll sideways on a phone, but no scrollbar is shown (the underline makes 1px of height) */
+.sport-tabs {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.sport-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Grid: 1 day on a phone, 2 on a tablet, 4 from 1200px, all 7 in one row from 1600px */
+.card-grid.sport-week {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+@media (min-width: 768px) {
+  .card-grid.sport-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .card-grid.sport-week {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  .card-grid.sport-week {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+
+/* A card is a column: the plan on top, the actions pressed to the bottom behind a thin line */
+.panel.sport-day {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-3);
+}
+
+.sport-day .sport-day-head {
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.sport-day .sport-day-head .panel-title {
+  font-size: var(--fs-card);
+}
+
+.sport-day-body {
+  min-width: 0;
+}
+
+.sport-day .sport-day-name {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Exercises: the name on the left, "3 × 5 · 80 kg" on the right, thin lines between */
+.sport-day .sport-ex-list {
+  gap: 0;
+  margin: 0;
+  font-size: var(--fs-small);
+}
+
+.sport-day .sport-ex-list li {
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.sport-day .sport-ex-list li:last-child {
+  border-bottom: 0;
+}
+
+.sport-day .sport-ex-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sport-day .sport-ex-meta {
+  margin-left: auto;
+}
+
+.sport-day .sport-none {
+  margin: 0;
+  font-size: var(--fs-small);
+}
+
+.sport-day .sport-day-actions {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--lifeos-border);
+}
+
+/* the line stays at the bottom even when the plan is short */
+.sport-day .sport-day-body {
+  margin-bottom: var(--space-3);
+}
+
+/* the same height in every card (a 36px icon row), so the lines of a row are level */
+.sport-day .sport-day-actions {
+  align-items: center;
+  min-height: calc(2.25rem + var(--space-3) + 1px);
+}
+
+/* "Edit" stays one line even in a narrow card (7 in a row) */
+.sport-day .sport-day-actions .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.6rem;
+  white-space: nowrap;
+}
+
+.sport-day-tools {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sport-day-icon.btn-icon {
+  width: 2.25rem; /* 36px */
+  height: 2.25rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  color: var(--lifeos-text-muted);
+}
+
+.sport-day-icon.btn-icon:hover,
+.sport-day-icon.btn-icon:focus-visible {
+  color: var(--lifeos-primary-text);
+}
+
+.sport-day-icon.is-danger:hover,
+.sport-day-icon.is-danger:focus-visible,
+.sport-day-icon.is-danger.is-armed {
+  background-color: var(--tone-danger-bg);
+  color: var(--tone-danger-fg);
+}
+
+/* "Clear?" after the first click: the icon button grows to fit the word */
+.sport-day-icon.is-armed {
+  width: auto;
+  padding-inline: 0.6rem;
+}
+
+/* A rest day: a quiet card with an icon and "Rest", one "+ Workout" button */
+.panel.sport-day.is-rest {
+  background-color: var(--lifeos-surface-2);
+  box-shadow: none;
+}
+
+.sport-day .sport-rest {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-weight: 600;
+}
+
+.sport-day .sport-rest .bi {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background-color: var(--lifeos-surface);
+  font-size: 1.1rem;
+}
+
+/* Today: the accent frame and the "today" badge (as before) */
+.panel.sport-day.is-today {
+  border-color: var(--lifeos-primary);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+}
+
 /* ---------- Phone: KPI cards of Progress and the Year summary in 2 columns ---------- */
 @media (max-width: 575.98px) {
   .card-grid.prog-kpis,
@@ -6328,6 +6378,455 @@ small,
   .prog-kpi .kpi-value,
   .sum-kpi .kpi-value {
     font-size: 1.5rem;
+  }
+}
+
+/* ---------- Period navigator (Planner and Progress): ‹  title + dates  ›  [To this week] ---------- */
+.period-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.prog-toolbar .period-nav {
+  margin-bottom: 0;
+}
+
+.period-nav-arrow {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.75rem; /* 44px */
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: 50%;
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text);
+}
+
+/* Hover only with a mouse: after a tap on a phone the button does not stay "pressed" */
+@media (hover: hover) {
+  .period-nav-arrow:hover {
+    border-color: var(--lifeos-primary);
+    background-color: var(--lifeos-primary-soft);
+    color: var(--lifeos-primary-text);
+  }
+}
+
+/* The focus ring only for the keyboard (Tab), not after a tap or a click */
+.period-nav-arrow:focus:not(:focus-visible),
+.period-current:focus:not(:focus-visible) {
+  box-shadow: none;
+  outline: none;
+}
+
+.period-nav-arrow:active {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary-soft);
+}
+
+/* Computer: the middle block does not make a box, so the order is ‹ title + dates › [To this week] */
+.period-nav-center {
+  display: contents;
+}
+
+#period-prev { order: 1; }
+.period-nav-text { order: 2; min-width: 0; }
+#period-next { order: 3; }
+.period-current { order: 4; }
+
+.period-nav-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.period-nav-title:focus-visible {
+  outline: none; /* focus is moved here by JS after "To this week" */
+}
+
+.period-nav-dates {
+  margin: 0.15rem 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.period-nav-dates[hidden] {
+  display: none;
+}
+
+/* In the Progress toolbar the navigator is one control among others: a smaller title */
+.prog-toolbar .period-nav-title {
+  font-size: var(--fs-card);
+}
+
+/* "To this week": a soft pill after a thin divider */
+.period-current {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  margin-left: var(--space-3);
+  padding: 0 var(--space-3);
+  border: 0;
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .period-current:hover {
+    background-color: var(--lifeos-primary-soft);
+    color: var(--lifeos-primary-text);
+  }
+}
+
+.period-current::before {
+  content: "";
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: calc(-1 * var(--space-3));
+  width: 1px;
+  background-color: var(--lifeos-border-strong);
+}
+
+/* Phone: one card over the whole width — ‹ | title, dates, [To this week] | ›.
+   A flex row with the items in the middle of the height: the title is centred between the arrows
+   whether there are dates and the button under it or not. */
+@media (max-width: 767.98px) {
+  .period-nav {
+    display: flex;
+    flex-basis: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2);
+    border: 1px solid var(--lifeos-border);
+    border-radius: var(--radius);
+    background-color: var(--lifeos-surface);
+    box-shadow: var(--lifeos-shadow);
+  }
+
+  .period-nav-center {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    order: 2; /* between ‹ (order 1) and › (order 3) */
+    align-items: center;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .period-nav-text {
+    max-width: 100%;
+  }
+
+  .period-nav-title,
+  .prog-toolbar .period-nav-title {
+    font-size: 1.125rem; /* 18px */
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .period-current {
+    min-height: 2rem;
+    margin: var(--space-2) 0 0;
+  }
+
+  .period-current::before {
+    display: none;
+  }
+}
+
+/* ==========================================================
+   Phone (< 768px) — the computer layout is not changed here
+   ========================================================== */
+
+/* Elements that only exist for the phone are hidden on wider screens */
+.mobile-tools,
+.greeting-path,
+.level-short {
+  display: none;
+}
+
+/* The wrapper of a strip that scrolls sideways (js/app.js, ScrollHints). It changes nothing by itself. */
+.scroll-hint {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.heat-main > .scroll-hint {
+  flex: 1;
+}
+
+.scroll-arrow {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  /* 1. Language and theme: in the top bar (RU ▾ + the theme icon), not in the page header */
+  .mobile-tools {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .mobile-lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 3.75rem;
+    font-weight: 700;
+  }
+
+  .mobile-lang .bi {
+    font-size: 0.7rem;
+  }
+
+  .mobile-tools .dropdown-item[aria-pressed="true"] {
+    background-color: var(--lifeos-primary-soft);
+    color: var(--lifeos-primary-text);
+    font-weight: 700;
+  }
+
+  .page-header .page-tools {
+    display: none;
+  }
+
+  /* 2. Planner levels: 5 equal parts, short names, no scrolling */
+  .planner-levels {
+    overflow: visible;
+  }
+
+  .planner-levels .nav-pills {
+    width: 100%;
+  }
+
+  .planner-levels .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .planner-levels .nav-link {
+    justify-content: center;
+    width: 100%;
+    padding: 0 0.25rem;
+    font-size: 0.875rem; /* 14px */
+    white-space: nowrap;
+  }
+
+  
+
+  .level-long {
+    display: none;
+  }
+
+  .level-short {
+    display: inline;
+  }
+
+  /* 3. Dashboard: one quiet line instead of the planning path */
+  .plan-path-nav {
+    display: none !important;
+  }
+
+  .greeting-path {
+    display: block;
+    margin: 0.25rem 0 0;
+    color: var(--lifeos-text-muted);
+    font-size: var(--fs-small);
+  }
+
+  /* 4. Strips that still scroll sideways: no scrollbar, a fade and an arrow on the side with more */
+  .scroll-hint > .sport-tabs,
+  .scroll-hint > .segmented,
+  .scroll-hint > .table-wrap,
+  .scroll-hint > .heat-scroll {
+    scrollbar-width: none;
+  }
+
+  .scroll-hint > ::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scroll-hint.has-more-right > :first-child {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent);
+  }
+
+  .scroll-hint.has-more-left > :first-child {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - 2.5rem), transparent);
+  }
+
+  .scroll-hint.has-more-left.has-more-right > :first-child {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 2.5rem, #000 calc(100% - 2.5rem), transparent);
+  }
+
+  .scroll-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--lifeos-border);
+    border-radius: 50%;
+    background-color: var(--lifeos-surface);
+    box-shadow: var(--lifeos-shadow);
+    color: var(--lifeos-text-muted);
+    font-size: 0.7rem;
+    opacity: 0;
+    pointer-events: none; /* only a hint: the strip itself is swiped */
+    transform: translateY(-50%);
+    transition: opacity 0.15s;
+  }
+
+  .scroll-arrow.is-left {
+    left: 0;
+  }
+
+  .scroll-arrow.is-right {
+    right: 0;
+  }
+
+  .scroll-hint.has-more-left > .scroll-arrow.is-left,
+  .scroll-hint.has-more-right > .scroll-arrow.is-right {
+    opacity: 1;
+  }
+
+  /* 5. Goal details, history: the date on its own line; text and value below; the bin on the right */
+  .gd-history li {
+    grid-template-areas: "date date bin" "note change bin";
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    row-gap: 0.15rem;
+  }
+
+  .gd-history-main {
+    display: contents;
+  }
+
+  .gd-history-date {
+    grid-area: date;
+    color: var(--lifeos-text-muted);
+    font-size: var(--fs-small);
+    font-weight: 600;
+  }
+
+  .gd-history-note {
+    grid-area: note;
+    min-width: 0;
+    color: var(--lifeos-text);
+    font-size: var(--fs-body);
+  }
+
+  .gd-history-change {
+    grid-area: change;
+    align-self: center;
+  }
+
+  .gd-history li > .btn-icon {
+    grid-area: bin;
+    align-self: center;
+  }
+
+  /* 6. Progress: charts 220px high and as wide as the card; grid children may shrink */
+  .prog-chart .chart-box {
+    width: 100%;
+    height: 220px;
+  }
+
+  .prog-row > *,
+  .prog-charts > *,
+  .prog-tiles > *,
+  .sum-row > *,
+  .card-grid > * {
+    min-width: 0;
+  }
+
+  /* 7. Goals: the tabs and "New goal" in one row */
+  .goals-toolbar {
+    flex-wrap: nowrap;
+  }
+
+  .goals-toolbar .goals-tabs {
+    min-width: 0;
+  }
+
+  .goals-toolbar .goals-tab {
+    padding-inline: 0.8rem;
+  }
+
+  .goals-new {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* Planner, the year timeline: a date is never broken inside (only at the spaces) */
+  .year-quarter {
+    padding-inline: 0.35rem;
+  }
+
+  .year-quarter-dates {
+    font-size: 0.6875rem; /* 11px */
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  /* Progress tiles in 2 columns: the icon on top (the arrow stays in the corner), the title under it
+     over the whole tile width, so a word is never broken inside */
+  .prog-tile-head {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
+  }
+
+  .prog-tile-title {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+    hyphens: manual;
+    overflow-wrap: normal;
+  }
+
+  /* 8. Planner, focus of the week: the field over the whole width, the button under it */
+  .week-focus .add-row {
+    flex-direction: column;
+    max-width: none;
+  }
+
+  .week-focus .add-row .btn {
+    width: 100%;
+  }
+}
+
+/* 7. When the row does not fit (js/goals.js, fitGoalsToolbar): "New goal" is only the "+" icon */
+@media (max-width: 767.98px) {
+  .goals-toolbar.is-compact .goals-new {
+    display: inline-grid;
+    place-items: center;
+    width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+  }
+
+  .goals-toolbar.is-compact .goals-new span {
+    display: none;
+  }
+
+  .goals-toolbar.is-compact .goals-new .bi {
+    margin: 0 !important;
   }
 }
 

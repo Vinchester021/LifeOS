@@ -408,7 +408,15 @@ function renderPeriodBar({ current, previous }) {
   document.querySelectorAll('[data-period]').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.period === progressState.period));
   });
-  byId('period-title').textContent = rangeText(current);
+  // The same navigator as on the Planner: the name of the period and its short dates under it.
+  const period = progressState.period;
+  byId('period-title').textContent = periodTitle(period, current);
+  const range = byId('period-range');
+  range.textContent = Format.periodRange(current.start, current.end, period === 'quarter' || period === 'year');
+  range.hidden = range.textContent === '';
+  const label = byId('period-current-label');
+  label.dataset.i18n = `planner.toCurrent.${period}`;
+  label.textContent = t(label.dataset.i18n);
   byId('compare-note').textContent = t('progress.compareWith', { range: rangeText(previous) });
   byId('period-prev').setAttribute('aria-label', t(`planner.prev.${progressState.period}`));
   byId('period-next').setAttribute('aria-label', t(`planner.next.${progressState.period}`));
@@ -543,6 +551,15 @@ function heatmapMonthLabels(weeks) {
   return labels;
 }
 
+// The year scrolls inside its card on a phone: show the current week (in the middle).
+function scrollHeatmapToToday(range, weekCount) {
+  const strip = document.querySelector('#year-heatmap .heat-scroll');
+  if (!strip || strip.scrollWidth <= strip.clientWidth) return;
+  const week = Math.floor(Dates.daysBetween(Dates.startOfWeek(range.start), Dates.today()) / 7);
+  const column = strip.scrollWidth / weekCount;
+  strip.scrollLeft = Math.max(0, (week + 0.5) * column - strip.clientWidth / 2);
+}
+
 function renderHeatmap(data) {
   const range = getPeriodRange('year', Dates.today(), yearStart());
   byId('heatmap-range').textContent = rangeText(range);
@@ -595,6 +612,7 @@ function renderHeatmap(data) {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+  scrollHeatmapToToday(range, weeks.length);
 }
 
 /* ----- 6 tiles: a number + a caption each, a small arrow to the details ----- */

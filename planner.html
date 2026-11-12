@@ -36,6 +36,23 @@
       <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
       <span class="brand-name" data-i18n="app.name">LifeOS</span>
     </a>
+    <!-- Phone (< 768px): language and theme are here; on wider screens they are in the page header -->
+    <div class="mobile-tools">
+      <div class="dropdown">
+        <button type="button" class="btn btn-tool mobile-lang" data-bs-toggle="dropdown" aria-expanded="false"
+                data-i18n-aria-label="layout.language" aria-label="Interface language">
+          <span data-lang-current>EN</span><i class="bi bi-chevron-down" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button type="button" class="dropdown-item" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en">English</button></li>
+          <li><button type="button" class="dropdown-item" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru">Русский</button></li>
+          <li><button type="button" class="dropdown-item" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk">Қазақша</button></li>
+        </ul>
+      </div>
+      <button type="button" class="btn btn-tool" data-theme-toggle data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+        <i class="bi bi-moon-stars" aria-hidden="true"></i>
+      </button>
+    </div>
   </header>
 
   <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
@@ -45,7 +62,7 @@
         <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.2</span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
@@ -97,25 +114,30 @@
       <!-- Level switcher: links keep working without JS (?level=...) -->
       <nav class="planner-levels" data-i18n-aria-label="planner.levelsLabel" aria-label="Planning levels">
         <ul class="nav nav-pills">
-          <li class="nav-item"><a class="nav-link" href="?level=year" data-level="year" data-i18n="planner.level.year">Personal Year</a></li>
-          <li class="nav-item"><a class="nav-link" href="?level=quarter" data-level="quarter" data-i18n="planner.level.quarter">Quarter</a></li>
-          <li class="nav-item"><a class="nav-link" href="?level=month" data-level="month" data-i18n="planner.level.month">Month</a></li>
-          <li class="nav-item"><a class="nav-link" href="?level=week" data-level="week" data-i18n="planner.level.week">Week</a></li>
-          <li class="nav-item"><a class="nav-link" href="?level=today" data-level="today" data-i18n="planner.level.today">Today</a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=year" data-level="year"><span class="level-long" data-i18n="planner.level.year">Personal Year</span><span class="level-short" data-i18n="planner.levelShort.year" aria-hidden="true">Personal Year</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=quarter" data-level="quarter"><span class="level-long" data-i18n="planner.level.quarter">Quarter</span><span class="level-short" data-i18n="planner.levelShort.quarter" aria-hidden="true">Quarter</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=month" data-level="month"><span class="level-long" data-i18n="planner.level.month">Month</span><span class="level-short" data-i18n="planner.levelShort.month" aria-hidden="true">Month</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=week" data-level="week"><span class="level-long" data-i18n="planner.level.week">Week</span><span class="level-short" data-i18n="planner.levelShort.week" aria-hidden="true">Week</span></a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=today" data-level="today"><span class="level-long" data-i18n="planner.level.today">Today</span><span class="level-short" data-i18n="planner.levelShort.today" aria-hidden="true">Today</span></a></li>
         </ul>
       </nav>
 
-      <!-- "← November 2026 →" | "Current period" (shown only when another period is open) -->
-      <div class="period-bar">
-        <button type="button" class="btn btn-tool period-arrow" id="period-prev"><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
-        <div class="period-heading">
-          <h2 class="period-title" id="period-title" tabindex="-1"></h2>
-          <p class="period-range" id="period-range"></p>
+      <!-- The period navigator (the same on Planner and Progress): ‹  title + dates  ›  [To this week]
+           On a phone it is one card; "To this …" is shown only when another period is open. -->
+      <div class="period-nav">
+        <button type="button" class="btn period-nav-arrow" id="period-prev"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+        <!-- The middle: the title, its dates (hidden when there are none) and "To this week".
+             On a computer it is "display: contents", so its parts line up as ‹ title › [To this week]. -->
+        <div class="period-nav-center">
+          <div class="period-nav-text">
+            <h2 class="period-nav-title" id="period-title" tabindex="-1"></h2>
+            <p class="period-nav-dates" id="period-range" hidden></p>
+          </div>
+          <button type="button" class="btn btn-pill period-current" id="period-current" hidden>
+            <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i><span id="period-current-label" data-i18n="planner.current">Current period</span>
+          </button>
         </div>
-        <button type="button" class="btn btn-tool period-arrow" id="period-next"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
-        <button type="button" class="btn btn-pill period-current" id="period-current">
-          <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i><span data-i18n="planner.current">Current period</span>
-        </button>
+        <button type="button" class="btn period-nav-arrow" id="period-next"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
       </div>
 
       <!-- ===== Personal year ===== -->

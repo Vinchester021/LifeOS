@@ -36,6 +36,23 @@
       <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
       <span class="brand-name" data-i18n="app.name">LifeOS</span>
     </a>
+    <!-- Phone (< 768px): language and theme are here; on wider screens they are in the page header -->
+    <div class="mobile-tools">
+      <div class="dropdown">
+        <button type="button" class="btn btn-tool mobile-lang" data-bs-toggle="dropdown" aria-expanded="false"
+                data-i18n-aria-label="layout.language" aria-label="Interface language">
+          <span data-lang-current>EN</span><i class="bi bi-chevron-down" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button type="button" class="dropdown-item" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en">English</button></li>
+          <li><button type="button" class="dropdown-item" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru">Русский</button></li>
+          <li><button type="button" class="dropdown-item" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk">Қазақша</button></li>
+        </ul>
+      </div>
+      <button type="button" class="btn btn-tool" data-theme-toggle data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+        <i class="bi bi-moon-stars" aria-hidden="true"></i>
+      </button>
+    </div>
   </header>
 
   <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
@@ -45,7 +62,7 @@
         <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.2</span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
@@ -102,6 +119,7 @@
         <div class="dash-hello">
           <p class="greeting" id="dashboard-greeting"></p>
           <p class="greeting-date" id="greeting-date"></p>
+          <p class="greeting-path" id="greeting-path"></p>
         </div>
         <!-- Where we are in the plan: each step opens that planner level -->
         <nav class="plan-path-nav" data-i18n-aria-label="dashboard.path" aria-label="Planning path">

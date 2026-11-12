@@ -57,6 +57,8 @@ function renderPlanPath(year) {
     ['week', t('planner.weekTitle', { number: Dates.isoWeek(today).week })],
     ['today', t('planner.level.today')]
   ];
+  // On a phone the path is one quiet line under the date (CSS shows one or the other).
+  byId('greeting-path').textContent = steps.slice(1, 4).map(([, label]) => label).join(' · ');
   byId('plan-path').innerHTML = steps.map(([level, label], index) => `
     <li${level === 'today' ? ' class="is-today"' : ''}>
       ${index ? '<i class="bi bi-arrow-right" aria-hidden="true"></i>' : ''}

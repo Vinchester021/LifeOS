@@ -178,7 +178,7 @@ async function loadQuotesData() {
 // (Texts written in the HTML stay as they are, see I18n.apply.)
 const FALLBACK_DICTIONARY = {
   'app.name': 'LifeOS',
-  'app.version': 'Beta v1.0',
+  'app.version': 'Beta v1.2',
   'page.dashboard': 'Dashboard',
   'page.goals': 'Goals',
   'page.goalDetails': 'Goal Details',
@@ -583,6 +583,29 @@ const Format = {
     return this.date(value, SHORT_DATE, lang);
   },
 
+  // The dates of a planner period, short: "9–15 November 2026", "30 November – 6 December 2026",
+  // "September – November 2026" (byMonths: a quarter or a personal year). The parts come from Intl
+  // (month names, cases); the common month and year are written once and there is no "г." / "ж.".
+  // (Intl formatRange does not join the year of "сентябрь – ноябрь" and has no Kazakh in every browser.)
+  periodRange(startValue, endValue, byMonths = false, lang = I18n.lang) {
+    const start = Dates.parse(startValue);
+    const end = Dates.parse(endValue);
+    if (!start || !end) return '';
+    const year = (date) => String(date.getFullYear());
+    const sameYear = start.getFullYear() === end.getFullYear();
+    if (byMonths) {
+      const month = (date) => this.date(date, { month: 'long' }, lang);
+      return sameYear
+        ? `${month(start)} – ${month(end)} ${year(end)}`
+        : `${month(start)} ${year(start)} – ${month(end)} ${year(end)}`;
+    }
+    const dayMonth = (date) => this.date(date, { day: 'numeric', month: 'long' }, lang);
+    if (sameYear && start.getMonth() === end.getMonth()) return `${start.getDate()}–${dayMonth(end)} ${year(end)}`;
+    return sameYear
+      ? `${dayMonth(start)} – ${dayMonth(end)} ${year(end)}`
+      : `${dayMonth(start)} ${year(start)} – ${dayMonth(end)} ${year(end)}`;
+  },
+
   // "9–15 November 2026" / "9–15 ноября 2026 г.": Intl formatRange joins the common parts.
   // Without formatRange (or without Kazakh in Intl) it is "9 Nov 2026 – 15 Nov 2026".
   dateRange(startValue, endValue, options = { day: 'numeric', month: 'long', year: 'numeric' }, lang = I18n.lang) {
@@ -747,9 +770,74 @@ function escapeHtml(value) {
 // Pages without their own menu item highlight their "parent" item.
 const NAV_PARENTS = { 'goal-details.html': 'goals.html' };
 
+/* ---------- Horizontal scroll hints (phone): fade + a small arrow at the side with more content ----------
+   The strips that scroll sideways (Sport tabs, Progress periods, wide tables, the year heatmap) are wrapped
+   once in <div class="scroll-hint">. Classes say from which side there is more content; CSS (< 768px)
+   draws the fade and the arrow. When a strip appears, it is scrolled to its active item. */
+const SCROLL_HINT_SELECTOR = '.sport-tabs, .segmented, .table-wrap, .heat-scroll';
+
+const ScrollHints = {
+  init() {
+    this.refresh();
+    // Lists and tables are redrawn by the pages: look for new strips after every change of the page.
+    new MutationObserver(() => this.scheduleRefresh()).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', () => this.scheduleRefresh());
+  },
+
+  scheduleRefresh() {
+    if (this.timer) return;
+    this.timer = requestAnimationFrame(() => {
+      this.timer = null;
+      this.refresh();
+    });
+  },
+
+  refresh() {
+    document.querySelectorAll(SCROLL_HINT_SELECTOR).forEach((strip) => {
+      if (!strip.parentElement.classList.contains('scroll-hint')) this.wrap(strip);
+      // The page may mark its active item a moment later: scroll to it the first time it is there.
+      if (!strip.dataset.hintPlaced && this.scrollToActive(strip)) strip.dataset.hintPlaced = 'true';
+      this.update(strip);
+    });
+  },
+
+  wrap(strip) {
+    const wrapper = createEl('div', { class: 'scroll-hint' });
+    strip.before(wrapper);
+    wrapper.append(strip);
+    ['left', 'right'].forEach((side) => {
+      const arrow = createEl('span', { class: `scroll-arrow is-${side}`, 'aria-hidden': 'true' });
+      arrow.append(createEl('i', { class: `bi bi-chevron-${side}` }));
+      wrapper.append(arrow);
+    });
+    strip.addEventListener('scroll', () => this.update(strip), { passive: true });
+  },
+
+  // The active tab / period is shown in the middle of the strip (only the strip moves, not the page).
+  // Returns true when an active item was found (the strip is placed once, later the user scrolls).
+  scrollToActive(strip) {
+    const active = strip.querySelector('.active, [aria-pressed="true"], [aria-current="page"]');
+    if (!active) return false;
+    if (strip.scrollWidth > strip.clientWidth) {
+      const box = active.getBoundingClientRect();
+      const stripBox = strip.getBoundingClientRect();
+      strip.scrollLeft += box.left - stripBox.left - (strip.clientWidth - box.width) / 2;
+    }
+    return true;
+  },
+
+  update(strip) {
+    const wrapper = strip.parentElement;
+    const max = strip.scrollWidth - strip.clientWidth;
+    wrapper.classList.toggle('has-more-left', max > 1 && strip.scrollLeft > 1);
+    wrapper.classList.toggle('has-more-right', max > 1 && strip.scrollLeft < max - 1);
+  }
+};
+
 const Layout = {
   init() {
     this.markActiveLink();
+    ScrollHints.init();
     this.initLanguageButtons();
     this.initThemeButton();
     this.fillFooterYear();
@@ -786,26 +874,35 @@ const Layout = {
     document.querySelectorAll('[data-lang]').forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.lang === I18n.lang));
     });
+    // The phone top bar shows the current language: "RU ▾"
+    document.querySelectorAll('[data-lang-current]').forEach((label) => {
+      label.textContent = t(`language.${I18n.lang}.short`);
+    });
+  },
+
+  // The theme buttons: in the page header (#theme-toggle) and in the phone top bar ([data-theme-toggle]).
+  themeButtons() {
+    return document.querySelectorAll('#theme-toggle, [data-theme-toggle]');
   },
 
   initThemeButton() {
-    const button = document.getElementById('theme-toggle');
-    if (!button) return;
-    button.addEventListener('click', () => {
-      Theme.set(Theme.current() === 'dark' ? 'light' : 'dark');
+    this.themeButtons().forEach((button) => {
+      button.addEventListener('click', () => {
+        Theme.set(Theme.current() === 'dark' ? 'light' : 'dark');
+      });
     });
     this.updateThemeButton();
   },
 
   // The button shows what will happen on click: a sun in dark theme, a moon in light.
   updateThemeButton() {
-    const button = document.getElementById('theme-toggle');
-    if (!button) return;
     const isDark = Theme.current() === 'dark';
-    button.querySelector('i').className = `bi ${isDark ? 'bi-sun' : 'bi-moon-stars'}`;
-    // Keep the key in data-i18n-aria-label so a later language change re-translates it.
-    button.dataset.i18nAriaLabel = isDark ? 'layout.themeToLight' : 'layout.themeToDark';
-    button.setAttribute('aria-label', t(button.dataset.i18nAriaLabel));
+    this.themeButtons().forEach((button) => {
+      button.querySelector('i').className = `bi ${isDark ? 'bi-sun' : 'bi-moon-stars'}`;
+      // Keep the key in data-i18n-aria-label so a later language change re-translates it.
+      button.dataset.i18nAriaLabel = isDark ? 'layout.themeToLight' : 'layout.themeToDark';
+      button.setAttribute('aria-label', t(button.dataset.i18nAriaLabel));
+    });
   },
 
   fillFooterYear() {
@@ -1264,6 +1361,9 @@ function formatGoalProgress(goal) {
   if (goal.progressType === 'checklist') {
     const items = asArray(goal.checklist);
     return `${items.filter((item) => item && item.done).length} / ${items.length}`;
+  }
+  if (goal.progressType === 'percent' && Number(goal.targetValue) === 100) {
+    return formatGoalValue(goal, goal.currentValue); // "35 %", not "35 % / 100 %"
   }
   if (['money', 'percent', 'levels'].includes(goal.progressType)) {
     return `${formatGoalValue(goal, goal.currentValue)} / ${formatGoalValue(goal, goal.targetValue)}`;

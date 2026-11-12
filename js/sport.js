@@ -122,7 +122,11 @@ function showTab(tab) {
   // On a phone the tabs scroll sideways: show the active one.
   const active = document.querySelector('.sport-tabs .active');
   const strip = active?.closest('.sport-tabs');
-  if (strip && strip.scrollWidth > strip.clientWidth) active.scrollIntoView({ inline: 'center', block: 'nearest' });
+  if (strip && strip.scrollWidth > strip.clientWidth) {
+    const tabBox = active.getBoundingClientRect();
+    const stripBox = strip.getBoundingClientRect();
+    strip.scrollLeft += tabBox.left - stripBox.left - (strip.clientWidth - tabBox.width) / 2;
+  }
 }
 
 function renderSport() {
@@ -150,7 +154,7 @@ function planOfDay(sport, day) {
 
 function planDayBodyHtml(plan) {
   if (plan?.type === 'rest') {
-    return `<p class="sport-rest"><i class="bi bi-cup-hot me-1" aria-hidden="true"></i>${escapeHtml(t('sport.day.rest'))}</p>`;
+    return `<p class="sport-rest"><i class="bi bi-cup-hot" aria-hidden="true"></i><span>${escapeHtml(t('sport.day.rest'))}</span></p>`;
   }
   if (plan?.type !== 'workout') return `<p class="sport-none">${escapeHtml(t('sport.day.none'))}</p>`;
   const rows = asArray(plan.exercises).map((exercise) => `
@@ -162,37 +166,63 @@ function planDayBodyHtml(plan) {
   return `<p class="sport-day-name">${escapeHtml(plan.title)}</p><ul class="sport-ex-list">${rows}</ul>`;
 }
 
-function planDayHtml(day, plan, isToday) {
-  const name = weekdayName(day);
-  const inText = weekdayInText(day);
-  const copyItems = WEEK_DAYS.filter((other) => other !== day).map((other) => `
-          <li><button type="button" class="dropdown-item" data-plan-copy="${day}" data-copy-to="${other}">${escapeHtml(weekdayName(other))}</button></li>`).join('');
-  const planActions = plan ? `
-        <div class="dropdown">
-          <button type="button" class="btn btn-tool btn-sm dropdown-toggle" id="plan-copy-${day}" data-bs-toggle="dropdown" aria-expanded="false"
-                  aria-label="${escapeHtml(t('sport.plan.copyLabel', { day: inText }))}">
-            <i class="bi bi-files me-1" aria-hidden="true"></i>${escapeHtml(t('sport.plan.copy'))}
-          </button>
-          <ul class="dropdown-menu">${copyItems}</ul>
-        </div>
-        <button type="button" class="btn btn-icon" id="plan-clear-${day}" data-plan-clear="${day}"
-                aria-label="${escapeHtml(t('sport.plan.clearLabel', { day: inText }))}" title="${escapeHtml(t('sport.plan.clearLabel', { day: inText }))}">
-          <i class="bi bi-trash" aria-hidden="true"></i>
-        </button>` : '';
+// Icon button 36px with a tooltip; the label says which day (en / ru / kk).
+function planIconButtonHtml({ id, icon, label, attributes, extraClass = '' }) {
   return `
-    <article class="panel sport-day${isToday ? ' is-today' : ''}" aria-labelledby="plan-day-${day}">
-      <header class="sport-day-head">
-        <h3 class="panel-title" id="plan-day-${day}">${escapeHtml(name)}</h3>
-        ${isToday ? `<span class="week-today-badge">${escapeHtml(t('planner.week.todayBadge'))}</span>` : ''}
-      </header>
-      ${planDayBodyHtml(plan)}
-      <div class="sport-day-actions">
+          <button type="button" class="btn btn-icon sport-day-icon${extraClass}" id="${id}" ${attributes}
+                  aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+            <i class="bi ${icon}" aria-hidden="true"></i>
+          </button>`;
+}
+
+// The bottom line of a card: "Edit" on the left; "Copy to…" (a menu of days) and "Clear" icons on the right.
+function planActionsHtml(day, plan, inText) {
+  const edit = `
         <button type="button" class="btn btn-tool btn-sm" id="plan-edit-${day}" data-plan-edit="${day}"
                 aria-label="${escapeHtml(t(plan ? 'sport.plan.editLabel' : 'sport.plan.addLabel', { day: inText }))}">
           <i class="bi ${plan ? 'bi-pencil' : 'bi-plus-lg'} me-1" aria-hidden="true"></i>${escapeHtml(t(plan ? 'sport.plan.edit' : 'sport.plan.add'))}
-        </button>
-        ${planActions}
-      </div>
+        </button>`;
+  if (!plan) return edit;
+  const copyItems = WEEK_DAYS.filter((other) => other !== day).map((other) => `
+              <li><button type="button" class="dropdown-item" data-plan-copy="${day}" data-copy-to="${other}">${escapeHtml(weekdayName(other))}</button></li>`).join('');
+  const copy = planIconButtonHtml({ id: `plan-copy-${day}`, icon: 'bi-copy', label: t('sport.plan.copyLabel', { day: inText }),
+    attributes: 'data-bs-toggle="dropdown" aria-expanded="false"' });
+  const clear = planIconButtonHtml({ id: `plan-clear-${day}`, icon: 'bi-trash', label: t('sport.plan.clearLabel', { day: inText }),
+    attributes: `data-plan-clear="${day}"`, extraClass: ' is-danger' });
+  return `${edit}
+        <div class="sport-day-tools">
+          <div class="dropdown">
+            ${copy}
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><h4 class="dropdown-header">${escapeHtml(t('sport.plan.copy'))}</h4></li>${copyItems}
+            </ul>
+          </div>
+          ${clear}
+        </div>`;
+}
+
+// A rest day: only "+ Workout" (it opens the same day dialog).
+function restActionsHtml(day, inText) {
+  return `
+        <button type="button" class="btn btn-tool btn-sm w-100" id="plan-edit-${day}" data-plan-edit="${day}"
+                aria-label="${escapeHtml(t('sport.plan.addWorkoutLabel', { day: inText }))}">
+          <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>${escapeHtml(t('sport.plan.addWorkout'))}
+        </button>`;
+}
+
+// A card: the day, the plan, and the actions pressed to the bottom (all cards of a row are equally tall).
+function planDayHtml(day, plan, isToday) {
+  const inText = weekdayInText(day);
+  const isRest = plan?.type === 'rest';
+  const classes = ['panel', 'sport-day', isToday ? 'is-today' : '', isRest ? 'is-rest' : '', plan ? '' : 'is-empty'].filter(Boolean).join(' ');
+  return `
+    <article class="${classes}" aria-labelledby="plan-day-${day}">
+      <header class="sport-day-head">
+        <h3 class="panel-title" id="plan-day-${day}">${escapeHtml(weekdayName(day))}</h3>
+        ${isToday ? `<span class="week-today-badge">${escapeHtml(t('planner.week.todayBadge'))}</span>` : ''}
+      </header>
+      <div class="sport-day-body">${planDayBodyHtml(plan)}</div>
+      <div class="sport-day-actions">${isRest ? restActionsHtml(day, inText) : planActionsHtml(day, plan, inText)}</div>
     </article>`;
 }
 

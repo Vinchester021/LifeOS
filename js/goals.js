@@ -166,6 +166,16 @@ function renderGoalsPage() {
   document.getElementById('goals-count').textContent = visible.length ? tPlural('goals.count', visible.length) : '';
   renderEmptyState(goals, visible);
   renderResetButton();
+  fitGoalsToolbar();
+}
+
+// The tabs and "New goal" share one row. When they do not fit (a narrow phone, long words in Kazakh),
+// the button shows only "+"; its aria-label keeps the name for screen readers.
+function fitGoalsToolbar() {
+  const toolbar = document.querySelector('.goals-toolbar');
+  const tabs = toolbar.querySelector('.goals-tabs');
+  toolbar.classList.remove('is-compact');
+  if (toolbar.scrollWidth > toolbar.clientWidth + 1 || tabs.scrollWidth > tabs.clientWidth + 1) toolbar.classList.add('is-compact');
 }
 
 // How many filters are on: the search, the category, the status (the sort order is not a filter).
@@ -533,6 +543,8 @@ onAppReady(() => {
   window.addEventListener('hashchange', handleGoalsHash);
   // Category names, dates and plural forms depend on the language.
   document.addEventListener('lifeos:languagechange', renderGoalsPage);
+  window.addEventListener('resize', fitGoalsToolbar);
+  document.fonts?.ready.then(fitGoalsToolbar); // the words get their real width when the fonts are loaded
   // The wizard saved a goal.
   document.addEventListener('lifeos:goalschange', renderGoalsPage);
   // After the first-run dialog, a "#new" link can still open the wizard.
