@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Goals · LifeOS</title>
+  <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
+
+  <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
+
+  <script src="./vendor/jquery/jquery-3.7.1.min.js" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
+  <script src="./data/translations-fallback.js"></script>
+  <script src="./data/quotes-fallback.js"></script>
+  <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/goal-wizard.js" defer></script>
+  <script src="./js/goals.js" defer></script>
+</head>
+<body>
+  <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
+
+  <!-- ===== Shared layout: identical on all 7 pages ===== -->
+
+  <!-- Phone / tablet (< 992px): top bar with the menu button -->
+  <header class="mobile-bar d-lg-none">
+    <button class="btn btn-tool" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" data-i18n-aria-label="layout.openMenu" aria-label="Open menu">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <a class="brand brand-small" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+      <span class="brand-name" data-i18n="app.name">LifeOS</span>
+    </a>
+  </header>
+
+  <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
+  <aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-labelledby="sidebar-title">
+    <div class="offcanvas-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+        <span class="brand-text">
+          <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+        </span>
+      </a>
+      <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="sidebar-nav" data-i18n-aria-label="layout.mainNav" aria-label="Main navigation">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span data-i18n="page.dashboard">Dashboard</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="goals.html"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="page.goals">Goals</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="planner.html"><i class="bi bi-calendar3" aria-hidden="true"></i><span data-i18n="page.planner">Planner</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="progress.html"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="page.progress">Progress</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="sport.html"><i class="bi bi-heart-pulse" aria-hidden="true"></i><span data-i18n="page.sport">Sport</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html"><i class="bi bi-gear" aria-hidden="true"></i><span data-i18n="page.settings">Settings</span></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="app-content">
+    <main class="app-main" id="main-content" tabindex="-1">
+      <header class="page-header">
+        <h1 class="page-title" data-i18n="page.goals">Goals</h1>
+        <div class="page-tools">
+          <div class="btn-group" role="group" data-i18n-aria-label="layout.language" aria-label="Interface language">
+            <button type="button" class="btn btn-tool" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en.short">EN</button>
+            <button type="button" class="btn btn-tool" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru.short">RU</button>
+            <button type="button" class="btn btn-tool" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk.short">ҚZ</button>
+          </div>
+          <button type="button" class="btn btn-tool" id="theme-toggle" data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+            <i class="bi bi-moon-stars" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== Page content starts here ===== -->
+
+      <!-- Segmented tabs "Goals N / Archive N" (the active one is filled) + the main action -->
+      <div class="goals-toolbar">
+        <div class="goals-tabs" role="group" data-i18n-aria-label="goals.tabsLabel" aria-label="Goal lists">
+          <button type="button" class="goals-tab" data-tab="goals" aria-pressed="true">
+            <span data-i18n="goals.tab.goals">Goals</span> <span class="badge tab-count" id="count-goals">0</span>
+          </button>
+          <button type="button" class="goals-tab" data-tab="archive" aria-pressed="false">
+            <span data-i18n="goals.tab.archive">Archive</span> <span class="badge tab-count" id="count-archive">0</span>
+          </button>
+        </div>
+        <button type="button" class="btn btn-primary" data-action="create-goal">
+          <i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="goals.new">New goal</span>
+        </button>
+      </div>
+
+      <!-- Search (always visible) + "Filters": the panel below folds open/closed with jQuery slideToggle -->
+      <section class="goals-search" data-i18n-aria-label="goals.filters.toggle" aria-label="Filters">
+        <div class="goals-search-row">
+          <div class="search-field">
+            <label class="visually-hidden" for="goal-search" data-i18n="goals.search.label">Search by title</label>
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input class="form-control" type="search" id="goal-search" autocomplete="off" data-i18n-placeholder="goals.search.label" placeholder="Search by title">
+          </div>
+          <button type="button" class="btn btn-tool filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters-panel">
+            <i class="bi bi-sliders me-2" aria-hidden="true"></i><span data-i18n="goals.filters.toggle">Filters</span>
+            <i class="bi bi-chevron-down filters-chevron" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="filters-panel" id="filters-panel">
+          <div class="filters-grid">
+            <div class="filter-field">
+              <label class="form-label" for="filter-category" data-i18n="goals.filters.category">Category</label>
+              <select class="form-select" id="filter-category">
+                <option value="all" data-i18n="goals.filters.allCategories">All categories</option>
+                <option value="finance" data-i18n="category.finance">Finance</option>
+                <option value="books" data-i18n="category.books">Books</option>
+                <option value="health" data-i18n="category.health">Health</option>
+                <option value="languages" data-i18n="category.languages">Languages</option>
+                <option value="education" data-i18n="category.education">Education</option>
+                <option value="projects" data-i18n="category.projects">Projects</option>
+                <option value="career" data-i18n="category.career">Career</option>
+                <option value="personal" data-i18n="category.personal">Personal</option>
+                <option value="custom" data-i18n="category.custom">Custom</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="form-label" for="filter-status" data-i18n="goals.filters.status">Status</label>
+              <select class="form-select" id="filter-status">
+                <option value="all" data-i18n="goals.status.all">All statuses</option>
+                <option value="active" data-i18n="goals.status.active">In progress</option>
+                <option value="completed" data-i18n="goals.status.completed">Completed</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label class="form-label" for="goal-sort" data-i18n="goals.filters.sort">Sort by</label>
+              <select class="form-select" id="goal-sort">
+                <option value="deadline" data-i18n="goals.sort.deadline">Deadline</option>
+                <option value="percent" data-i18n="goals.sort.percent">Progress</option>
+                <option value="created" data-i18n="goals.sort.created">Newest first</option>
+                <option value="title" data-i18n="goals.sort.title">Title (A–Z)</option>
+              </select>
+            </div>
+            <!-- Shown only when a filter or the search is active: "Reset (2)" (js/goals.js) -->
+            <button type="button" class="btn btn-tool filters-reset" id="filters-reset" hidden>
+              <i class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></i><span id="filters-reset-label"></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <p class="results-count" id="goals-count" aria-live="polite"></p>
+
+      <!-- Cards: auto-fill columns from 320px, one card is never wider than ~440px -->
+      <div class="goals-grid" id="goals-grid"></div>
+
+      <!-- One block for three cases: no goals yet / nothing found / empty archive -->
+      <div class="empty-state" id="goals-empty" hidden>
+        <span class="empty-state-icon" aria-hidden="true"><i class="bi bi-bullseye" id="goals-empty-icon"></i></span>
+        <h2 class="h5" id="goals-empty-title"></h2>
+        <p id="goals-empty-text"></p>
+        <div class="empty-state-actions">
+          <button type="button" class="btn btn-primary" id="goals-empty-create" data-action="create-goal" data-i18n="goals.empty.create">Create your first goal</button>
+          <button type="button" class="btn btn-tool" id="goals-empty-reset" data-i18n="goals.filters.reset">Reset filters</button>
+        </div>
+      </div>
+
+      <!-- Only with ?debug=1 in the address -->
+      <div class="debug-tools" id="debug-tools" hidden>
+        <p class="mb-2" data-i18n="debug.demoNote">Debug mode: demo data replaces all current goals, their history and tasks.</p>
+        <button type="button" class="btn btn-tool" id="debug-fill-demo">
+          <i class="bi bi-magic me-2" aria-hidden="true"></i><span data-i18n="debug.fillDemo">Fill with demo data</span>
+        </button>
+      </div>
+
+    </main>
+
+    <footer class="app-footer">
+      <p class="mb-0">
+        © <span id="footer-year">2026</span> <span data-i18n="app.name">LifeOS</span> ·
+        <span data-i18n="layout.author">Vilgelm Feller</span>
+      </p>
+      <p class="mb-0">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        <span data-i18n="layout.storageNote">Your data is stored only in this browser.</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- First run: shown by app.js only when there is no lifeos_profile.
+       Static backdrop + keyboard="false": it cannot be closed without creating a profile. -->
+  <div class="modal fade" id="first-run-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="first-run-title" aria-describedby="first-run-intro">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <form class="modal-content" id="first-run-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-4" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
+          <p id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
+          <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
+            <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
+            <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+            <p class="field-error" id="first-run-name-error"></p>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+            <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
+            <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
+            <p class="field-error" id="first-run-start-error"></p>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
+              <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
+              <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
+              <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
+              <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
+              <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
+            </div>
+          </fieldset>
+
+          <p class="storage-note mb-0">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span data-i18n="firstRun.storageNote">LifeOS has no account or server. Your data is stored only in this browser on this device: clearing browser data deletes it.</span>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- ===== End of shared layout ===== -->
+
+  <!-- ===== Goals page dialogs ===== -->
+
+  <!-- Goal wizard: 7 steps, used for creating and editing (js/goal-wizard.js).
+       Choice lists (categories, icons, colors, types) are filled by JS from the lists in app.js. -->
+  <div class="modal fade" id="goal-wizard" tabindex="-1" data-bs-backdrop="static" aria-labelledby="wizard-title">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
+      <form class="modal-content" id="wizard-form" novalidate>
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title fs-5" id="wizard-title">New goal</h2>
+            <h3 class="wizard-step-label" id="wizard-step-label" tabindex="-1"></h3>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close" aria-label="Close"></button>
+        </div>
+        <ol class="wizard-steps" aria-hidden="true">
+          <li></li><li></li><li></li><li></li><li></li><li></li><li></li>
+        </ol>
+
+        <div class="modal-body">
+          <!-- Step 1: category -->
+          <section class="wizard-step" data-step="1">
+            <!-- Templates (create mode only): fill the fields, everything can be changed later -->
+            <div class="wizard-templates" id="wiz-templates">
+              <h4 class="h6 mb-1" data-i18n="wizard.templates.title">Start from a template (optional)</h4>
+              <p class="form-text mt-0" data-i18n="wizard.templates.hint">A template fills in the fields; you can change everything on the next steps.</p>
+              <div class="template-list" id="wiz-template-list"></div>
+            </div>
+            <fieldset id="wiz-category">
+              <legend class="wizard-intro" data-i18n="wizard.category.intro">What area of life is this goal about?</legend>
+              <div class="choice-grid" id="wiz-category-list"></div>
+            </fieldset>
+            <p class="field-error" id="wiz-category-error"></p>
+          </section>
+
+          <!-- Step 2: title and description -->
+          <section class="wizard-step" data-step="2" hidden>
+            <div class="mb-3">
+              <label class="form-label" for="wiz-title" data-i18n="wizard.title.label">Goal title</label>
+              <input class="form-control" type="text" id="wiz-title" autocomplete="off" aria-describedby="wiz-title-hint">
+              <div class="form-text" id="wiz-title-hint" data-i18n="wizard.title.hint">From 2 to 80 characters.</div>
+              <p class="field-error" id="wiz-title-error"></p>
+            </div>
+            <div>
+              <label class="form-label" for="wiz-description" data-i18n="wizard.description.label">Description</label>
+              <textarea class="form-control" id="wiz-description" rows="3" aria-describedby="wiz-description-hint"></textarea>
+              <div class="form-text" id="wiz-description-hint" data-i18n="wizard.description.hint">Optional, up to 300 characters.</div>
+              <p class="field-error" id="wiz-description-error"></p>
+            </div>
+          </section>
+
+          <!-- Step 3: icon and color -->
+          <section class="wizard-step" data-step="3" hidden>
+            <div class="goal-preview mb-3" id="wiz-preview" data-color="teal">
+              <span class="goal-icon" aria-hidden="true"><i class="bi bi-stars"></i></span>
+              <span class="goal-preview-title" id="wiz-preview-title"></span>
+            </div>
+            <fieldset class="mb-3">
+              <legend class="form-label fs-6" data-i18n="wizard.icon.label">Icon</legend>
+              <div class="choice-grid choice-grid-icons" id="wiz-icon-list"></div>
+            </fieldset>
+            <fieldset>
+              <legend class="form-label fs-6" data-i18n="wizard.color.label">Color</legend>
+              <div class="choice-grid-colors" id="wiz-color-list"></div>
+            </fieldset>
+          </section>
+
+          <!-- Step 4: progress type -->
+          <section class="wizard-step" data-step="4" hidden>
+            <fieldset id="wiz-type">
+              <legend class="wizard-intro" data-i18n="wizard.type.intro">How will you measure progress?</legend>
+              <div class="choice-grid choice-grid-wide" id="wiz-type-list"></div>
+            </fieldset>
+            <p class="field-error" id="wiz-type-error"></p>
+          </section>
+
+          <!-- Step 5: values and deadline. JS shows only the fields of the chosen type (data-field). -->
+          <section class="wizard-step" data-step="5" hidden>
+            <p class="wizard-intro" id="wiz-type-hint"></p>
+            <div class="row g-3">
+              <div class="col-sm-6" data-field="start">
+                <label class="form-label" for="wiz-start" data-i18n="wizard.values.start">Start value</label>
+                <input class="form-control" type="text" id="wiz-start" inputmode="decimal" autocomplete="off" data-group-digits>
+                <p class="field-error" id="wiz-start-error"></p>
+              </div>
+              <div class="col-sm-6" data-field="target">
+                <label class="form-label" for="wiz-target" data-i18n="wizard.values.target">Target value</label>
+                <input class="form-control" type="text" id="wiz-target" inputmode="decimal" autocomplete="off" data-group-digits>
+                <p class="field-error" id="wiz-target-error"></p>
+              </div>
+              <div class="col-sm-6" data-field="current">
+                <label class="form-label" for="wiz-current" data-i18n="wizard.values.current">Current value</label>
+                <input class="form-control" type="text" id="wiz-current" inputmode="decimal" autocomplete="off" data-group-digits>
+                <p class="field-error" id="wiz-current-error"></p>
+              </div>
+              <div class="col-sm-6" data-field="unit">
+                <label class="form-label" for="wiz-unit" data-i18n="wizard.values.unit">Unit</label>
+                <input class="form-control" type="text" id="wiz-unit" maxlength="20" autocomplete="off" aria-describedby="wiz-unit-hint">
+                <div class="form-text" id="wiz-unit-hint" data-i18n="wizard.values.unitHint">Optional, e.g. books, kg, days.</div>
+              </div>
+              <div class="col-sm-6" data-field="currency">
+                <label class="form-label" for="wiz-currency" data-i18n="wizard.values.currency">Currency</label>
+                <select class="form-select" id="wiz-currency">
+                  <option value="KZT" data-i18n="currency.KZT">Tenge (₸)</option>
+                  <option value="USD" data-i18n="currency.USD">US dollar ($)</option>
+                  <option value="EUR" data-i18n="currency.EUR">Euro (€)</option>
+                  <option value="RUB" data-i18n="currency.RUB">Russian ruble (₽)</option>
+                </select>
+              </div>
+
+              <div class="col-12" data-field="levels">
+                <label class="form-label" for="wiz-levels" data-i18n="wizard.values.levels">Levels in order</label>
+                <input class="form-control" type="text" id="wiz-levels" autocomplete="off" aria-describedby="wiz-levels-hint">
+                <div class="form-text" id="wiz-levels-hint" data-i18n="wizard.values.levelsHint">Separate with commas, from lowest to highest.</div>
+                <p class="field-error" id="wiz-levels-error"></p>
+                <div class="row g-3 mt-0">
+                  <div class="col-sm-4">
+                    <label class="form-label" for="wiz-level-start" data-i18n="wizard.values.levelStart">Start level</label>
+                    <select class="form-select" id="wiz-level-start"></select>
+                  </div>
+                  <div class="col-sm-4">
+                    <label class="form-label" for="wiz-level-target" data-i18n="wizard.values.levelTarget">Target level</label>
+                    <select class="form-select" id="wiz-level-target"></select>
+                    <p class="field-error" id="wiz-level-target-error"></p>
+                  </div>
+                  <div class="col-sm-4" data-field="levelCurrent">
+                    <label class="form-label" for="wiz-level-current" data-i18n="wizard.values.levelCurrent">Current level</label>
+                    <select class="form-select" id="wiz-level-current"></select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12" data-field="checklist">
+                <label class="form-label" for="wiz-check-input" data-i18n="wizard.values.checkItem">New item</label>
+                <div class="add-row">
+                  <input class="form-control" type="text" id="wiz-check-input" maxlength="120" autocomplete="off" aria-describedby="wiz-check-input-hint">
+                  <button type="button" class="btn btn-tool" id="wiz-check-add"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i><span data-i18n="wizard.add">Add</span></button>
+                </div>
+                <div class="form-text" id="wiz-check-input-hint" data-i18n="wizard.values.checkHint">Press Enter to add. Tick items that are already done.</div>
+                <p class="field-error" id="wiz-check-input-error"></p>
+                <ul class="edit-list" id="wiz-check-list"></ul>
+              </div>
+
+              <div class="col-sm-6">
+                <label class="form-label" for="wiz-deadline" data-i18n="wizard.values.deadline">Deadline</label>
+                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="wiz-deadline" aria-describedby="wiz-deadline-hint">
+                <div class="form-text" id="wiz-deadline-hint" data-i18n="wizard.values.deadlineHint">Optional. Cannot be in the past.</div>
+                <p class="field-error" id="wiz-deadline-error"></p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Step 6: milestones (optional) -->
+          <section class="wizard-step" data-step="6" hidden>
+            <p class="wizard-intro" data-i18n="wizard.milestones.intro">Split the goal into stages with dates. This step is optional.</p>
+            <div class="row g-3 align-items-start">
+              <div class="col-sm-6">
+                <label class="form-label" for="wiz-ms-title" data-i18n="wizard.milestones.title">Milestone</label>
+                <input class="form-control" type="text" id="wiz-ms-title" maxlength="80" autocomplete="off">
+                <p class="field-error" id="wiz-ms-title-error"></p>
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label" for="wiz-ms-date" data-i18n="wizard.milestones.date">Date</label>
+                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="wiz-ms-date">
+                <p class="field-error" id="wiz-ms-date-error"></p>
+              </div>
+              <div class="col-sm-2 milestone-add">
+                <button type="button" class="btn btn-tool w-100" id="wiz-ms-add"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i><span data-i18n="wizard.add">Add</span></button>
+              </div>
+            </div>
+            <p class="text-secondary mt-3 mb-0" id="wiz-ms-empty" data-i18n="wizard.milestones.empty">No milestones yet.</p>
+            <ul class="edit-list" id="wiz-ms-list"></ul>
+            <p class="field-error" id="wiz-ms-list-error"></p>
+          </section>
+
+          <!-- Step 7: review -->
+          <section class="wizard-step" data-step="7" hidden>
+            <p class="wizard-intro" data-i18n="wizard.review.intro">Check the goal before saving.</p>
+            <div class="goal-preview mb-3" id="wiz-review-preview" data-color="teal">
+              <span class="goal-icon" aria-hidden="true"><i class="bi bi-stars"></i></span>
+              <span class="goal-preview-title" id="wiz-review-title"></span>
+            </div>
+            <dl class="review-list" id="wiz-review"></dl>
+          </section>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-tool" id="wiz-back"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i><span data-i18n="wizard.back">Back</span></button>
+          <button type="submit" class="btn btn-primary" id="wiz-next"><span id="wiz-next-label">Next</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirmation: the only way to delete a goal -->
+  <div class="modal fade" id="delete-goal-modal" tabindex="-1" aria-labelledby="delete-goal-heading">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="delete-goal-heading" data-i18n="delete.title">Delete goal?</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p data-i18n="delete.text">This goal and all its data will be deleted permanently:</p>
+          <p class="delete-goal-name" id="delete-goal-name"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-tool" id="delete-goal-cancel" data-bs-dismiss="modal" data-i18n="delete.cancel">Cancel</button>
+          <button type="button" class="btn btn-danger" id="delete-goal-confirm">
+            <i class="bi bi-trash me-1" aria-hidden="true"></i><span data-i18n="delete.confirm">Delete</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

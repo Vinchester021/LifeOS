@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planner · LifeOS</title>
+  <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
+
+  <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
+
+  <script src="./vendor/jquery/jquery-3.7.1.min.js" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
+  <script src="./data/translations-fallback.js"></script>
+  <script src="./data/quotes-fallback.js"></script>
+  <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/tasks.js" defer></script>
+  <script src="./js/planner.js" defer></script>
+</head>
+<body>
+  <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
+
+  <!-- ===== Shared layout: identical on all 7 pages ===== -->
+
+  <!-- Phone / tablet (< 992px): top bar with the menu button -->
+  <header class="mobile-bar d-lg-none">
+    <button class="btn btn-tool" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" data-i18n-aria-label="layout.openMenu" aria-label="Open menu">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <a class="brand brand-small" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+      <span class="brand-name" data-i18n="app.name">LifeOS</span>
+    </a>
+  </header>
+
+  <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
+  <aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-labelledby="sidebar-title">
+    <div class="offcanvas-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+        <span class="brand-text">
+          <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+        </span>
+      </a>
+      <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="sidebar-nav" data-i18n-aria-label="layout.mainNav" aria-label="Main navigation">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span data-i18n="page.dashboard">Dashboard</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="goals.html"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="page.goals">Goals</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="planner.html"><i class="bi bi-calendar3" aria-hidden="true"></i><span data-i18n="page.planner">Planner</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="progress.html"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="page.progress">Progress</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="sport.html"><i class="bi bi-heart-pulse" aria-hidden="true"></i><span data-i18n="page.sport">Sport</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html"><i class="bi bi-gear" aria-hidden="true"></i><span data-i18n="page.settings">Settings</span></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="app-content">
+    <main class="app-main" id="main-content" tabindex="-1">
+      <header class="page-header">
+        <h1 class="page-title" data-i18n="page.planner">Planner</h1>
+        <div class="page-tools">
+          <div class="btn-group" role="group" data-i18n-aria-label="layout.language" aria-label="Interface language">
+            <button type="button" class="btn btn-tool" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en.short">EN</button>
+            <button type="button" class="btn btn-tool" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru.short">RU</button>
+            <button type="button" class="btn btn-tool" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk.short">ҚZ</button>
+          </div>
+          <button type="button" class="btn btn-tool" id="theme-toggle" data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+            <i class="bi bi-moon-stars" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== Page content starts here ===== -->
+
+      <!-- Level switcher: links keep working without JS (?level=...) -->
+      <nav class="planner-levels" data-i18n-aria-label="planner.levelsLabel" aria-label="Planning levels">
+        <ul class="nav nav-pills">
+          <li class="nav-item"><a class="nav-link" href="?level=year" data-level="year" data-i18n="planner.level.year">Personal Year</a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=quarter" data-level="quarter" data-i18n="planner.level.quarter">Quarter</a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=month" data-level="month" data-i18n="planner.level.month">Month</a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=week" data-level="week" data-i18n="planner.level.week">Week</a></li>
+          <li class="nav-item"><a class="nav-link" href="?level=today" data-level="today" data-i18n="planner.level.today">Today</a></li>
+        </ul>
+      </nav>
+
+      <!-- "← November 2026 →" | "Current period" (shown only when another period is open) -->
+      <div class="period-bar">
+        <button type="button" class="btn btn-tool period-arrow" id="period-prev"><i class="bi bi-arrow-left" aria-hidden="true"></i></button>
+        <div class="period-heading">
+          <h2 class="period-title" id="period-title" tabindex="-1"></h2>
+          <p class="period-range" id="period-range"></p>
+        </div>
+        <button type="button" class="btn btn-tool period-arrow" id="period-next"><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-pill period-current" id="period-current">
+          <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i><span data-i18n="planner.current">Current period</span>
+        </button>
+      </div>
+
+      <!-- ===== Personal year ===== -->
+      <section class="planner-view" data-view="year" hidden>
+        <div class="planner-stack">
+          <section class="panel" aria-labelledby="year-timeline-title">
+            <h3 class="panel-title gd-icon-title" id="year-timeline-title"><i class="bi bi-calendar-range" aria-hidden="true"></i><span data-i18n="planner.year.timeline">Year timeline</span></h3>
+            <div id="year-timeline"></div>
+          </section>
+          <section class="panel" aria-labelledby="year-goals-title">
+            <h3 class="panel-title gd-icon-title" id="year-goals-title"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="planner.year.goals">Main goals</span></h3>
+            <div id="year-goals"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ===== Quarter ===== -->
+      <section class="planner-view" data-view="quarter" hidden>
+        <div class="planner-grid">
+          <section class="panel" aria-labelledby="quarter-goals-title">
+            <h3 class="panel-title gd-icon-title" id="quarter-goals-title"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="planner.quarter.goals">Goals of the quarter</span></h3>
+            <p class="text-secondary" data-i18n="planner.quarter.goalsHint">Tick the goals you focus on in this quarter.</p>
+            <div id="quarter-goals"></div>
+          </section>
+          <section class="panel" aria-labelledby="quarter-points-title">
+            <h3 class="panel-title gd-icon-title" id="quarter-points-title"><i class="bi bi-flag" aria-hidden="true"></i><span data-i18n="planner.quarter.checkpoints">Checkpoints</span></h3>
+            <div id="quarter-checkpoints"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ===== Month: calendar | tasks for the month ===== -->
+      <section class="planner-view" data-view="month" hidden>
+        <div class="planner-grid is-month">
+          <div class="panel month-panel">
+            <div class="month-calendar" id="month-calendar"></div>
+            <!-- What each mark means (on a phone the cells show only the marks) -->
+            <p class="calendar-legend">
+              <span><span class="cal-dot dot-task" aria-hidden="true"></span><span data-i18n="planner.month.legendTasks">Tasks</span></span>
+              <span><span class="cal-dot dot-deadline" aria-hidden="true"></span><span data-i18n="planner.month.legendDeadlines">Deadlines and milestones</span></span>
+              <span><span class="cal-legend-today" aria-hidden="true"></span><span data-i18n="planner.level.today">Today</span></span>
+            </p>
+          </div>
+          <section class="panel month-tasks-panel" aria-labelledby="month-tasks-title">
+            <h3 class="panel-title" id="month-tasks-title" data-i18n="planner.month.tasks">Tasks for the month</h3>
+            <div id="month-tasks"></div>
+            <button type="button" class="btn btn-primary w-100 mt-3 planner-add" id="month-task-add">
+              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="task.form.create">Add task</span>
+            </button>
+          </section>
+        </div>
+        <p class="planner-hint">
+          <i class="bi bi-info-circle" aria-hidden="true"></i><span data-i18n="planner.month.dayHint">Choose a day to open its plan.</span>
+        </p>
+      </section>
+
+      <!-- ===== Week ===== -->
+      <section class="planner-view" data-view="week" hidden>
+        <form class="panel week-focus" id="week-focus-form" novalidate>
+          <label class="panel-title gd-icon-title" for="week-focus"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="planner.week.focus">Focus of the week</span></label>
+          <div class="add-row">
+            <input class="form-control" type="text" id="week-focus" maxlength="80" autocomplete="off"
+                   data-i18n-placeholder="planner.week.focusPlaceholder" aria-describedby="week-focus-hint">
+            <button type="submit" class="btn btn-primary" data-i18n="planner.week.save">Save focus</button>
+          </div>
+          <div class="form-text" id="week-focus-hint" data-i18n="planner.week.focusHint">One short phrase, up to 80 characters.</div>
+          <p class="field-error" id="week-focus-error"></p>
+        </form>
+        <div class="week-days" id="week-days"></div>
+      </section>
+
+      <!-- ===== Today (one day) ===== -->
+      <section class="planner-view" data-view="today" hidden>
+        <div class="planner-grid is-today">
+          <section class="panel" aria-labelledby="today-tasks-title">
+            <h3 class="panel-title gd-icon-title" id="today-tasks-title"><i class="bi bi-check2-square" aria-hidden="true"></i><span data-i18n="planner.today.tasks">Tasks of the day</span></h3>
+            <form class="mb-3" id="quick-task-form" novalidate>
+              <label class="form-label" for="quick-task" data-i18n="planner.today.quickAdd">Quick task</label>
+              <input class="form-control" type="text" id="quick-task" autocomplete="off" maxlength="120"
+                     data-i18n-placeholder="planner.today.quickAddPlaceholder" aria-describedby="quick-task-hint">
+              <div class="form-text" id="quick-task-hint" data-i18n="planner.today.quickAddHint">Type and press Enter.</div>
+              <p class="field-error" id="quick-task-error"></p>
+            </form>
+            <!-- The workout of this day from the Sport plan (js/app.js sportDayLineHtml) -->
+            <div id="today-sport-line"></div>
+            <div id="today-tasks"></div>
+          </section>
+          <div class="planner-stack">
+            <section class="panel" aria-labelledby="habits-title">
+              <h3 class="panel-title gd-icon-title" id="habits-title"><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span data-i18n="planner.today.habits">Habits</span></h3>
+              <div id="today-habits"></div>
+            </section>
+            <section class="panel" aria-labelledby="record-title">
+              <h3 class="panel-title gd-icon-title" id="record-title"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="planner.today.record">Quick result</span></h3>
+              <p class="text-secondary mb-0" id="quick-record-none" data-i18n="planner.record.none" hidden></p>
+              <form id="quick-record-form" novalidate>
+                <div class="mb-3">
+                  <label class="form-label" for="quick-goal" data-i18n="planner.record.goal">Goal</label>
+                  <select class="form-select" id="quick-goal"></select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label" for="quick-value" id="quick-value-label" data-i18n="planner.record.add">Amount to add</label>
+                  <div class="input-group">
+                    <input class="form-control" type="text" id="quick-value" inputmode="decimal" autocomplete="off" data-group-digits>
+                    <span class="input-group-text" id="quick-value-unit"></span>
+                  </div>
+                  <p class="field-error" id="quick-value-error"></p>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" data-i18n="planner.record.submit">Save result</button>
+              </form>
+            </section>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="app-footer">
+      <p class="mb-0">
+        © <span id="footer-year">2026</span> <span data-i18n="app.name">LifeOS</span> ·
+        <span data-i18n="layout.author">Vilgelm Feller</span>
+      </p>
+      <p class="mb-0">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        <span data-i18n="layout.storageNote">Your data is stored only in this browser.</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- First run: shown by app.js only when there is no lifeos_profile.
+       Static backdrop + keyboard="false": it cannot be closed without creating a profile. -->
+  <div class="modal fade" id="first-run-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="first-run-title" aria-describedby="first-run-intro">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <form class="modal-content" id="first-run-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-4" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
+          <p id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
+          <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
+            <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
+            <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+            <p class="field-error" id="first-run-name-error"></p>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+            <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
+            <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
+            <p class="field-error" id="first-run-start-error"></p>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
+              <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
+              <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
+              <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
+              <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
+              <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
+            </div>
+          </fieldset>
+
+          <p class="storage-note mb-0">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span data-i18n="firstRun.storageNote">LifeOS has no account or server. Your data is stored only in this browser on this device: clearing browser data deletes it.</span>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- ===== End of shared layout ===== -->
+</body>
+</html>

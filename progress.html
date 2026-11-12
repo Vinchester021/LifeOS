@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress · LifeOS</title>
+  <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
+
+  <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
+
+  <script src="./vendor/jquery/jquery-3.7.1.min.js" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
+  <script src="./data/translations-fallback.js"></script>
+  <script src="./data/quotes-fallback.js"></script>
+  <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <!-- Chart.js only on this page; if it does not load, progress-charts.js shows tables -->
+  <script src="./vendor/chartjs/chart.umd.min.js" defer></script>
+  <script src="./js/progress-charts.js" defer></script>
+  <script src="./js/progress.js" defer></script>
+</head>
+<body>
+  <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
+
+  <!-- ===== Shared layout: identical on all 7 pages ===== -->
+
+  <!-- Phone / tablet (< 992px): top bar with the menu button -->
+  <header class="mobile-bar d-lg-none">
+    <button class="btn btn-tool" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" data-i18n-aria-label="layout.openMenu" aria-label="Open menu">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <a class="brand brand-small" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+      <span class="brand-name" data-i18n="app.name">LifeOS</span>
+    </a>
+  </header>
+
+  <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
+  <aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-labelledby="sidebar-title">
+    <div class="offcanvas-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+        <span class="brand-text">
+          <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+        </span>
+      </a>
+      <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="sidebar-nav" data-i18n-aria-label="layout.mainNav" aria-label="Main navigation">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span data-i18n="page.dashboard">Dashboard</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="goals.html"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="page.goals">Goals</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="planner.html"><i class="bi bi-calendar3" aria-hidden="true"></i><span data-i18n="page.planner">Planner</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="progress.html"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="page.progress">Progress</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="sport.html"><i class="bi bi-heart-pulse" aria-hidden="true"></i><span data-i18n="page.sport">Sport</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html"><i class="bi bi-gear" aria-hidden="true"></i><span data-i18n="page.settings">Settings</span></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="app-content">
+    <main class="app-main" id="main-content" tabindex="-1">
+      <header class="page-header sum-header">
+        <div class="page-heading">
+          <a class="back-link" id="summary-back" href="progress.html" hidden><i class="bi bi-arrow-left" aria-hidden="true"></i><span data-i18n="progress.summary.back">Back to progress</span></a>
+          <h1 class="page-title" id="page-title" data-i18n="page.progress">Progress</h1>
+        </div>
+        <div class="page-tools">
+          <div class="btn-group" role="group" data-i18n-aria-label="layout.language" aria-label="Interface language">
+            <button type="button" class="btn btn-tool" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en.short">EN</button>
+            <button type="button" class="btn btn-tool" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru.short">RU</button>
+            <button type="button" class="btn btn-tool" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk.short">ҚZ</button>
+          </div>
+          <button type="button" class="btn btn-tool" id="theme-toggle" data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+            <i class="bi bi-moon-stars" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== Page content starts here ===== -->
+
+      <!-- Year summary: shown instead of the statistics with ?view=summary (js/progress.js, Part 4) -->
+      <section id="summary-view" aria-labelledby="summary-title" hidden>
+        <h2 class="sum-title" id="summary-title" tabindex="-1"></h2>
+        <p class="sum-range" id="summary-range"></p>
+
+        <!-- The year is not over yet: these are intermediate results -->
+        <div class="sum-info" id="summary-info" role="status" hidden>
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          <div class="sum-info-body">
+            <p class="sum-info-text" id="summary-info-text"></p>
+            <div class="progress" id="summary-info-bar" role="progressbar" aria-labelledby="summary-info-text" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6 numbers of the year -->
+        <div class="sum-kpis" id="year-summary-cards"></div>
+
+        <div class="sum-row sum-row-3">
+          <section class="panel" aria-labelledby="summary-months-title">
+            <h3 class="panel-title" id="summary-months-title" data-i18n="progress.summary.byMonth">Tasks by month</h3>
+            <p class="text-secondary small" id="summary-chart-offline" data-i18n="progress.charts.offline" hidden>Charts could not be loaded. The same numbers are shown in tables.</p>
+            <div id="summary-months"></div>
+          </section>
+          <section class="panel" aria-labelledby="summary-categories-title">
+            <h3 class="panel-title" id="summary-categories-title" data-i18n="progress.summary.categories">Best categories</h3>
+            <div id="summary-categories"></div>
+          </section>
+          <section class="panel" aria-labelledby="summary-week-title">
+            <h3 class="panel-title" id="summary-week-title" data-i18n="progress.summary.bestWeek">Best week</h3>
+            <div id="summary-week"></div>
+          </section>
+        </div>
+
+        <div class="sum-row sum-row-2">
+          <section class="panel" aria-labelledby="summary-achieved-title">
+            <h3 class="panel-title" id="summary-achieved-title" data-i18n="progress.summary.achieved">Achieved goals</h3>
+            <div id="summary-achieved"></div>
+          </section>
+          <section class="panel" aria-labelledby="summary-compare-title">
+            <h3 class="panel-title" id="summary-compare-title" data-i18n="progress.summary.compare">At the start and now</h3>
+            <div id="summary-compare"></div>
+          </section>
+        </div>
+
+        <!-- Finishing the year: two actions; "Start a new year" is filled only when the year is over -->
+        <section class="panel sum-finish" aria-labelledby="summary-finish-title">
+          <div class="sum-finish-text">
+            <h3 class="panel-title" id="summary-finish-title" data-i18n="progress.summary.finishTitle">Finishing the year</h3>
+            <p class="summary-status" id="summary-status"></p>
+          </div>
+          <div class="sum-finish-actions">
+            <button type="button" class="btn btn-outline-primary" id="summary-archive"><i class="bi bi-archive me-2" aria-hidden="true"></i><span id="summary-archive-label"></span></button>
+            <button type="button" class="btn btn-outline-primary" id="summary-new-year"><i class="bi bi-stars me-2" aria-hidden="true"></i><span data-i18n="progress.summary.newYear">Start a new year</span></button>
+          </div>
+        </section>
+      </section>
+
+      <div id="progress-main">
+      <!-- Shown when less than 30 days of the personal year are left, or when it has ended -->
+      <div class="prog-banner" id="year-banner" role="status" hidden>
+        <i class="bi bi-trophy" aria-hidden="true"></i>
+        <p class="prog-banner-text" id="year-banner-text"></p>
+        <a class="btn btn-primary" href="progress.html?view=summary" data-i18n="progress.banner.button">View the summary</a>
+      </div>
+
+      <!-- One row: period type | ‹ 9–15 November 2026 › | Current period | Summary of the personal year.
+           The choice is kept in the address: ?period=month&date=2026-11-01 -->
+      <div class="prog-toolbar">
+        <div class="segmented" role="group" data-i18n-aria-label="progress.periodLabel" aria-label="Period">
+          <button type="button" class="segmented-btn" data-period="week" aria-pressed="false" data-i18n="planner.level.week">Week</button>
+          <button type="button" class="segmented-btn" data-period="month" aria-pressed="false" data-i18n="planner.level.month">Month</button>
+          <button type="button" class="segmented-btn" data-period="quarter" aria-pressed="false" data-i18n="planner.level.quarter">Quarter</button>
+          <button type="button" class="segmented-btn" data-period="year" aria-pressed="false" data-i18n="planner.level.year">Personal Year</button>
+        </div>
+        <div class="prog-nav">
+          <button type="button" class="btn prog-nav-arrow" id="period-prev"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+          <h2 class="prog-nav-title" id="period-title" tabindex="-1"></h2>
+          <button type="button" class="btn prog-nav-arrow" id="period-next"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+        </div>
+        <button type="button" class="btn btn-pill period-current" id="period-current">
+          <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i><span data-i18n="planner.current">Current period</span>
+        </button>
+        <a class="btn btn-tool btn-pill prog-summary-link" href="progress.html?view=summary">
+          <i class="bi bi-trophy me-2" aria-hidden="true"></i><span data-i18n="progress.summary.link">Summary of the personal year</span>
+        </a>
+      </div>
+      <p class="prog-compare" id="compare-note"></p>
+
+      <!-- Four numbers of the period, each compared with the previous period -->
+      <div class="card-grid is-kpi prog-kpis mb-3" id="summary-cards"></div>
+
+      <div class="prog-row prog-row-main">
+        <section class="panel" aria-labelledby="tasks-chart-title">
+          <div class="panel-head">
+            <h3 class="panel-title" id="tasks-chart-title" data-i18n="progress.tasks.title">Completed tasks</h3>
+            <p class="prog-head-value" id="tasks-chart-total"></p>
+          </div>
+          <div id="tasks-chart"></div>
+        </section>
+        <section class="panel" aria-labelledby="goals-progress-title">
+          <h3 class="panel-title" id="goals-progress-title" data-i18n="progress.goals.title">Progress of goals</h3>
+          <div id="goals-progress"></div>
+        </section>
+      </div>
+
+      <!-- Charts (Chart.js). Without Chart.js the same numbers are shown as tables. -->
+      <section class="mb-3" aria-labelledby="charts-title">
+        <h3 class="panel-title prog-section-title" id="charts-title" data-i18n="progress.charts.title">Charts</h3>
+        <p class="text-secondary small" id="charts-offline" data-i18n="progress.charts.offline" hidden>Charts could not be loaded. The same numbers are shown in tables.</p>
+        <div class="prog-charts">
+          <section class="panel prog-chart" aria-labelledby="chart-weight-title">
+            <div class="prog-chart-head">
+              <h4 class="prog-chart-title" id="chart-weight-title" data-i18n="progress.charts.weight">Weight over time</h4>
+              <p class="prog-chart-now" id="chart-weight-now"></p>
+            </div>
+            <div id="chart-weight"></div>
+          </section>
+          <section class="panel prog-chart" aria-labelledby="chart-savings-title">
+            <div class="prog-chart-head">
+              <h4 class="prog-chart-title" id="chart-savings-title" data-i18n="progress.charts.savings">Savings over time</h4>
+              <p class="prog-chart-now" id="chart-savings-now"></p>
+            </div>
+            <div id="chart-savings"></div>
+          </section>
+          <section class="panel prog-chart" aria-labelledby="chart-tasks-title">
+            <div class="prog-chart-head">
+              <h4 class="prog-chart-title" id="chart-tasks-title" data-i18n="progress.charts.tasks">Completed tasks by week</h4>
+              <p class="prog-chart-now" id="chart-tasks-now"></p>
+            </div>
+            <div id="chart-tasks"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- Activity of every day of the personal year: the full width, "Active days N of 365" on the right -->
+      <section class="panel mb-3" aria-labelledby="heatmap-title">
+        <div class="panel-head">
+          <h3 class="panel-title" id="heatmap-title" data-i18n="progress.heatmap.title">Activity in the personal year</h3>
+          <span class="text-secondary small" id="heatmap-range"></span>
+        </div>
+        <div id="year-heatmap"></div>
+      </section>
+
+      <!-- 6 small tiles: a number and a caption each; the arrow opens the page with the details -->
+      <div class="prog-tiles" id="progress-tiles"></div>
+
+      </div><!-- /progress-main -->
+    </main>
+
+    <footer class="app-footer">
+      <p class="mb-0">
+        © <span id="footer-year">2026</span> <span data-i18n="app.name">LifeOS</span> ·
+        <span data-i18n="layout.author">Vilgelm Feller</span>
+      </p>
+      <p class="mb-0">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        <span data-i18n="layout.storageNote">Your data is stored only in this browser.</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- First run: shown by app.js only when there is no lifeos_profile.
+       Static backdrop + keyboard="false": it cannot be closed without creating a profile. -->
+  <div class="modal fade" id="first-run-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="first-run-title" aria-describedby="first-run-intro">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <form class="modal-content" id="first-run-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-4" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
+          <p id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
+          <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
+            <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
+            <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+            <p class="field-error" id="first-run-name-error"></p>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+            <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
+            <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
+            <p class="field-error" id="first-run-start-error"></p>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
+              <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
+              <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
+              <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
+              <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
+              <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
+            </div>
+          </fieldset>
+
+          <p class="storage-note mb-0">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span data-i18n="firstRun.storageNote">LifeOS has no account or server. Your data is stored only in this browser on this device: clearing browser data deletes it.</span>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- ===== End of shared layout ===== -->
+
+  <!-- Start a new personal year: choose which unfinished goals go on -->
+  <div class="modal fade" id="new-year-modal" tabindex="-1" aria-labelledby="new-year-title">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <form class="modal-content" id="new-year-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="new-year-title" data-i18n="progress.summary.newYearTitle">Start a new personal year?</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="sum-early" id="new-year-early" hidden></p>
+          <p class="mb-2" data-i18n="progress.summary.willHappen">What will happen:</p>
+          <ul class="sum-steps">
+            <li><i class="bi bi-archive" aria-hidden="true"></i><span data-i18n="progress.summary.step.archive">The current year with its numbers is saved in the archive (Settings → Personal years).</span></li>
+            <li><i class="bi bi-arrow-right-circle" aria-hidden="true"></i><span data-i18n="progress.summary.step.carry">The unfinished goals you tick below stay active with their progress.</span></li>
+            <li><i class="bi bi-calendar-plus" aria-hidden="true"></i><span data-i18n="progress.summary.newYearText">This year is saved in the archive. The new personal year starts today; you can change the date in Settings.</span></li>
+          </ul>
+          <fieldset>
+            <legend class="form-label fs-6" data-i18n="progress.summary.carryTitle">Carry these unfinished goals over to the new year</legend>
+            <ul class="edit-list" id="new-year-goals"></ul>
+            <p class="task-empty" id="new-year-none" data-i18n="progress.summary.carryNone" hidden>All goals are finished — nothing to carry over.</p>
+          </fieldset>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-tool" data-bs-dismiss="modal" data-i18n="delete.cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" data-i18n="progress.summary.newYearConfirm">Start the new year</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,6344 @@
+/* ==========================================================
+   LifeOS — main stylesheet
+   Mobile first: base styles target phones, media queries
+   add layout for wider screens (added in later steps).
+   ========================================================== */
+
+/* ---------- Color tokens: light theme (default) — docs/design ---------- */
+:root,
+[data-bs-theme="light"] {
+  /* Palette: used for the accent color and for goal colors.
+     Light values have at least 4.5:1 contrast on the page background. */
+  --palette-teal: #0f5f57;          /* deep green: the default accent of the design */
+  --palette-blue: #3d6aa0;
+  --palette-green: #3c7350;
+  --palette-plum: #7a5089;
+  --palette-clay: #95641f;
+  --palette-rose: #9a4c5e;          /* goal color only, not an accent */
+
+  --lifeos-primary: var(--palette-teal);
+  --lifeos-bg: #f5f3ee;             /* warm light page background */
+  --lifeos-surface: #ffffff;        /* cards */
+  --lifeos-surface-2: #faf8f4;      /* side menu, table heads, quiet blocks */
+  --lifeos-border: #e7e2d8;
+  --lifeos-border-strong: #d6d0c4;  /* outline buttons, fields */
+  --lifeos-text: #17211f;
+  --lifeos-text-muted: #5d6763;
+  --lifeos-on-primary: #ffffff;     /* text/icons on a primary background */
+
+  /* Soft tones for badges and icon tiles (text on them stays >= 4.5:1) */
+  --tone-success-bg: #e3efe6;
+  --tone-success-fg: #2c5e3d;
+  --tone-warning-bg: #f7ebd3;
+  --tone-warning-fg: #6f4b0f;
+  --tone-danger-bg: #f8e3e3;
+  --tone-danger-fg: #8c2f2f;
+  --tone-neutral-bg: #eeebe4;
+  --tone-neutral-fg: #4b5450;
+
+  --lifeos-shadow: 0 1px 2px rgb(23 33 31 / 0.04), 0 4px 12px rgb(23 33 31 / 0.04);
+
+  /* Map our tokens onto Bootstrap variables */
+  --bs-body-bg: var(--lifeos-bg);
+  --bs-body-color: var(--lifeos-text);
+  --bs-secondary-color: var(--lifeos-text-muted);
+  --bs-border-color: var(--lifeos-border);
+}
+
+/* ---------- Color tokens: dark theme (the same tokens) ---------- */
+[data-bs-theme="dark"] {
+  /* Lighter palette: at least 4.5:1 contrast on the dark background */
+  --palette-teal: #5fbaa9;
+  --palette-blue: #8aa9d8;
+  --palette-green: #8cc29d;
+  --palette-plum: #bf9fcd;
+  --palette-clay: #d9aa6a;
+  --palette-rose: #dd9cab;
+
+  --lifeos-primary: var(--palette-teal);
+  --lifeos-bg: #111816;             /* deep green-graphite */
+  --lifeos-surface: #1a2220;        /* cards */
+  --lifeos-surface-2: #151c1a;
+  --lifeos-border: #2a3532;
+  --lifeos-border-strong: #3a4743;
+  --lifeos-text: #e6ece9;
+  --lifeos-text-muted: #a2b1ac;
+  --lifeos-on-primary: #0f1614;     /* dark text on the lighter dark-theme accents */
+
+  --tone-success-bg: #1f3428;
+  --tone-success-fg: #9fd3ae;
+  --tone-warning-bg: #3a2f1b;
+  --tone-warning-fg: #f0c987;
+  --tone-danger-bg: #3a2224;
+  --tone-danger-fg: #f2a9a9;
+  --tone-neutral-bg: #252e2c;
+  --tone-neutral-fg: #c3cfcb;
+
+  --lifeos-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+
+  --bs-body-bg: var(--lifeos-bg);
+  --bs-body-color: var(--lifeos-text);
+  --bs-secondary-color: var(--lifeos-text-muted);
+  --bs-secondary-rgb: 162, 177, 172; /* = --lifeos-text-muted; Bootstrap's .text-secondary uses it */
+  --bs-border-color: var(--lifeos-border);
+}
+
+/* Outline danger button ("Reset profile…", "Delete task"): Bootstrap's #dc3545 is too dark on graphite */
+[data-bs-theme="dark"] .btn-outline-danger {
+  --bs-btn-color: var(--bs-danger-text-emphasis);
+}
+
+/* ---------- Accent colors ----------
+   app.js sets data-accent="teal|blue|green|plum|clay" on <html>.
+   The palette variables already have light and dark values,
+   so one line per accent works in both themes. */
+[data-accent="blue"]  { --lifeos-primary: var(--palette-blue); }
+[data-accent="green"] { --lifeos-primary: var(--palette-green); }
+[data-accent="plum"]  { --lifeos-primary: var(--palette-plum); }
+[data-accent="clay"]  { --lifeos-primary: var(--palette-clay); }
+
+/* Shades derived from the current accent, so every accent works in both themes. */
+:root {
+  --lifeos-primary-hover: color-mix(in srgb, var(--lifeos-primary) 80%, var(--lifeos-text));
+  --lifeos-primary-soft: color-mix(in srgb, var(--lifeos-primary) 14%, var(--lifeos-surface));
+  /* Accent for text on the soft background (active menu item): a bit closer to the text color for 4.5:1 */
+  --lifeos-primary-text: color-mix(in srgb, var(--lifeos-primary) 75%, var(--lifeos-text));
+  --lifeos-focus: var(--lifeos-primary);
+}
+
+/* ---------- Typography, spacing, radii (docs/design) ---------- */
+:root {
+  /* System font stack: no extra download, looks native on every OS */
+  --lifeos-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --bs-body-font-family: var(--lifeos-font);
+  --bs-body-font-size: 0.9375rem;
+
+  /* Font sizes: page title 36–40px, section 22px, card 16px, text 15px, captions 13px */
+  --fs-page: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  --fs-section: 1.375rem;
+  --fs-card: 1rem;
+  --fs-body: 0.9375rem;
+  --fs-small: 0.8125rem;
+
+  /* Spacing scale: 4 / 8 / 16 / 24 / 40 */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+
+  /* Radii */
+  --radius-sm: 0.625rem;  /* buttons, fields */
+  --radius: 0.875rem;     /* cards */
+  --radius-lg: 1.125rem;  /* big blocks */
+  --radius-pill: 999px;
+  --bs-border-radius: var(--radius-sm);
+}
+
+body {
+  background-color: var(--lifeos-bg);
+  color: var(--lifeos-text);
+  font-family: var(--lifeos-font);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--lifeos-primary);
+}
+
+a:hover {
+  color: var(--lifeos-primary-hover);
+}
+
+/* ---------- Visible keyboard focus ---------- */
+:focus-visible {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+}
+
+/* Bootstrap uses a box-shadow ring on form controls and buttons;
+   replace it with the same outline so focus looks consistent. */
+.btn:focus-visible,
+.btn-close:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.form-check-input:focus-visible {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* The skip link moves focus to <main>; the whole area does not need a ring. */
+#main-content:focus-visible {
+  outline: none;
+}
+
+/* ==========================================================
+   Layout (shared by all pages)
+   ========================================================== */
+
+:root {
+  --lifeos-sidebar-width: 16.25rem; /* 260px */
+}
+
+/* ---------- Skip link: hidden until focused with Tab ---------- */
+.skip-link:focus {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1080; /* above the offcanvas */
+  padding: 0.6rem 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-primary);
+  font-weight: 600;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- Brand (logo + name + version) ---------- */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--lifeos-text);
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--lifeos-text);
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+  font-size: 1.15rem;
+}
+
+.brand-small .brand-mark {
+  width: 2rem;
+  height: 2rem;
+  font-size: 1rem;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+/* "Beta v1.0" under the name: a small quiet badge (the same in every language) */
+.brand-version {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-bg);
+  color: var(--tone-neutral-fg);
+  font-size: 0.75rem; /* 12px */
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* ---------- Icon / toggle buttons (menu, language, theme) ---------- */
+.btn-tool {
+  --bs-btn-bg: var(--lifeos-surface);
+  --bs-btn-color: var(--lifeos-text);
+  --bs-btn-border-color: var(--lifeos-border);
+  --bs-btn-hover-bg: var(--lifeos-primary-soft);
+  --bs-btn-hover-color: var(--lifeos-text);
+  --bs-btn-hover-border-color: var(--lifeos-border);
+  --bs-btn-active-bg: var(--lifeos-primary-soft);
+  --bs-btn-active-color: var(--lifeos-text);
+  --bs-btn-active-border-color: var(--lifeos-border);
+  min-width: 2.75rem;  /* ~44px: comfortable touch target */
+  min-height: 2.75rem;
+  font-weight: 600;
+}
+
+.btn-tool[aria-pressed="true"],
+.btn-check:checked + .btn-tool {
+  background-color: var(--lifeos-primary);
+  border-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+.btn-tool .bi-list {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+/* Radio buttons styled as buttons: the real <input> is hidden,
+   so the focus ring is drawn on its label. */
+.btn-check:focus-visible + .btn {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* ---------- Primary button in the LifeOS accent ---------- */
+.btn-primary {
+  --bs-btn-bg: var(--lifeos-primary);
+  --bs-btn-border-color: var(--lifeos-primary);
+  --bs-btn-color: var(--lifeos-on-primary);
+  --bs-btn-hover-bg: var(--lifeos-primary-hover);
+  --bs-btn-hover-border-color: var(--lifeos-primary-hover);
+  --bs-btn-hover-color: var(--lifeos-on-primary);
+  --bs-btn-active-bg: var(--lifeos-primary-hover);
+  --bs-btn-active-border-color: var(--lifeos-primary-hover);
+  --bs-btn-active-color: var(--lifeos-on-primary);
+  font-weight: 600;
+}
+
+/* ---------- Forms and dialogs on card-colored surfaces ---------- */
+.modal {
+  --bs-modal-bg: var(--lifeos-surface);
+}
+
+.form-control,
+.form-control:focus,
+.form-select,
+.form-select:focus {
+  background-color: var(--lifeos-surface);
+}
+
+/* Date field: [dd/mm/yyyy | calendar button]. The real browser date input is invisible;
+   it stays in the page only so its calendar can open next to the button. */
+.date-field .btn-tool {
+  min-height: 0;
+}
+
+.date-native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Checkboxes: visible border on the warm background, checked in the LifeOS accent */
+.form-check-input {
+  border-color: color-mix(in srgb, var(--lifeos-text) 40%, transparent);
+  background-color: var(--lifeos-surface);
+}
+
+.form-check-input:checked {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary);
+}
+
+.storage-note {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.6rem;
+  background-color: var(--lifeos-primary-soft);
+  font-size: 0.9rem;
+}
+
+.storage-note .bi {
+  color: var(--lifeos-primary);
+}
+
+/* ---------- Dashboard (index.html, docs/design/dashboard.png) ---------- */
+
+/* Line 1: the title on the left, language/theme on the right.
+   .page-header.dash-header: stronger than the shared .page-header rule further down */
+.page-header.dash-header {
+  align-items: flex-start;
+  margin-bottom: var(--space-3); /* 16px from the title to the greeting */
+}
+
+.greeting {
+  margin: 0;
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.greeting-date {
+  margin: 0.45rem 0 0; /* ~7px under the greeting */
+  color: var(--lifeos-text-muted);
+}
+
+/* Line 2 (from 1600px): [ greeting + date ......... ] [ path ] [ New goal ] [ Record a result ]
+   Everything sits on one bottom line: the date, the path and the buttons (44px high). */
+.dash-bar {
+  display: grid;
+  grid-template-areas: "hello path actions";
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: var(--space-3) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.dash-hello {
+  grid-area: hello;
+  min-width: 0;
+}
+
+.plan-path-nav {
+  grid-area: path;
+}
+
+.dash-actions {
+  display: flex;
+  grid-area: actions;
+  gap: var(--space-2);
+}
+
+.dash-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem; /* 44px */
+  padding-block: 0;
+  padding-inline: 1.1rem;
+  white-space: nowrap;
+}
+
+/* Narrower than ~1600px (path 600px + buttons 370px leave the greeting too little room):
+   the buttons stay next to the greeting, the path goes to its own line */
+@media (max-width: 1599.98px) {
+  .dash-bar {
+    grid-template-areas: "hello actions" "path path";
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .plan-path-nav {
+    justify-self: start;
+  }
+}
+
+/* Planning path: a compact strip, as wide as its steps */
+.plan-path-nav {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.3rem 0 var(--space-3);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.plan-path-nav > .bi {
+  flex-shrink: 0;
+  color: var(--lifeos-text-muted);
+  font-size: 1.1rem;
+}
+
+.plan-path {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow-x: auto; /* too narrow (long Kazakh words): scroll inside the strip, never cut */
+  scrollbar-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+/* Each step after the first = [ → ][ link ] */
+.plan-path li {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.plan-path li > .bi {
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.plan-path a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.875rem; /* 14px */
+  border-radius: var(--radius-pill);
+  color: var(--lifeos-text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.plan-path a:hover {
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-text);
+}
+
+/* The current step: a pill filled with the accent */
+.plan-path .is-today a,
+.plan-path .is-today a:hover {
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+/* Phone: greeting, then the path (scrolls sideways), then the two buttons 50 / 50 */
+@media (max-width: 767.98px) {
+  .page-header.dash-header {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .dash-header .page-tools {
+    align-self: flex-end;
+  }
+
+  .dash-bar {
+    grid-template-areas: "hello" "path" "actions";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .plan-path-nav {
+    justify-self: stretch;
+  }
+
+  .dash-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dash-actions .btn {
+    padding-inline: var(--space-2);
+    font-size: var(--fs-small);
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* Top row and bottom row: CSS grids that fill the width */
+.dash-top,
+.dash-bottom {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .dash-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .dash-top {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 992px) {
+  .dash-bottom {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+
+/* Personal year: ring "12% passed" | "44 days of 365" / "321 days left" */
+.year-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.ring {
+  position: relative;
+  flex: 0 0 8.5rem;
+  width: 8.5rem;
+  height: 8.5rem;
+}
+
+.ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* the ring starts at the top */
+}
+
+.ring circle {
+  fill: none;
+  stroke-width: 11;
+}
+
+.ring-track {
+  stroke: var(--tone-neutral-bg);
+}
+
+.ring-value {
+  stroke: var(--lifeos-primary);
+  stroke-linecap: round;
+}
+
+.ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.ring-label strong {
+  color: var(--lifeos-text);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.year-numbers {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--lifeos-border);
+}
+
+.year-numbers dt {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.year-numbers dd {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.year-note {
+  margin: var(--space-3) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Today: "+ Quickly add a task…" */
+.dash-quick {
+  margin-bottom: var(--space-3);
+}
+
+.quick-add {
+  position: relative;
+}
+
+.quick-add > .bi {
+  position: absolute;
+  top: 50%;
+  left: 0.9rem;
+  color: var(--lifeos-text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.quick-add .form-control {
+  min-height: 2.75rem;
+  padding-left: 2.4rem;
+  border-color: var(--lifeos-border-strong);
+}
+
+/* Lists inside the top cards: an empty list is a soft dashed box, not white space */
+#dash-today-tasks .task-empty,
+.dash-week-empty {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+/* Focus of the week: the text in a soft plaque + "2 of 5" with one segment per task */
+.focus-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+}
+
+.focus-note > .bi {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.dash-focus-text {
+  margin: 0;
+  color: var(--lifeos-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.dash-focus-text.is-empty {
+  color: var(--lifeos-text-muted);
+  font-weight: 400;
+}
+
+#dash-focus-form {
+  margin-bottom: var(--space-3);
+}
+
+/* The field takes the whole card; the button moves under it when both do not fit in one line */
+#dash-focus-form .add-row {
+  flex-wrap: wrap;
+}
+
+#dash-focus-form .add-row .form-control {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+#dash-focus-form .add-row .btn {
+  flex: 0 0 auto;
+}
+
+.dash-week {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dash-week-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.week-segments {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  height: 0.55rem;
+}
+
+.week-segments > span {
+  flex: 1;
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-bg);
+}
+
+.week-segments > span.is-done {
+  background-color: var(--lifeos-primary);
+}
+
+.week-segments.is-bar {
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-bg);
+}
+
+.week-segments.is-bar > span {
+  flex: none;
+}
+
+/* Big goals: a section with up to 4 small goal cards */
+.dash-goals-panel {
+  margin-bottom: var(--space-3);
+}
+
+/* 1 column on a phone, 2 on a tablet / small laptop, 4 from 1360px */
+.dash-goal-grid {
+  --goal-columns: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--goal-columns), minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (min-width: 576px) {
+  .dash-goal-grid {
+    --goal-columns: 2;
+  }
+}
+
+@media (min-width: 1360px) {
+  .dash-goal-grid {
+    --goal-columns: 4;
+  }
+}
+
+/* Card: [icon | title, value]  then  [bar ........ 30%] */
+.dash-goal {
+  position: relative; /* the stretched link covers the card */
+  display: grid;
+  grid-template-areas: "icon text text" "bar bar pct";
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3) 0.85rem;
+  padding: var(--space-3);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dash-goal:hover {
+  border-color: var(--lifeos-border-strong);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.dash-goal:has(.stretched-link:focus-visible) {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+}
+
+.dash-goal .goal-title {
+  margin: 0 0 0.15rem;
+  overflow-wrap: break-word; /* whole words; only a very long word is broken */
+}
+
+.dash-goal .goal-values {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-body);
+}
+
+/* % badge in the goal's own color (text mixed darker for contrast) */
+.dash-goal .goal-icon {
+  grid-area: icon;
+  align-self: start;
+}
+
+.dash-goal-text {
+  grid-area: text;
+}
+
+.dash-goal-percent {
+  grid-area: pct;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background-color: color-mix(in srgb, var(--goal-color) 14%, var(--lifeos-surface));
+  color: color-mix(in srgb, var(--goal-color) 70%, var(--lifeos-text));
+  font-size: var(--fs-small);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-goal .progress {
+  grid-area: bar;
+  --bs-progress-height: 0.5rem;
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--goal-color);
+}
+
+.dash-goal {
+  --goal-color: var(--palette-teal);
+}
+
+/* "+ Add a goal": the free place in the row */
+/* "+ Add a goal" takes exactly the free places of its row (data-goals = how many goals are shown) */
+.dash-goal-more.dash-goal-add {
+  justify-items: center;
+  align-content: center;
+  text-align: center;
+  color: var(--lifeos-primary-text);
+}
+
+.dash-goal-more.dash-goal-add > .bi {
+  font-size: 1.4rem;
+}
+
+.dash-goal-more.dash-goal-add strong {
+  font-size: var(--fs-card);
+}
+
+@media (min-width: 576px) and (max-width: 1359.98px) {
+  .dash-goal-add[data-goals="2"] { grid-column: span 2; }
+}
+
+@media (min-width: 1360px) {
+  .dash-goal-add[data-goals="1"] { grid-column: span 3; }
+  .dash-goal-add[data-goals="2"] { grid-column: span 2; }
+}
+
+/* "+N more" card */
+.dash-goal-more {
+  grid-template-areas: none;
+  grid-template-columns: 1fr;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-1);
+  border-style: dashed;
+  color: var(--lifeos-text);
+  text-decoration: none;
+}
+
+.dash-goal-more strong {
+  color: var(--lifeos-primary-text);
+  font-size: 1.15rem;
+}
+
+.dash-goal-more span {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.dash-goal-more:hover {
+  color: var(--lifeos-text);
+}
+
+/* Calm empty state inside a card */
+.dash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-surface-2);
+  text-align: center;
+}
+
+.dash-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary);
+  font-size: 1.3rem;
+}
+
+.dash-empty p {
+  max-width: 26rem;
+  margin: 0;
+  color: var(--lifeos-text-muted);
+}
+
+/* Activity: 4 weeks in columns, week labels on top, weekdays on the left, no gaps between them */
+.dash-heatmap {
+  display: grid;
+  grid-template-columns: auto repeat(var(--weeks), minmax(0, 5.5rem));
+  justify-content: start; /* free space goes to the right, the day labels stay next to the cells */
+  gap: 4px;
+  align-items: center;
+}
+
+.heat-week {
+  padding-bottom: 2px;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.heat-day {
+  padding-right: var(--space-2);
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+}
+
+.heat-cell {
+  display: inline-block;
+  width: 1.6rem;
+  height: 1.1rem;
+  border-radius: 0.3rem;
+  background-color: var(--tone-neutral-bg);
+}
+
+.dash-heatmap .heat-cell {
+  width: 100%;
+  height: 1.5rem;
+  border-radius: 0.35rem;
+}
+
+.heat-cell.level-1 { background-color: color-mix(in srgb, var(--lifeos-primary) 25%, var(--lifeos-surface)); }
+.heat-cell.level-2 { background-color: color-mix(in srgb, var(--lifeos-primary) 50%, var(--lifeos-surface)); }
+.heat-cell.level-3 { background-color: color-mix(in srgb, var(--lifeos-primary) 75%, var(--lifeos-surface)); }
+.heat-cell.level-4 { background-color: var(--lifeos-primary); }
+
+.heat-cell.is-future {
+  border: 1px dashed var(--lifeos-border);
+  background-color: transparent;
+}
+
+.dash-activity-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.dash-activity-summary {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.dash-activity-summary.is-empty {
+  color: var(--lifeos-text-muted);
+  font-weight: 400;
+}
+
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+}
+
+.heat-legend .heat-cell {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* By category: icon tile, "Name (N goals)", bar, % */
+.category-stats {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-stats li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.35rem 0.85rem;
+  align-items: center;
+}
+
+.category-icon {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary);
+  font-size: 1.15rem;
+}
+
+.category-name {
+  grid-column: 2 / -1;
+  font-weight: 700;
+}
+
+.category-count {
+  margin-left: 0.3rem;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+.category-bar {
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-bg);
+}
+
+.category-bar span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-primary);
+}
+
+.category-average {
+  min-width: 2.75rem;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Quote of the day: the card is in the side menu (see "Sidebar quote"); here the favorites dialog */
+.quote-author {
+  color: var(--lifeos-text-muted);
+  font-size: 0.9rem;
+}
+
+.favorite-quotes {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.favorite-quotes li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 0.5rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  border-left: 3px solid var(--lifeos-primary);
+  border-radius: 0.4rem;
+  background-color: var(--lifeos-primary-soft);
+}
+
+.favorite-quotes .btn-icon {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  align-self: center;
+}
+
+/* ---------- Goals page (goals.html, docs/design/goals.png) ---------- */
+
+/* Segmented tabs "Goals N / Archive N": a pill frame, the active tab is filled with the accent */
+.goals-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.goals-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-surface);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.goals-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem; /* 40px */
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--lifeos-text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.goals-tab:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.goals-tab[aria-pressed="true"] {
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+.tab-count {
+  margin-left: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-bg);
+  color: var(--tone-neutral-fg);
+  font-size: 0.75rem;
+}
+
+/* On the filled tab the counter is light on the accent */
+.goals-tab[aria-pressed="true"] .tab-count,
+.btn-tool[aria-pressed="true"] .tab-count {
+  background-color: color-mix(in srgb, var(--lifeos-on-primary) 22%, transparent);
+  color: var(--lifeos-on-primary);
+}
+
+/* Search across the width + "Filters ˅" */
+.goals-search {
+  margin-bottom: var(--space-3);
+}
+
+.goals-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A narrow phone: the search takes the whole line, "Filters" goes under it */
+@media (max-width: 575.98px) {
+  .goals-search-row .search-field {
+    flex: 1 1 100%;
+  }
+}
+
+.search-field {
+  position: relative;
+  flex: 1;
+}
+
+.search-field > .bi {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  color: var(--lifeos-text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.search-field .form-control {
+  min-height: 3rem;
+  padding-left: 2.75rem;
+  border-color: var(--lifeos-border-strong);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.filters-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-height: 3rem;
+  padding-inline: 1rem;
+  white-space: nowrap;
+}
+
+.filters-chevron {
+  margin-left: 0.5rem;
+  transition: transform 0.2s;
+}
+
+.filters-toggle[aria-expanded="true"] {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary-soft);
+}
+
+.filters-toggle[aria-expanded="true"] .filters-chevron {
+  transform: rotate(180deg);
+}
+
+/* The panel: closed until "Filters" opens it (jQuery slideToggle; open at start on a computer) */
+.filters-panel {
+  display: none;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.filters-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.filter-field .form-label {
+  margin-bottom: var(--space-1);
+  color: var(--lifeos-text);
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 600;
+}
+
+/* "Reset (2)": outline, as high as a select, accent frame — it is only shown when a filter is on */
+.filters-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-width: 0;
+  min-height: calc(1.5em + 0.75rem + 2px); /* = the height of a .form-select */
+  padding-block: 0;
+  border-color: var(--lifeos-primary);
+  color: var(--lifeos-primary-text);
+  white-space: nowrap;
+}
+
+.filters-reset[hidden] {
+  display: none;
+}
+
+/* Wider screens: "Category: [ ]  Status: [ ]  Sort: [ ]  |  Reset filters" in one line */
+@media (min-width: 768px) {
+  .filters-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+  }
+}
+
+@media (min-width: 1200px) {
+  .filters-grid {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .filter-field {
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .filter-field .form-label {
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .filter-field .form-select {
+    min-width: 0;
+  }
+
+  .filters-reset {
+    margin-left: auto;
+  }
+}
+
+.results-count {
+  min-height: 1.25rem;
+  margin-bottom: var(--space-2);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Goal card: --goal-color comes from the goal's own color */
+.goal-card {
+  position: relative; /* for the Bootstrap stretched-link */
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--lifeos-border);
+  border-top: 4px solid var(--goal-color);
+  border-radius: 0.9rem;
+  background-color: var(--lifeos-surface);
+  transition: box-shadow 0.15s;
+}
+
+/* Goal colors: any element with data-color (card, preview, swatch) gets --goal-color. */
+.goal-card,
+.goal-preview,
+.details-hero,
+.gd-hero,
+.task-goal,
+.plan-goal,
+.habit,
+.swatch {
+  --goal-color: var(--palette-teal);
+}
+
+[data-color="blue"]  { --goal-color: var(--palette-blue); }
+[data-color="green"] { --goal-color: var(--palette-green); }
+[data-color="plum"]  { --goal-color: var(--palette-plum); }
+[data-color="clay"]  { --goal-color: var(--palette-clay); }
+[data-color="rose"]  { --goal-color: var(--palette-rose); }
+
+.goal-card:hover {
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08);
+}
+
+/* The whole card is the link, so the focus ring goes around the whole card
+   (only when the link is focused, not the menu button). */
+.goal-card:has(.stretched-link:focus-visible) {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+}
+
+/* The menu sits above the stretched link, so it can be clicked. */
+.goal-menu {
+  position: relative;
+  z-index: 2;
+  margin: -0.35rem -0.5rem 0 0;
+}
+
+.goal-menu:has(.show) {
+  z-index: 5; /* an open menu stays above the next card */
+}
+
+.dropdown-menu {
+  --bs-dropdown-bg: var(--lifeos-surface);
+  --bs-dropdown-border-color: var(--lifeos-border);
+  --bs-dropdown-link-color: var(--lifeos-text);
+  --bs-dropdown-link-hover-bg: var(--lifeos-primary-soft);
+  --bs-dropdown-link-hover-color: var(--lifeos-text);
+  --bs-dropdown-link-active-bg: var(--lifeos-primary);
+  --bs-dropdown-link-active-color: var(--lifeos-on-primary);
+}
+
+/* Small icon-only button (card menu, remove item) */
+.btn-icon {
+  --bs-btn-color: var(--lifeos-text-muted);
+  --bs-btn-hover-color: var(--lifeos-text);
+  --bs-btn-hover-bg: var(--lifeos-primary-soft);
+  --bs-btn-active-bg: var(--lifeos-primary-soft);
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-border-color: transparent;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  padding: 0;
+}
+
+.goal-title a:focus-visible {
+  outline: none;
+}
+
+.goal-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background-color: color-mix(in srgb, var(--goal-color) 15%, var(--lifeos-surface));
+  color: var(--goal-color);
+  font-size: 1.3rem;
+}
+
+.goal-title {
+  margin: 0 0 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.goal-title a {
+  color: var(--lifeos-text);
+  text-decoration: none;
+}
+
+.goal-category,
+.goal-values,
+.goal-deadline {
+  margin: 0;
+}
+
+.goal-category {
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.goal-percent {
+  min-width: 3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.goal-values {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.goal-deadline {
+  display: flex;
+  gap: 0.4rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Overdue: the text itself says "Overdue", color is only an extra hint. */
+.goal-deadline.is-overdue {
+  color: var(--bs-danger-text-emphasis);
+  font-weight: 600;
+}
+
+/* ---------- Goal wizard ---------- */
+.wizard-step-label {
+  margin: 0.15rem 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Focus is moved here by JS so screen readers announce the step; it is not a control. */
+.wizard-step-label:focus-visible {
+  outline: none;
+}
+
+/* Step indicator: 7 segments, done and current ones are filled */
+.wizard-steps {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.75rem 1rem 0;
+  list-style: none;
+}
+
+.wizard-steps li {
+  flex: 1;
+  height: 0.35rem;
+  border-radius: 999px;
+  background-color: var(--lifeos-border);
+}
+
+.wizard-steps li.is-done {
+  background-color: color-mix(in srgb, var(--lifeos-primary) 55%, var(--lifeos-surface));
+}
+
+.wizard-steps li.is-current {
+  background-color: var(--lifeos-primary);
+}
+
+.wizard-intro {
+  margin-bottom: 1rem;
+  color: var(--lifeos-text-muted);
+  font-size: 1rem;
+}
+
+/* Error text under a field or a group (visible text, not only a red border) */
+.field-error {
+  margin: 0.35rem 0 0;
+  color: var(--bs-form-invalid-color);
+  font-size: 0.875em;
+}
+
+.field-error:empty {
+  display: none;
+}
+
+/* Radio choices shown as cards (category, progress type) */
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.choice-card,
+.choice-icon,
+.choice-color {
+  position: relative;
+  margin: 0;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.75rem;
+  background-color: var(--lifeos-surface);
+  cursor: pointer;
+}
+
+.choice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.choice-card .bi {
+  color: var(--lifeos-primary);
+  font-size: 1.35rem;
+}
+
+.choice-name {
+  font-weight: 600;
+}
+
+.choice-hint {
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.choice-grid-icons {
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+}
+
+.choice-icon {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  font-size: 1.3rem;
+}
+
+.choice-grid-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.choice-color {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+}
+
+.swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: var(--goal-color);
+}
+
+.choice-card:hover,
+.choice-icon:hover,
+.choice-color:hover {
+  border-color: var(--lifeos-primary);
+}
+
+/* Selected: thicker border + tinted background + a check mark (not color alone) */
+.btn-check:checked + .choice-card,
+.btn-check:checked + .choice-icon,
+.btn-check:checked + .choice-color {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+}
+
+.btn-check:checked + .choice-card::after,
+.btn-check:checked + .choice-icon::after,
+.btn-check:checked + .choice-color::after {
+  content: "✓";
+  position: absolute;
+  top: -0.45rem;
+  right: -0.45rem;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.btn-check:focus-visible + .choice-card,
+.btn-check:focus-visible + .choice-icon,
+.btn-check:focus-visible + .choice-color {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+}
+
+fieldset.is-invalid .choice-card {
+  border-color: var(--bs-form-invalid-border-color);
+}
+
+/* Preview of icon + color + title */
+.goal-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--lifeos-border);
+  border-top: 4px solid var(--goal-color);
+  border-radius: 0.75rem;
+}
+
+.goal-preview .goal-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.goal-preview-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Lists you build in the wizard (checklist items, milestones) */
+.add-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.milestone-add {
+  padding-top: 2rem; /* lines the button up with the inputs below their labels */
+}
+
+.edit-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.edit-list:empty {
+  display: none;
+}
+
+.edit-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.75rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.6rem;
+  background-color: var(--lifeos-surface);
+}
+
+.edit-list .item-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.edit-list .item-date {
+  color: var(--lifeos-text-muted);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.review-list {
+  display: grid;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+
+.review-list dt {
+  color: var(--lifeos-text-muted);
+  font-weight: 500;
+}
+
+.review-list dd {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.review-list ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+@media (min-width: 576px) {
+  .review-list {
+    grid-template-columns: minmax(8rem, 1fr) 2fr;
+  }
+
+  .review-list dd {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .milestone-add {
+    padding-top: 0;
+  }
+}
+
+/* Delete dialog: the goal title stands out */
+.delete-goal-name {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid var(--bs-danger);
+  background-color: var(--lifeos-primary-soft);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Goal details page ---------- */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.panel,
+.details-hero {
+  padding: 1.25rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.9rem;
+  background-color: var(--lifeos-surface);
+}
+
+.details-hero {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+  border-top: 4px solid var(--goal-color);
+}
+
+.details-title {
+  margin: 0 0 0.15rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.details-title:focus-visible {
+  outline: none; /* focus is moved here by JS after "complete" */
+}
+
+.details-description {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.details-percent {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.details-pace {
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  background-color: var(--lifeos-primary-soft);
+}
+
+.details-pace p,
+.details-pace ul {
+  margin: 0;
+}
+
+.details-pace ul {
+  padding-left: 1.1rem;
+  font-weight: 500;
+}
+
+.panel-title {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.panel-title:focus-visible {
+  outline: none; /* focus is moved here by JS after deleting an entry */
+}
+
+.panel .edit-list {
+  margin-top: 0;
+}
+
+.edit-list li.is-done .item-text {
+  color: var(--lifeos-text-muted);
+  text-decoration: line-through;
+}
+
+.item-date.is-overdue {
+  color: var(--bs-danger-text-emphasis);
+  font-weight: 600;
+}
+
+.entry-check {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 0.45rem;
+}
+
+.history-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.4rem 0.6rem 0.85rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.6rem;
+}
+
+.history-date {
+  color: var(--lifeos-text-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Task list (js/tasks.js) ---------- */
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.panel-head .panel-title {
+  margin-bottom: 0;
+}
+
+.task-list {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  padding: 0.4rem 0.35rem 0.4rem 0.75rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.6rem;
+  background-color: var(--lifeos-surface);
+}
+
+.task-item .form-check-input {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+
+.task-title {
+  flex: 1 1 10rem;
+  min-width: 0;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.task-item.is-done .task-title {
+  color: var(--lifeos-text-muted);
+  text-decoration: line-through;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.task-date,
+.task-repeat {
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.task-repeat .bi {
+  font-size: 1rem;
+}
+
+/* The priority is written as text; the color is only an extra hint. */
+.task-priority {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.priority-high {
+  background-color: color-mix(in srgb, var(--bs-danger) 14%, var(--lifeos-surface));
+  color: var(--bs-danger-text-emphasis);
+}
+
+.priority-medium {
+  background-color: color-mix(in srgb, var(--palette-clay) 18%, var(--lifeos-surface));
+  color: var(--lifeos-text);
+}
+
+.priority-low {
+  background-color: var(--lifeos-border);
+  color: var(--lifeos-text);
+}
+
+.task-goal {
+  display: inline-grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.5rem;
+  background-color: color-mix(in srgb, var(--goal-color) 15%, var(--lifeos-surface));
+  color: var(--goal-color);
+  text-decoration: none;
+}
+
+.task-empty {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+}
+
+/* Week view: goal, move and edit buttons of a task (see "Compact task card of the week") */
+.task-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+/* ---------- Planner ---------- */
+.planner-levels {
+  margin-bottom: 1rem;
+  overflow-x: auto; /* the pills scroll sideways on very narrow phones */
+}
+
+.planner-levels .nav-pills {
+  --bs-nav-pills-link-active-bg: var(--lifeos-primary);
+  --bs-nav-pills-link-active-color: var(--lifeos-on-primary);
+  --bs-nav-link-color: var(--lifeos-text);
+  --bs-nav-link-hover-color: var(--lifeos-primary);
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  width: max-content;
+  padding: 0.25rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 999px;
+  background-color: var(--lifeos-surface);
+}
+
+.planner-levels .nav-link {
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.period-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.period-heading {
+  flex: 1;
+  min-width: 10rem;
+}
+
+.period-range {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.period-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.period-title:focus-visible {
+  outline: none; /* focus is moved here by JS after changing the period */
+}
+
+/* Year timeline: 4 quarters, the passed part is filled, "today" is a line */
+.year-summary {
+  font-weight: 500;
+}
+
+.year-bar {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  min-height: 4.5rem;
+  padding-top: 1.6rem;
+}
+
+.year-fill {
+  position: absolute;
+  top: 1.6rem;
+  bottom: 0;
+  left: 0;
+  border-radius: 0.6rem 0 0 0.6rem;
+  background-color: color-mix(in srgb, var(--lifeos-primary) 22%, transparent);
+  pointer-events: none;
+}
+
+.year-quarter {
+  display: flex;
+  flex-basis: 0;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.6rem;
+  background-color: transparent;
+  color: var(--lifeos-text);
+  text-align: start;
+}
+
+.year-quarter:hover {
+  border-color: var(--lifeos-primary);
+}
+
+.year-quarter-name {
+  font-weight: 700;
+}
+
+.year-quarter-dates {
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.year-today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--lifeos-primary);
+  pointer-events: none;
+}
+
+.year-today span {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.plan-goals,
+.habits,
+.checkpoints {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-goal,
+.habit {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.plan-goal .goal-icon,
+.habit .goal-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.05rem;
+}
+
+.plan-goal-body,
+.habit-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.plan-goal-title {
+  color: var(--lifeos-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.plan-goal .progress {
+  --bs-progress-bg: color-mix(in srgb, var(--goal-color) 15%, var(--lifeos-surface));
+  --bs-progress-bar-bg: var(--goal-color);
+  --bs-progress-height: 0.45rem;
+}
+
+.plan-goal-percent {
+  min-width: 3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.checkpoints li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.checkpoint-date {
+  min-width: 5.5rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkpoint-text {
+  flex: 1;
+  min-width: 10rem;
+  overflow-wrap: anywhere;
+}
+
+.checkpoint-text a {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.checkpoint-done {
+  color: var(--lifeos-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Month calendar (a real table: rows are weeks, columns are days) */
+.cal-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+
+.cal-table th {
+  padding-bottom: 0.25rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.3rem 0.1rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.5rem;
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text);
+}
+
+.cal-day:hover {
+  border-color: var(--lifeos-primary);
+}
+
+.cal-day.is-outside {
+  background-color: transparent;
+  color: var(--lifeos-text-muted);
+}
+
+.cal-day.is-today {
+  border: 2px solid var(--lifeos-primary);
+  font-weight: 700;
+}
+
+.cal-dot {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+}
+
+.dot-task {
+  background-color: var(--lifeos-primary);
+}
+
+/* Different shape too (a square), not only a different color */
+.dot-deadline {
+  border-radius: 1px;
+  background-color: var(--bs-danger);
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0.75rem 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.calendar-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (min-width: 768px) {
+  .cal-day {
+    min-height: 4.5rem;
+  }
+}
+
+/* Week: a list of days on phones; from 768px 7 columns (min 150px) that scroll sideways if they do not fit */
+.week-days {
+  position: relative; /* offsetLeft of a day is measured from here (scroll to today) */
+  display: grid;
+  gap: 0.75rem;
+  align-items: start; /* a column is as tall as its content */
+}
+
+.week-day {
+  padding: 0.65rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.9rem;
+  background-color: var(--lifeos-surface);
+}
+
+.week-day.is-today {
+  border-color: var(--lifeos-primary);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+}
+
+.week-day-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.week-day-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.week-day-title a {
+  color: var(--lifeos-text);
+  text-decoration: none;
+}
+
+.week-day-title a:hover {
+  text-decoration: underline;
+}
+
+.week-today-badge {
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.week-day .week-add {
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Load of the day: a thin bar under the title, the text on one line */
+.week-load {
+  margin: 0.35rem 0 0.5rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+}
+
+.week-load-bar {
+  display: block;
+  height: 3px;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background-color: var(--lifeos-border);
+}
+
+.week-load-bar span {
+  display: block;
+  height: 100%;
+  background-color: var(--lifeos-primary);
+}
+
+.load-heavy .week-load-bar span {
+  background-color: var(--bs-danger);
+}
+
+.week-load-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Empty day */
+.week-free {
+  margin: 0.3rem 0 0.5rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.week-add-empty {
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: 1px dashed var(--lifeos-border);
+  border-radius: 0.6rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.week-add-empty:hover,
+.week-add-empty:focus-visible {
+  border-color: var(--lifeos-primary);
+  color: var(--lifeos-primary-text);
+}
+
+/* Compact task card of the week: checkbox | title (2 lines) | priority dot */
+.task-item-week {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.25rem 0.35rem 0.5rem;
+}
+
+.task-item-week .task-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.task-repeat-mini {
+  margin-right: 0.25rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+}
+
+.task-dot-button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+.task-dot-button:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.priority-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+
+.dot-high { background-color: var(--bs-danger); }
+.dot-medium { background-color: var(--palette-clay); }
+.dot-low { background-color: var(--lifeos-text-muted); }
+
+.task-dot-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Goal, ‹ › and edit: small buttons over the end of the title (left of the dot),
+   shown on hover and when the keyboard focus is inside the card */
+.task-item-week .task-actions {
+  position: absolute;
+  top: 50%;
+  right: 2.4rem;
+  gap: 0;
+  padding: 0.1rem;
+  border-radius: 0.5rem;
+  background-color: var(--lifeos-surface);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.15s;
+}
+
+.task-item-week:hover .task-actions,
+.task-item-week:focus-within .task-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.task-item-week .task-actions .btn-icon,
+.task-item-week .task-actions .task-goal {
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
+  min-height: 2rem;
+}
+
+/* Touch screens have no hover: the buttons are always shown, on a second line */
+@media (hover: none) {
+  .task-item-week .task-actions {
+    position: static;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+
+.week-name-short {
+  display: none;
+}
+
+/* With a mouse the dot needs less room (on touch screens it stays 32px) */
+@media (hover: hover) {
+  .task-item-week .task-dot-button {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .task-item-week .task-actions {
+    right: 1.9rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .week-name-long {
+    display: none;
+  }
+
+  .week-name-short {
+    display: inline;
+  }
+
+  .week-day {
+    padding: 0.55rem 0.5rem;
+  }
+
+  .task-item-week {
+    gap: 0.15rem 0.3rem;
+    padding-left: 0.4rem;
+  }
+
+  .week-days {
+    grid-auto-columns: minmax(150px, 1fr);
+    grid-auto-flow: column;
+    overflow-x: auto;
+    padding-bottom: 0.5rem; /* room for the scrollbar */
+    scroll-snap-type: x mandatory;
+  }
+
+  .week-day {
+    scroll-snap-align: start;
+  }
+}
+
+/* Focus of the week: not a full-width field */
+.week-focus .add-row {
+  max-width: 40rem; /* 640px */
+}
+
+.week-focus .btn,
+#dash-focus-form .btn {
+  white-space: nowrap;
+}
+
+.habit-streak {
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.habit-done {
+  color: var(--lifeos-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Progress ---------- */
+
+/* Bar chart of completed tasks */
+.bar-chart {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 11rem;
+  margin-top: 1rem;
+}
+
+.bar-col {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+.bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 0.3rem 0.3rem 0 0;
+  background-color: var(--lifeos-primary);
+}
+
+.bar-value,
+.bar-label {
+  color: var(--lifeos-text-muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bar-label {
+  margin-top: 0.25rem;
+}
+
+/* Many bars (a month): show every second label */
+.bar-chart.is-dense .bar-col:nth-child(even) .bar-label {
+  visibility: hidden;
+}
+
+/* Heatmap of the personal year: columns = weeks, rows = Mon–Sun */
+
+.year-heatmap {
+  display: grid;
+  grid-auto-columns: 0.85rem;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 0.85rem);
+  gap: 3px;
+  width: max-content;
+}
+
+.year-heatmap .heat-cell {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.2rem;
+}
+
+.heat-cell.is-empty {
+  visibility: hidden;
+}
+
+/* Charts (Chart.js draws into the canvas) */
+.chart-box {
+  position: relative;
+  height: 14rem;
+}
+
+/* ---------- Sport page (sport.html, js/sport.js) ---------- */
+
+/* One line about today's workout in Dashboard "Today" and Planner "Today" */
+.sport-day-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-bottom: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--lifeos-border);
+  border-left: 3px solid var(--lifeos-primary);
+  border-radius: 0.6rem;
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-text);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.sport-day-line:hover {
+  color: var(--lifeos-primary-text);
+}
+
+.sport-day-line.is-done {
+  border-left-color: var(--palette-green);
+}
+
+.sport-day-line.is-rest {
+  border-left-color: var(--lifeos-border);
+  background-color: var(--lifeos-surface);
+}
+
+.sport-day-line > .bi:first-child {
+  color: var(--lifeos-primary);
+  font-size: 1.1rem;
+}
+
+/* Week plan: one card per day; the columns come from .card-grid (design system) */
+.sport-week {
+  align-items: start;
+}
+
+.sport-day.is-today {
+  border-color: var(--lifeos-primary);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+}
+
+.sport-day-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.sport-day-head .panel-title {
+  margin: 0;
+}
+
+.sport-day-name {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+}
+
+.sport-ex-list {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.sport-ex-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 0.5rem;
+}
+
+.sport-ex-meta {
+  color: var(--lifeos-text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sport-ex-note {
+  flex-basis: 100%;
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+}
+
+.sport-rest,
+.sport-none {
+  margin: 0 0 0.75rem;
+  color: var(--lifeos-text-muted);
+}
+
+.sport-day-actions,
+.sport-today-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* "Sure?" on a dangerous button after the first click */
+.btn.is-armed {
+  width: auto;
+  padding-inline: 0.6rem;
+  border-color: var(--bs-danger);
+  color: var(--bs-danger-text-emphasis);
+  font-size: 0.85rem;
+}
+
+/* Dialog: rows of exercises */
+.sport-ex-rows {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sport-ex-row {
+  padding: 0.75rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.75rem;
+}
+
+.sport-ex-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.sport-ex-note-row .btn-icon {
+  margin-top: 1.9rem; /* in line with the field, under its label */
+}
+
+/* Today */
+.sport-today-label {
+  margin: 0 0 0.25rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.sport-today-state {
+  margin: 0 0 0.75rem;
+}
+
+.sport-today-state.is-done {
+  color: var(--lifeos-primary-text);
+  font-weight: 600;
+}
+
+.sport-done-list {
+  margin: 0 0 0.75rem;
+  padding-left: 1.1rem;
+}
+
+/* Today: the inputs stay close to "Set 1" on wide screens */
+#sport-today > .panel {
+  max-width: 48rem;
+}
+
+.sport-current .progress {
+  --bs-progress-height: 0.5rem;
+  --bs-progress-bar-bg: var(--lifeos-primary);
+}
+
+.sport-progress-text {
+  margin: 0 0 1rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+}
+
+.sport-current-ex {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.sport-sets {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+/* A set: [✓] Set 1   [60] kg × [8] */
+.sport-set {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.6rem;
+}
+
+.sport-set.is-done {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.sport-set .form-check-input {
+  width: 1.4rem;
+  height: 1.4rem;
+  margin: 0;
+}
+
+.sport-set-label {
+  cursor: pointer;
+}
+
+.sport-set-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sport-set-inputs .form-control {
+  width: 4.25rem;
+  min-height: 2.25rem;
+  text-align: center;
+}
+
+.sport-set-unit {
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.sport-set .field-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.sport-finish .field-error {
+  margin: 0 0 0.5rem;
+}
+
+/* Journal */
+.sport-log {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sport-log-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sport-log-lines {
+  margin: 0.25rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.sport-log-filter {
+  max-width: 22rem;
+}
+
+@media (max-width: 767.98px) {
+  .sport-today-actions .btn {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+}
+
+/* Body form: the save button 18px under the last fields, full width on a phone, 44px high */
+.body-submit {
+  margin-top: 1.125rem;
+}
+
+.body-submit .field-error {
+  margin: 0 0 0.5rem;
+}
+
+.body-save {
+  width: 100%;
+  min-height: 44px;
+}
+
+@media (min-width: 768px) {
+  .body-save {
+    width: auto;
+  }
+}
+
+/* Body: silhouette, stages, differences */
+.body-figure {
+  margin: 0;
+  text-align: center;
+}
+
+.body-svg {
+  width: 100%;
+  max-width: 9rem;
+  height: auto;
+  fill: color-mix(in srgb, var(--lifeos-text-muted) 45%, var(--lifeos-surface));
+}
+
+.body-stages {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.body-stages li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 2.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.5rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+}
+
+.body-stages .body-svg {
+  max-width: 1.5rem;
+}
+
+.body-stages li.is-current {
+  border: 2px solid var(--lifeos-primary);
+  color: var(--lifeos-primary);
+  font-weight: 700;
+}
+
+.body-stages li.is-current .body-svg {
+  fill: var(--lifeos-primary);
+}
+
+.body-figure figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.body-disclaimer {
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* The sign (+/−) and the arrow say the direction; the color only helps */
+.body-diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.body-diff.is-down {
+  color: var(--lifeos-primary);
+}
+
+.body-diff.is-up {
+  color: var(--palette-clay);
+}
+
+.body-diff.is-same {
+  color: var(--lifeos-text-muted);
+}
+
+.body-table td {
+  white-space: nowrap;
+}
+
+/* The date of a column goes on its own line, so the table stays narrow */
+.body-table .th-date {
+  display: block;
+  color: var(--lifeos-text-muted);
+  font-weight: 400;
+}
+
+#body-compare {
+  overflow-x: auto;
+}
+
+/* ---------- Settings ---------- */
+
+.data-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.file-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-name {
+  color: var(--lifeos-text-muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+/* The hidden file input has the focus; the ring is drawn on its button */
+.file-picker input:focus-visible + label {
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Compact mode (Settings → Appearance) ---------- */
+[data-compact="true"] body {
+  font-size: 0.94rem;
+}
+
+[data-compact="true"] .panel,
+[data-compact="true"] .details-hero,
+[data-compact="true"] .goal-card,
+[data-compact="true"] .filters {
+  padding: 0.75rem 0.9rem;
+}
+
+[data-compact="true"] .row {
+  --bs-gutter-x: 0.6rem;
+  --bs-gutter-y: 0.6rem;
+}
+
+[data-compact="true"] .page-header,
+[data-compact="true"] .panel-title,
+[data-compact="true"] .panel-head {
+  margin-bottom: 0.6rem;
+}
+
+[data-compact="true"] .app-main {
+  padding-top: 1rem;
+  padding-bottom: 1.25rem;
+}
+
+/* ---------- Step 15: drag and drop, templates, year summary ---------- */
+.week-day [draggable="true"] {
+  cursor: grab;
+}
+
+.task-item.is-dragging {
+  opacity: 0.5;
+}
+
+/* The day under the dragged task: dashed border + tint (not color alone) */
+.week-day.is-drop-target {
+  outline: 3px dashed var(--lifeos-primary);
+  outline-offset: 2px;
+  background-color: var(--lifeos-primary-soft);
+}
+
+.wizard-templates {
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed var(--lifeos-border);
+  border-radius: 0.75rem;
+}
+
+.template-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.year-ended {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--lifeos-primary);
+  border-radius: 0.9rem;
+  background-color: var(--lifeos-primary-soft);
+  font-weight: 600;
+}
+
+/* "display: flex" above would beat the hidden attribute (e.g. when Bootstrap CSS did not load) */
+.year-ended[hidden] {
+  display: none;
+}
+
+.year-ended > .bi {
+  color: var(--lifeos-primary);
+  font-size: 1.5rem;
+}
+
+.year-ended p {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.summary-status {
+  color: var(--lifeos-text-muted);
+  font-weight: 500;
+}
+
+.past-years,
+.past-year-goals {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.past-years > li {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.6rem;
+}
+
+.past-years summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  cursor: pointer;
+}
+
+.past-year-goals {
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.past-year-goals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* ---------- Empty states and debug tools ---------- */
+.empty-state {
+  padding: 3rem 1rem;
+  border: 1px dashed var(--lifeos-border);
+  border-radius: 0.9rem;
+  background-color: var(--lifeos-surface);
+  text-align: center;
+}
+
+.empty-state > .bi {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--lifeos-primary);
+  font-size: 2.5rem;
+}
+
+.empty-state p {
+  max-width: 28rem;
+  margin: 0 auto 1.25rem;
+  color: var(--lifeos-text-muted);
+}
+
+.debug-tools {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 1px dashed var(--lifeos-border);
+  border-radius: 0.9rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- Mobile top bar (< 992px) ---------- */
+.mobile-bar {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--lifeos-border);
+  background-color: var(--lifeos-surface);
+}
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  --bs-offcanvas-width: 17rem;
+  --bs-offcanvas-bg: var(--lifeos-surface);
+}
+
+.sidebar .offcanvas-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Sidebar quote (js/quote-widget.js) ----------
+   Menu = column: logo and links, free space, the quote card, free space.
+   Phone (Offcanvas): the spacer pushes the card to the bottom of the menu.
+   Computer: the free space is split 2 : 1 (see the >= 992px block), so the card
+   sits between the middle and the bottom, not glued to the bottom. */
+.sidebar-spacer {
+  flex: 1 0 1.5rem;
+}
+
+.sidebar-quote {
+  padding: 0.75rem 0.75rem 0.4rem;
+  border: 1px solid var(--lifeos-border);
+  border-radius: 0.75rem;
+  background-color: var(--lifeos-bg);
+  font-size: 0.875rem;
+}
+
+.sidebar-quote-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.sidebar-quote-title {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-quote .btn-link {
+  padding: 0;
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.sidebar-quote .btn-link:hover {
+  color: var(--lifeos-primary-text);
+  text-decoration: underline;
+}
+
+.sidebar-quote-favorites {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.sidebar-quote-figure {
+  margin: 0;
+}
+
+/* Up to 4 lines; "More" shows the rest */
+.sidebar-quote-text {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-weight: 500;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.sidebar-quote-text.is-expanded {
+  display: block;
+  overflow: visible;
+}
+
+.sidebar-quote-author {
+  margin-top: 0.3rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.8rem;
+}
+
+.sidebar-quote-actions {
+  display: flex;
+  gap: 0.1rem;
+  margin: 0.2rem 0 0 -0.5rem; /* icons line up with the text */
+}
+
+.sidebar-nav .nav {
+  gap: 0.25rem;
+}
+
+.sidebar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.6rem;
+  color: var(--lifeos-text);
+  font-weight: 500;
+}
+
+.sidebar-nav .nav-link .bi {
+  font-size: 1.1rem;
+}
+
+.sidebar-nav .nav-link:hover {
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-text);
+}
+
+/* Active page: color + weight + a bar on the left (not color alone) */
+.sidebar-nav .nav-link[aria-current="page"] {
+  background-color: var(--lifeos-primary-soft);
+  box-shadow: inset 3px 0 0 var(--lifeos-primary);
+  color: var(--lifeos-primary-text);
+  font-weight: 600;
+}
+
+/* ---------- Content column ---------- */
+.app-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  padding: 1.25rem 1rem 2rem; /* phone: 16px sides; from 992px see "Content width" */
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  font-weight: 700;
+}
+
+.page-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ---------- Footer ---------- */
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1.5rem;
+  padding: 1.25rem 1rem;
+  border-top: 1px solid var(--lifeos-border);
+  color: var(--lifeos-text-muted);
+  font-size: 0.875rem;
+}
+
+/* ---------- Desktop (>= 992px): fixed sidebar ---------- */
+@media (min-width: 992px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--lifeos-sidebar-width);
+    padding: 1.25rem 0.75rem;
+    border-right: 1px solid var(--lifeos-border);
+    overflow-y: auto;
+  }
+
+  /* Bootstrap makes offcanvas-lg transparent on desktop with !important;
+     this more specific rule keeps the card-colored panel. */
+  .sidebar.offcanvas-lg {
+    background-color: var(--lifeos-surface) !important;
+  }
+
+  /* Bootstrap hides the offcanvas header on desktop; we keep it for the logo. */
+  .sidebar .offcanvas-header {
+    display: flex;
+    padding: 0 0.5rem 1.5rem;
+  }
+
+  /* Full-height column: links on top, then the quote card with free space 2 : 1 around it */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar .offcanvas-body {
+    flex-grow: 1;
+  }
+
+  .sidebar-spacer {
+    flex: 2 1 0;
+  }
+
+  .sidebar .offcanvas-body::after {
+    content: "";
+    flex: 1 1 0;
+  }
+
+  .app-content {
+    margin-left: var(--lifeos-sidebar-width);
+  }
+
+  .app-footer {
+    padding-block: 1.25rem;
+  }
+}
+
+/* A low window: the quote card would push into the menu links, so it is hidden */
+@media (min-width: 992px) and (max-height: 699.98px) {
+  .sidebar-spacer,
+  .sidebar-quote {
+    display: none;
+  }
+}
+
+/* ---------- Content width (docs/design): fluid up to 1680px, 32px side padding from 992px ---------- */
+:root {
+  --lifeos-content-max: 105rem; /* 1680px */
+}
+
+@media (min-width: 992px) {
+  .app-main {
+    max-width: var(--lifeos-content-max);
+    margin-inline: auto;
+    padding: var(--space-4) 2rem var(--space-5);
+  }
+
+  /* The border stays full width; the text lines up with the content edges. */
+  .app-footer {
+    padding-inline: max(2rem, calc((100% - var(--lifeos-content-max)) / 2 + 2rem));
+  }
+}
+
+@media (min-width: 1400px) {
+  /* Year heatmap: cells grow with the card (square, 14–20px) instead of leaving an empty third */
+  .year-heatmap {
+    grid-auto-columns: minmax(0.85rem, 1.25rem);
+    grid-template-rows: repeat(7, auto);
+    width: 100%;
+  }
+
+  .year-heatmap .heat-cell {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+}
+
+/* ---------- Required fields: "*" after the label (the input has the required attribute) ---------- */
+.required-label::after {
+  content: " *";
+  color: var(--bs-danger-text-emphasis);
+}
+
+/* ---------- Touch targets on phones: links and small buttons at least 44px high ---------- */
+@media (max-width: 767.98px) {
+  .btn-sm,
+  .brand-small,
+  .app-main a:not(.btn):not(.stretched-link):not(.dropdown-item):not(.dash-goal-more) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    justify-content: center;
+  }
+
+  /* Icon-only link to the goal of a task: a square tap area */
+  /* "Favorites" and "More" in the quote card of the phone menu */
+  .sidebar-quote .btn-link {
+    min-height: 44px;
+  }
+
+  .app-main a.task-goal {
+    justify-content: center;
+    min-width: 44px;
+  }
+
+}
+
+/* ==========================================================
+   Design system (docs/design) — shared base for every page.
+   Comes last, so these rules win over the older ones above.
+   Rule for buttons: ONE filled button (.btn-primary) per card,
+   every other button is outline (.btn-tool / .btn-outline-*).
+   ========================================================== */
+
+/* ---------- Cards ---------- */
+.panel,
+.details-hero,
+.goal-card,
+.week-day,
+.empty-state,
+.filters {
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.panel,
+.details-hero {
+  padding: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .panel,
+  .details-hero {
+    padding: var(--space-4);
+  }
+}
+
+/* Goal cards: the goal color stays in the icon tile and the bar, the card itself is calm */
+.goal-card,
+.details-hero {
+  border-top: 1px solid var(--lifeos-border);
+}
+
+/* ---------- Text sizes ---------- */
+.page-title {
+  font-size: var(--fs-page);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.panel-title {
+  font-size: var(--fs-section);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.goal-title,
+.week-day-title,
+.sport-day-name {
+  font-size: var(--fs-card);
+  font-weight: 600;
+}
+
+.form-text,
+.small,
+small,
+.history-date,
+.goal-category,
+.goal-deadline {
+  font-size: var(--fs-small);
+}
+
+/* ---------- Side menu: logo + version, links ---------- */
+@media (min-width: 992px) {
+  .sidebar.offcanvas-lg {
+    background-color: var(--lifeos-surface-2) !important;
+  }
+}
+
+.sidebar {
+  --bs-offcanvas-bg: var(--lifeos-surface-2);
+}
+
+.brand-mark {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  color: var(--lifeos-primary);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.brand-small .brand-mark {
+  width: auto;
+  height: auto;
+  font-size: 1.5rem;
+}
+
+.brand-name {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.sidebar-nav .nav-link {
+  gap: 0.85rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.sidebar-nav .nav-link .bi {
+  font-size: 1.2rem;
+}
+
+.sidebar-nav .nav-link[aria-current="page"] {
+  box-shadow: none;
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-text);
+  font-weight: 700;
+}
+
+/* ---------- Language switcher EN / RU / ҚZ + theme button (same on every page) ---------- */
+.page-tools .btn-group {
+  padding: 3px;
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-surface);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.page-tools .btn-group > .btn-tool {
+  min-width: 3rem;
+  min-height: 2.375rem;
+  border: 0;
+  border-radius: var(--radius-pill) !important; /* Bootstrap squares the inner edges of a group */
+  background: none;
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.page-tools .btn-group > .btn-tool[aria-pressed="true"] {
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+#theme-toggle {
+  min-width: 2.75rem;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--lifeos-shadow);
+}
+
+/* ---------- Buttons: filled (one per card) and outline ---------- */
+.btn {
+  border-radius: var(--radius-sm);
+}
+
+.btn-tool {
+  --bs-btn-bg: var(--lifeos-surface);
+  --bs-btn-color: var(--lifeos-text);
+  --bs-btn-border-color: var(--lifeos-border-strong);
+  --bs-btn-hover-bg: var(--lifeos-surface);
+  --bs-btn-hover-color: var(--lifeos-primary-text);
+  --bs-btn-hover-border-color: var(--lifeos-primary);
+  --bs-btn-active-bg: var(--lifeos-primary-soft);
+  --bs-btn-active-border-color: var(--lifeos-primary);
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--lifeos-primary-text);
+  --bs-btn-border-color: var(--lifeos-primary);
+  --bs-btn-hover-bg: var(--lifeos-primary-soft);
+  --bs-btn-hover-color: var(--lifeos-primary-text);
+  --bs-btn-hover-border-color: var(--lifeos-primary);
+  --bs-btn-active-bg: var(--lifeos-primary-soft);
+  --bs-btn-active-color: var(--lifeos-primary-text);
+  --bs-btn-active-border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-surface);
+  font-weight: 600;
+}
+
+/* Pill buttons: tabs, filters, quick choices */
+.btn-pill {
+  border-radius: var(--radius-pill);
+}
+
+/* ---------- Status badges (soft tone + darker text, never color alone: the text says it) ---------- */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-neutral-bg);
+  color: var(--tone-neutral-fg);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.badge-status.is-success {
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+}
+
+.badge-status.is-warning { background-color: var(--tone-warning-bg); color: var(--tone-warning-fg); }
+.badge-status.is-danger { background-color: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+.badge-status.is-accent { background-color: var(--lifeos-primary-soft); color: var(--lifeos-primary-text); }
+
+.tab-count {
+  border-radius: var(--radius-pill);
+}
+
+/* ---------- KPI card: icon tile + caption + big number ---------- */
+.kpi-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.kpi-icon {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary);
+  font-size: 1.3rem;
+}
+
+.kpi-icon.is-success { background-color: var(--tone-success-bg); color: var(--tone-success-fg); }
+.kpi-icon.is-warning { background-color: var(--tone-warning-bg); color: var(--tone-warning-fg); }
+
+.kpi-label {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.kpi-value {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+/* ---------- Section header: "Title … All goals →" ---------- */
+.panel-head,
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.section-head .panel-title,
+.section-head h2 {
+  margin: 0;
+}
+
+.section-link,
+.panel-head > a:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--lifeos-primary-text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.section-link:hover,
+.panel-head > a:not(.btn):hover {
+  color: var(--lifeos-primary-text);
+  text-decoration: underline;
+}
+
+/* ---------- Card grids: fill the width (no empty space on 1920/2560),
+   but 1–2 cards never grow wider than ~420px (empty tracks keep their width) ---------- */
+.card-grid {
+  --card-min: 17.5rem; /* 280px */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr));
+  gap: var(--space-3);
+}
+
+/* The same class on a Bootstrap .row: no gutters, the columns become grid cells */
+.row.card-grid {
+  --bs-gutter-x: 0;
+  --bs-gutter-y: 0;
+  margin: 0;
+}
+
+.row.card-grid > * {
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.card-grid.is-kpi {
+  --card-min: 13.75rem; /* 220px: small number cards */
+}
+
+/* ---------- Goals: cards and empty states (docs/design/goals.png) ---------- */
+
+/* auto-fill columns from 320px; one card is never wider than ~440px */
+.goals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-3);
+}
+
+.goals-grid .goal-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 27.5rem;
+  padding: var(--space-4);
+}
+
+/* [icon]  ...  [In progress] [⋯] */
+.goal-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.goal-card-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.goals-grid .goal-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 1.5rem;
+}
+
+.goals-grid .goal-menu {
+  margin: -0.4rem -0.6rem 0 0;
+}
+
+.goals-grid .goal-title {
+  margin: 0 0 var(--space-1);
+  font-size: 1.2rem;
+  font-weight: 700;
+  overflow-wrap: break-word;
+}
+
+.goals-grid .goal-category {
+  color: var(--lifeos-text-muted);
+}
+
+/* "300 000 / 1 000 000 ₸" ........ "30%" */
+.goal-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin-top: auto; /* cards in one row keep their bars on one line */
+}
+
+.goal-numbers .goal-values {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.goal-numbers .goal-percent {
+  min-width: 0;
+  color: var(--lifeos-primary-text);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.goals-grid .progress {
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--goal-color);
+  --bs-progress-height: 0.55rem;
+  --bs-progress-border-radius: var(--radius-pill);
+}
+
+.goals-grid .goal-deadline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-body);
+}
+
+.goals-grid .goal-deadline > .bi {
+  color: var(--lifeos-primary);
+}
+
+/* Overdue: the text itself says "overdue", the red only helps */
+.goals-grid .goal-deadline.is-overdue,
+.goals-grid .goal-deadline.is-overdue > .bi {
+  color: var(--tone-danger-fg);
+  font-weight: 600;
+}
+
+/* Empty states ("no goals yet", "nothing found", "empty archive") in the same calm style */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface-2);
+  box-shadow: none;
+  text-align: center;
+}
+
+.empty-state-icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary);
+  font-size: 1.6rem;
+}
+
+.empty-state h2 {
+  margin: 0;
+}
+
+.empty-state p {
+  max-width: 28rem;
+  margin: 0;
+  color: var(--lifeos-text-muted);
+}
+
+.empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.empty-state-actions .btn[hidden] {
+  display: none;
+}
+
+/* ---------- Goal details (goal-details.html, docs/design/goal-details.png) ---------- */
+
+/* "← All goals" above the page title */
+.page-header.gd-header {
+  align-items: flex-end;
+}
+
+.gd-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.gd-heading .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--lifeos-primary-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gd-heading .back-link:hover {
+  text-decoration: underline;
+}
+
+/* Goal card */
+.gd-hero {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.gd-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.gd-icon.goal-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius);
+  font-size: 1.9rem;
+}
+
+.gd-hero-title {
+  flex: 1 1 18rem;
+  min-width: 0;
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--lifeos-border);
+}
+
+.gd-hero .details-title {
+  margin: 0 0 var(--space-2);
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.875rem);
+  font-weight: 800;
+  overflow-wrap: break-word;
+}
+
+.gd-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.gd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.gd-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: 1.1rem;
+}
+
+.gd-actions .btn[hidden] {
+  display: none;
+}
+
+.gd-hero .details-description {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--lifeos-text-muted);
+}
+
+/* "30 %  [==========          ]" */
+.gd-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.gd-progress .details-percent {
+  min-width: 3.5rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-progress .progress {
+  flex: 1;
+  --bs-progress-height: 0.75rem;
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--goal-color);
+  --bs-progress-border-radius: var(--radius-pill);
+}
+
+/* 4 numbers in a row with dividers: Now | Target | Deadline | Pace (2 + 2 on a phone) */
+.gd-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) 0;
+  margin: 0;
+}
+
+.gd-stats > div {
+  min-width: 0;
+  padding: 0 var(--space-3);
+}
+
+.gd-stats > div:nth-child(odd) {
+  padding-left: 0;
+}
+
+.gd-stats > div:nth-child(even) {
+  border-left: 1px solid var(--lifeos-border);
+}
+
+.gd-stats dt {
+  margin-bottom: var(--space-1);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.gd-stats dd {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.gd-stats .gd-stat-note {
+  margin-top: 0.15rem;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+.gd-stats .gd-stat-note:empty {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .gd-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .gd-stats > div {
+    padding: 0 var(--space-4);
+  }
+
+  .gd-stats > div:first-child {
+    padding-left: 0;
+  }
+
+  .gd-stats > div:nth-child(odd):not(:first-child) {
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--lifeos-border);
+  }
+}
+
+/* Rows of cards */
+.gd-row {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (min-width: 992px) {
+  .gd-row-main {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+  }
+}
+
+.gd-row-bottom {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+}
+
+.gd-icon-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.2rem;
+}
+
+.gd-icon-title > .bi {
+  color: var(--lifeos-primary);
+}
+
+/* Deposit (+) | Withdrawal (−): one segmented switch, the chosen part is filled */
+.gd-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.gd-switch .btn {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0;
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text);
+  font-weight: 600;
+}
+
+.gd-switch .btn:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.gd-switch .btn-check:checked + .btn {
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+.gd-submit {
+  min-height: 2.75rem;
+}
+
+/* History: date + note | +200 000 ₸ | delete */
+.gd-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-history li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.gd-history li:first-child {
+  padding-top: 0;
+}
+
+.gd-history li:last-child {
+  border-bottom: 0;
+}
+
+.gd-history-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gd-history-date {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-history-note {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.gd-history-change {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gd-history-change.is-plus { color: var(--tone-success-fg); }
+.gd-history-change.is-minus { color: var(--tone-danger-fg); }
+
+/* Milestones: [ ] title + date | "reached 15.01.2026" / "12 days left" */
+.gd-milestones {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-milestones li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.gd-milestones li:first-child {
+  padding-top: 0;
+}
+
+.gd-milestones li:last-child {
+  border-bottom: 0;
+}
+
+.gd-milestones .form-check-input {
+  width: 1.3rem;
+  height: 1.3rem;
+  margin: 0;
+}
+
+.gd-milestone-title {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.gd-milestone-date {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+.gd-milestones li.is-done .gd-milestone-title {
+  color: var(--lifeos-text-muted);
+}
+
+.gd-milestone-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  text-align: right;
+}
+
+.gd-milestone-status.is-done { color: var(--tone-success-fg); font-weight: 600; }
+.gd-milestone-status.is-overdue { color: var(--tone-danger-fg); font-weight: 600; }
+.gd-milestone-status.is-soon { color: var(--tone-warning-fg); font-weight: 600; }
+
+/* A small dashed empty state inside a card */
+.gd-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.gd-empty[hidden] {
+  display: none;
+}
+
+.gd-notes {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+/* Phone: the actions go under the title, two equal buttons */
+@media (max-width: 575.98px) {
+  /* icon and title stay in one row */
+  .gd-hero-top {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .gd-icon.goal-icon {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.4rem;
+  }
+
+  .gd-hero-title {
+    flex: 1 1 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  /* "Deposit (+)" must fit in one line */
+  .gd-switch .btn {
+    padding-inline: var(--space-1);
+    font-size: var(--fs-small);
+    white-space: nowrap;
+  }
+
+  .gd-switch .btn .bi {
+    margin-right: var(--space-1) !important;
+  }
+
+  .gd-actions {
+    display: grid;
+    flex-basis: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-left: 0;
+  }
+
+  .gd-actions .btn {
+    justify-content: center;
+    padding-inline: var(--space-2);
+    font-size: var(--fs-small);
+  }
+}
+
+/* ---------- Planner (planner.html, docs/design/planner-month.png) ---------- */
+
+/* Levels: one segmented frame, the chosen level is filled (like the Goals tabs) */
+.planner-levels {
+  margin-bottom: var(--space-4);
+}
+
+.planner-levels .nav-pills {
+  gap: 2px;
+  padding: 3px;
+  border-color: var(--lifeos-border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.planner-levels .nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 1.25rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-body);
+}
+
+.planner-levels .nav-link:not(.active):hover {
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+}
+
+/* "←  November 2026  →  |  Current period" */
+.period-bar {
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.period-bar .period-heading {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.period-bar .period-title {
+  font-size: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.period-bar .period-range {
+  font-size: var(--fs-small);
+}
+
+.period-arrow {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+
+.period-current {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  margin-left: var(--space-3);
+  padding: 0 var(--space-3);
+  border: 0;
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.period-current:hover,
+.period-current:focus-visible {
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+}
+
+/* the thin divider between the arrows and the button */
+.period-current::before {
+  content: "";
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: calc(-1 * var(--space-3));
+  width: 1px;
+  background-color: var(--lifeos-border-strong);
+}
+
+/* Cards of all levels: the same gaps */
+.planner-stack,
+.planner-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.planner-grid > .panel,
+.planner-stack > .panel {
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+  .planner-grid:not(.is-month) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planner-grid.is-today {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+  }
+}
+
+@media (min-width: 1200px) {
+  .planner-grid.is-month {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  }
+}
+
+.planner-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  color: var(--lifeos-text-muted);
+}
+
+/* Month: a calendar with a header row; the cells are joined by thin lines */
+.month-calendar {
+  overflow: hidden;
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius-sm);
+}
+
+.month-calendar .cal-table {
+  border-spacing: 0;
+}
+
+.month-calendar .cal-table th {
+  padding: 0.6rem 0;
+  border-right: 1px solid var(--lifeos-border);
+  border-bottom: 1px solid var(--lifeos-border);
+  background-color: var(--lifeos-surface-2);
+  color: var(--lifeos-text);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.month-calendar .cal-table td {
+  padding: 0;
+  border-right: 1px solid var(--lifeos-border);
+  border-bottom: 1px solid var(--lifeos-border);
+  vertical-align: top;
+}
+
+.month-calendar .cal-table th:last-child,
+.month-calendar .cal-table td:last-child {
+  border-right: 0;
+}
+
+.month-calendar .cal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.month-calendar .cal-day {
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--space-1);
+  min-height: 3.25rem;
+  padding: 0.35rem 0.4rem;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  text-align: start;
+}
+
+.month-calendar .cal-day:hover {
+  background-color: color-mix(in srgb, var(--lifeos-primary) 6%, var(--lifeos-surface));
+}
+
+.month-calendar .cal-num {
+  font-size: var(--fs-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* days of the next / previous month: quiet */
+.month-calendar .cal-day.is-outside {
+  background-color: var(--lifeos-surface-2);
+}
+
+.month-calendar .cal-day.is-outside .cal-num {
+  color: var(--lifeos-text-muted);
+  font-weight: 400;
+}
+
+/* Saturday, Sunday: a warm color (the day names in the header say it too) */
+.month-calendar th.is-weekend,
+.month-calendar .cal-day.is-weekend:not(.is-outside) .cal-num {
+  color: var(--tone-warning-fg);
+}
+
+/* Today: a frame and a light fill */
+.month-calendar .cal-day.is-today {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  box-shadow: inset 0 0 0 2px var(--lifeos-primary);
+}
+
+.month-calendar .cal-day.is-today .cal-num {
+  color: var(--lifeos-primary-text);
+}
+
+/* Marks: dots on a phone, "● 3 tasks" lines from 768px */
+.cal-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.cal-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--lifeos-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.cal-mark .cal-dot {
+  flex-shrink: 0;
+}
+
+.cal-mark-text {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .month-calendar .cal-day {
+    min-height: 5.5rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .month-calendar .cal-num {
+    font-size: 1.1rem;
+  }
+
+  .cal-marks {
+    flex-direction: column;
+    gap: 0.2rem;
+    width: 100%;
+  }
+
+  .cal-mark-text {
+    display: inline;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.calendar-legend {
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-3);
+  font-size: var(--fs-small);
+}
+
+.cal-legend-today {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--lifeos-primary);
+  border-radius: 3px;
+  background-color: var(--lifeos-primary-soft);
+}
+
+/* "Tasks for the month": the list, the filled button at the bottom */
+.month-tasks-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.month-tasks-panel #month-tasks {
+  flex: 1;
+}
+
+.planner-add {
+  min-height: 2.75rem;
+}
+
+/* Week: the focus card, then the days */
+.week-focus {
+  margin-bottom: var(--space-3);
+}
+
+.week-focus .panel-title {
+  margin-bottom: var(--space-2);
+}
+
+.week-day-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* From 768px the columns follow their content: a free day is narrow, a busy day is wider.
+   If 7 columns do not fit, the strip scrolls sideways (js scrolls to today). */
+@media (min-width: 768px) {
+  .week-days {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .week-day {
+    flex: 1 0 11rem;
+    min-width: 0;
+    padding: var(--space-2);
+  }
+
+  .week-day.is-empty {
+    flex: 0 0 7rem;
+  }
+
+  .week-day.is-empty .week-add-empty {
+    padding-inline: var(--space-1);
+  }
+}
+
+/* Phone: the actions do not fit on one line with the arrows */
+@media (max-width: 575.98px) {
+  .planner-levels .nav-link {
+    padding: 0 0.9rem;
+  }
+
+  .period-current {
+    margin-left: 0;
+  }
+
+  .period-current::before {
+    display: none;
+  }
+}
+
+/* ---------- Tables (shared): a soft header row, thin lines, rounded frame ----------
+   .table-wrap scrolls sideways inside the card on a narrow phone (the page itself never does). */
+.table-wrap {
+  position: relative; /* hidden (position: absolute) labels inside are clipped too */
+  overflow-x: auto;
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius-sm);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.7rem var(--space-3);
+  border-bottom: 1px solid var(--lifeos-border);
+  text-align: start;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.data-table thead th {
+  background-color: var(--lifeos-surface-2);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.data-table tbody th {
+  font-weight: 600;
+}
+
+.data-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.data-table .cell-action {
+  width: 1%;
+  padding-block: 0.25rem;
+  text-align: end;
+}
+
+/* ---------- Sport (sport.html, docs/design/sport-body.png) ---------- */
+
+/* Tabs: plain words, the active one is underlined */
+.sport-tabs {
+  margin-bottom: var(--space-4);
+  overflow-x: auto; /* on a narrow phone the tabs scroll sideways */
+  border-bottom: 1px solid var(--lifeos-border-strong);
+}
+
+.sport-tab-list {
+  display: flex;
+  gap: var(--space-4);
+  width: max-content;
+  margin: 0;
+  padding: 0 var(--space-1);
+  list-style: none;
+}
+
+.sport-tab {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-2);
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px; /* the underline sits on the grey line */
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-card);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sport-tab:hover {
+  color: var(--lifeos-text);
+}
+
+.sport-tab.active {
+  border-bottom-color: var(--lifeos-primary);
+  color: var(--lifeos-primary-text);
+  font-weight: 700;
+}
+
+/* Body: 3 cards in a row from 1200px (form | comparison | illustration), 2 from 768px */
+.body-grid {
+  display: grid;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.body-grid > .panel {
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .body-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .body-grid > .panel:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1200px) {
+  .body-grid {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 4fr);
+  }
+
+  .body-grid > .panel:last-child {
+    grid-column: auto;
+  }
+}
+
+/* One hint above the fields instead of "(optional)" next to each */
+.body-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.body-inputs .form-label {
+  margin-bottom: var(--space-1);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.body-inputs .field-error:empty {
+  display: none;
+}
+
+.body-submit {
+  margin-top: var(--space-4);
+}
+
+.body-save,
+.body-grid .body-save {
+  width: 100%;
+  min-height: 2.75rem;
+}
+
+/* Comparison: "−1 kg" in a soft pill; green = towards the goal, orange = away, gray = no goal */
+.body-diff {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.body-diff.is-good { background-color: var(--tone-success-bg); color: var(--tone-success-fg); }
+.body-diff.is-bad { background-color: var(--tone-warning-bg); color: var(--tone-warning-fg); }
+.body-diff.is-neutral { background-color: var(--tone-neutral-bg); color: var(--tone-neutral-fg); }
+
+.body-table th,
+.body-table td {
+  padding-inline: var(--space-2);
+}
+
+.body-table thead .th-date {
+  display: block;
+  font-weight: 400;
+}
+
+.body-legend {
+  margin: var(--space-2) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Illustration: the big figure | "Stage 2 of 4" + 4 small figures with numbers */
+.body-figure {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  text-align: start;
+}
+
+.body-figure-main .body-svg {
+  display: block;
+  width: 100%;
+  max-width: 8rem;
+  max-height: 15rem;
+  margin-inline: auto;
+}
+
+.body-svg-base {
+  fill: color-mix(in srgb, var(--lifeos-primary) 16%, var(--lifeos-surface));
+}
+
+.body-svg-fill {
+  fill: color-mix(in srgb, var(--lifeos-primary) 70%, var(--lifeos-surface));
+}
+
+.body-stage-title {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-size: var(--fs-section);
+  font-weight: 700;
+}
+
+.body-figure .body-stages {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.body-figure .body-stages li {
+  gap: var(--space-1);
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+
+.body-figure .body-stages .body-svg {
+  width: 1.6rem;
+  max-width: none;
+  height: auto;
+  opacity: 0.55;
+}
+
+.body-figure .body-stages li.is-current .body-svg {
+  opacity: 1;
+}
+
+.body-stage-number {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.body-stages li.is-current .body-stage-number {
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+.body-figure figcaption {
+  grid-column: 1 / -1;
+  gap: var(--space-2);
+  color: var(--lifeos-text);
+  font-size: var(--fs-small);
+}
+
+.body-figure .body-disclaimer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-surface-2);
+  font-style: normal;
+}
+
+/* All measurements: the newest row is highlighted (and says "latest") */
+.body-entries-table tr.is-latest > * {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.body-entries-table tr.is-latest th {
+  font-weight: 700;
+}
+
+.body-entries-table th .badge-status {
+  margin-left: var(--space-2);
+  background-color: var(--lifeos-surface); /* stays visible on the highlighted row */
+}
+
+/* Journal: one card, workouts are rows with thin lines */
+.sport-log-top {
+  align-items: flex-end;
+}
+
+.sport-log-top .panel-title {
+  margin: 0;
+}
+
+.sport-log-filter {
+  flex: 0 1 18rem;
+  min-width: 12rem;
+}
+
+.sport-log-filter .form-label {
+  margin-bottom: var(--space-1);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.sport-log {
+  gap: 0;
+}
+
+.sport-log-item {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.sport-log-item:first-child {
+  padding-top: 0;
+}
+
+.sport-log-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* Records: the hint above the table */
+#sport-records .form-text {
+  color: var(--lifeos-text-muted);
+}
+
+/* ---------- Progress (progress.html, docs/design/progress.png) ---------- */
+
+/* Segmented switch (period type): one frame, the chosen part is filled */
+.segmented {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  overflow-x: auto;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+  box-shadow: var(--lifeos-shadow);
+}
+
+.segmented-btn {
+  min-height: 2.5rem;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--lifeos-text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.segmented-btn:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.segmented-btn[aria-pressed="true"] {
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+/* Banner: the end of the personal year is near (or it is over) */
+.prog-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--lifeos-primary) 30%, var(--lifeos-border));
+  border-radius: var(--radius);
+  background-color: var(--lifeos-primary-soft);
+}
+
+.prog-banner[hidden] {
+  display: none;
+}
+
+.prog-banner > .bi {
+  color: var(--lifeos-primary-text);
+  font-size: 1.4rem;
+}
+
+.prog-banner-text {
+  flex: 1 1 16rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Toolbar: period type | ‹ 9–15 November 2026 › | Current period … Summary of the personal year */
+.prog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.prog-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-surface);
+}
+
+.prog-nav-arrow {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--lifeos-text);
+}
+
+.prog-nav-arrow:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.prog-nav-title {
+  min-width: 11rem;
+  margin: 0;
+  font-size: var(--fs-card);
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.prog-nav-title:focus-visible {
+  outline: none; /* focus is moved here after "Current period" */
+}
+
+.prog-summary-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-left: auto;
+  padding-inline: 1.1rem;
+  font-weight: 600;
+}
+
+.prog-summary-link .bi {
+  color: var(--palette-clay);
+}
+
+.prog-compare {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* KPI: always 4 equal cards in a row from 1200px (2 from 576px), so the row fills the width */
+@media (min-width: 576px) {
+  .card-grid.prog-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .card-grid.prog-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* KPI: icon | label, number, "+2 vs the previous period" */
+.prog-kpi .kpi-icon {
+  grid-row: 1 / span 2;
+}
+
+.prog-kpi .kpi-delta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  grid-column: 2;
+  margin: var(--space-1) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Completed tasks (wide) | Progress of goals */
+.prog-row {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (min-width: 992px) {
+  .prog-row-main {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}
+
+.prog-head-value {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.prog-row .bar-chart {
+  height: 10rem;
+}
+
+.prog-row .bar {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.prog-row .bar-value {
+  color: var(--lifeos-text);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.prog-row .bar-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--fs-small);
+  line-height: 1.2;
+}
+
+.prog-row .bar-label small {
+  font-size: 0.7rem;
+}
+
+/* "Year passed 86 %" + bar + "314 of 365 days" */
+.prog-meter + .prog-meter {
+  margin-top: var(--space-4);
+}
+
+.prog-meter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.prog-meter-head strong {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.prog-meter .progress {
+  --bs-progress-height: 0.75rem;
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--lifeos-primary);
+  --bs-progress-border-radius: var(--radius-pill);
+}
+
+.prog-meter-note {
+  margin: var(--space-1) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  text-align: end;
+}
+
+/* Charts: 3 cards; in the head the latest value and its change */
+.prog-section-title {
+  margin-bottom: var(--space-3);
+}
+
+.prog-charts {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 992px) {
+  .prog-charts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.prog-chart {
+  min-width: 0;
+}
+
+.prog-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.prog-chart-title {
+  margin: 0;
+  font-size: var(--fs-card);
+  font-weight: 700;
+}
+
+.prog-chart-now {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.prog-chart .chart-box {
+  height: 10rem;
+}
+
+.chart-table {
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+/* Heatmap: weekdays | months above the weeks (the year fills the width) | "Active days N of 365" */
+.heat-layout {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 992px) {
+  .heat-layout {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .heat-side {
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--lifeos-border);
+  }
+}
+
+.heat-main {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.heat-weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  padding-top: 1.35rem; /* the height of the month row */
+  padding-bottom: 0.4rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.heat-weekdays span {
+  display: flex;
+  align-items: center;
+}
+
+.heat-scroll {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 0.4rem;
+  overflow-x: auto; /* on a phone the year scrolls inside the card */
+}
+
+.heat-months,
+.heat-scroll .year-heatmap {
+  display: grid;
+  grid-template-columns: repeat(var(--weeks), minmax(0.6rem, 1fr));
+  gap: 3px;
+  width: auto;
+}
+
+.heat-months {
+  height: 1.35rem;
+  color: var(--lifeos-text-muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.heat-scroll .year-heatmap {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, auto);
+  grid-auto-columns: auto;
+}
+
+.heat-scroll .year-heatmap .heat-cell {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 3px;
+}
+
+.heat-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.heat-side-value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.heat-side-value strong {
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-side-value span {
+  color: var(--lifeos-text-muted);
+}
+
+/* 6 tiles: icon + title + small arrow | number (+ badge) | caption */
+.prog-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .prog-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  .prog-tiles {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.panel.prog-tile {
+  position: relative; /* the arrow sits in the top right corner */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+}
+
+.prog-tile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-right: 1.75rem; /* room for the corner arrow */
+}
+
+.prog-tile-icon {
+  color: var(--lifeos-primary);
+  font-size: 1.15rem;
+}
+
+.prog-tile-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* The arrow is small but has a 32px click area */
+.prog-tile-link {
+  position: absolute;
+  top: calc(var(--space-3) - 0.25rem);
+  right: calc(var(--space-3) - 0.5rem);
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--lifeos-primary-text);
+}
+
+.prog-tile-link:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.prog-tile-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.prog-tile-note {
+  margin: auto 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+@media (max-width: 575.98px) {
+  .prog-summary-link {
+    margin-left: 0;
+  }
+
+  .prog-nav {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
+  .prog-nav-title {
+    min-width: 0;
+    white-space: normal;
+  }
+}
+
+/* ---------- Settings (settings.html, docs/design/settings.png) ---------- */
+
+/* The note on top: calm, not a warning */
+.set-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0.7rem var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+  font-weight: 500;
+}
+
+/* Profile | Appearance */
+.set-grid {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (min-width: 992px) {
+  .set-grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  }
+}
+
+.set-grid > .panel {
+  min-width: 0;
+}
+
+.set-save {
+  min-height: 2.75rem;
+  margin-top: var(--space-2);
+}
+
+.set-save-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Appearance rows: the name on the left, the choices on the right, thin lines between */
+.set-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.set-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.set-row:first-of-type {
+  padding-top: 0;
+}
+
+/* A legend is not a flex item: float keeps it on the left like the other labels */
+.set-row > legend.set-row-label {
+  float: left;
+  width: 9.5rem;
+  margin: 0;
+  padding: 0;
+  font-size: var(--fs-body);
+}
+
+.set-row-label {
+  flex: 0 0 9.5rem;
+  font-weight: 600;
+}
+
+.set-row-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+
+.set-row-control .form-check-inline {
+  min-height: 2.75rem; /* touch target */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 0;
+}
+
+.set-row-control .form-check-input {
+  float: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+}
+
+.set-row-control .form-check-input:checked {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary);
+}
+
+/* Accent colors: circles, the chosen one has a white check mark */
+.set-accents {
+  gap: var(--space-2);
+}
+
+.set-accents .choice-color {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.set-accents .swatch {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.set-accents .swatch .bi {
+  visibility: hidden;
+}
+
+.set-accents .btn-check:checked + .choice-color .swatch .bi {
+  visibility: visible;
+}
+
+.set-accents .btn-check:checked + .choice-color::after {
+  display: none; /* the old corner badge: the check mark is inside the circle now */
+}
+
+/* Compact mode: name + hint on the left, the switch on the right */
+.set-row-switch {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.set-row-switch .set-row-label {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.set-row-switch .form-text {
+  margin: 0;
+  font-weight: 400;
+}
+
+.set-switch {
+  margin: 0;
+  padding-left: 0;
+}
+
+.set-switch .form-check-input {
+  width: 2.75rem;
+  height: 1.5rem;
+  margin: 0;
+  cursor: pointer;
+}
+
+.set-switch .form-check-input:checked {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary);
+}
+
+/* All buttons of the Data rows (and "Year summary") are outline and equally wide */
+.set-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 13rem;
+  min-height: 2.75rem;
+  margin: 0;
+}
+
+/* Personal years: the line, the bar "72 of 365 days (20 %)", the button on the right */
+.set-year {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.set-year-main {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.set-year-line {
+  margin: 0 0 var(--space-2);
+}
+
+.set-year-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.set-year-bar .progress {
+  flex: 1 1 14rem;
+  --bs-progress-height: 0.75rem;
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--lifeos-primary);
+  --bs-progress-border-radius: var(--radius-pill);
+}
+
+.set-year-days {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.set-subtitle {
+  margin: var(--space-4) 0 var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--lifeos-border);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Data: icon | title + text | button */
+.set-data {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.set-data-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.set-data-row:first-child {
+  padding-top: 0;
+}
+
+.set-data-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.set-data-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+  font-size: 1.2rem;
+}
+
+.set-data-text {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.set-data-title {
+  margin: 0 0 0.15rem;
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.set-data-text p {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.set-data-text .file-name {
+  margin-top: var(--space-1);
+  color: var(--lifeos-text);
+  font-weight: 600;
+}
+
+.set-data-text .field-error:empty {
+  display: none;
+}
+
+.set-data-row .file-picker {
+  display: block;
+  margin: 0;
+}
+
+/* Reset: a red card at the very bottom */
+.set-danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--bs-danger) 45%, var(--lifeos-border));
+  border-radius: var(--radius);
+  background-color: var(--tone-danger-bg);
+}
+
+.set-danger-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--bs-danger) 60%, transparent);
+  background-color: var(--lifeos-surface);
+  color: var(--tone-danger-fg);
+  font-weight: 700;
+}
+
+.set-danger-btn:hover,
+.set-danger-btn:focus-visible {
+  background-color: var(--lifeos-surface);
+  border-color: var(--bs-danger);
+  color: var(--tone-danger-fg);
+}
+
+.set-danger-text {
+  flex: 1 1 18rem;
+  margin: 0;
+  padding-left: var(--space-4);
+  border-left: 1px solid color-mix(in srgb, var(--bs-danger) 35%, transparent);
+  color: var(--tone-danger-fg);
+  font-size: var(--fs-small);
+}
+
+/* Phone: the rows stack, the buttons take the full width */
+@media (max-width: 575.98px) {
+  .set-row > legend.set-row-label {
+    float: none;
+    width: 100%;
+  }
+
+  .set-btn,
+  .set-data-row .file-picker {
+    width: 100%;
+  }
+
+  .set-danger-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .set-danger-text {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+/* ---------- Year summary (progress.html?view=summary) ---------- */
+
+/* "← Back to progress" above the page title */
+.page-header.sum-header {
+  align-items: flex-end;
+}
+
+.page-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.page-heading .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--lifeos-primary-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.page-heading .back-link[hidden] {
+  display: none;
+}
+
+.page-heading .back-link:hover {
+  text-decoration: underline;
+}
+
+/* "Personal year 2026–2027" + "12 November 2026 – 11 November 2027" */
+.sum-title {
+  margin: 0;
+  font-size: var(--fs-section);
+  font-weight: 700;
+}
+
+.sum-title:focus-visible {
+  outline: none;
+}
+
+.sum-range {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--lifeos-text-muted);
+}
+
+/* The year is still going: an info note with a thin bar */
+.sum-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+}
+
+.sum-info[hidden] {
+  display: none;
+}
+
+.sum-info > .bi {
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+.sum-info-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sum-info-text {
+  margin: 0 0 var(--space-2);
+  font-weight: 600;
+}
+
+.sum-info .progress {
+  --bs-progress-height: 0.35rem;
+  --bs-progress-bg: color-mix(in srgb, var(--lifeos-primary) 18%, var(--lifeos-surface));
+  --bs-progress-bar-bg: var(--lifeos-primary);
+  --bs-progress-border-radius: var(--radius-pill);
+}
+
+/* 6 KPI cards: label 13px on top, the number 28px, a small unit next to it.
+   auto-fit (not auto-fill): the 6 cards always share the whole row, no empty track on 1920px */
+.sum-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sum-kpi .kpi-label {
+  font-size: var(--fs-small);
+}
+
+.sum-kpi .kpi-value {
+  font-size: 1.75rem; /* 28px */
+}
+
+.kpi-unit {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+/* Rows of cards */
+.sum-row {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sum-row > .panel {
+  min-width: 0;
+}
+
+@media (min-width: 992px) {
+  .sum-row-2 {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+  }
+
+  .sum-row-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sum-row-3 > .panel:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1400px) {
+  .sum-row-3 {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(0, 3fr);
+  }
+
+  .sum-row-3 > .panel:first-child {
+    grid-column: auto;
+  }
+}
+
+#summary-months .chart-box {
+  height: 12rem;
+}
+
+/* Friendly empty state: icon, text, button */
+.sum-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text-muted);
+  text-align: center;
+}
+
+.sum-empty p {
+  margin: 0;
+}
+
+.sum-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+  font-size: 1.25rem;
+}
+
+/* Best categories: icon | name, percent, bar, "3 goals" */
+.sum-categories {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sum-categories li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.sum-category-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+}
+
+.sum-category-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sum-category-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.sum-category-head span {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sum-category-body .progress {
+  --bs-progress-height: 0.4rem;
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--lifeos-primary);
+  --bs-progress-border-radius: var(--radius-pill);
+  margin-bottom: var(--space-1);
+}
+
+.sum-category-body small {
+  color: var(--lifeos-text-muted);
+}
+
+/* Best week */
+.sum-week-dates {
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+}
+
+.sum-week-count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.sum-week-count strong {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sum-week-count span,
+.sum-week-note {
+  color: var(--lifeos-text-muted);
+}
+
+.sum-week-note {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-small);
+}
+
+/* Achieved goals: trophy | title | category */
+.sum-achieved {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sum-achieved li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--lifeos-border);
+}
+
+.sum-achieved li:last-child {
+  border-bottom: 0;
+}
+
+.sum-trophy {
+  color: var(--palette-clay);
+}
+
+.sum-achieved-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sum-goal-cell {
+  min-width: 10rem;
+  white-space: normal !important;
+}
+
+/* Finishing the year: the text on the left, two buttons on the right */
+.sum-finish {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sum-finish-text {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.sum-finish-text .panel-title {
+  margin-bottom: var(--space-1);
+}
+
+.sum-finish .summary-status {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+}
+
+.sum-finish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sum-finish-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+}
+
+/* The dialog: what will happen */
+.sum-early {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-warning-bg);
+  color: var(--tone-warning-fg);
+  font-weight: 600;
+}
+
+.sum-early[hidden] {
+  display: none;
+}
+
+.sum-steps {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.sum-steps li {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.sum-steps .bi {
+  color: var(--lifeos-primary-text);
+}
+
+@media (max-width: 575.98px) {
+  .sum-finish-actions,
+  .sum-finish-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ---------- Phone: KPI cards of Progress and the Year summary in 2 columns ---------- */
+@media (max-width: 575.98px) {
+  .card-grid.prog-kpis,
+  .sum-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  /* A narrow card: the icon goes above the label */
+  .prog-kpi,
+  .sum-kpi {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .prog-kpi .kpi-icon,
+  .sum-kpi .kpi-icon {
+    grid-row: auto;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-bottom: var(--space-1);
+    font-size: 1.1rem;
+  }
+
+  .prog-kpi .kpi-delta {
+    grid-column: 1;
+  }
+
+  .prog-kpi .kpi-value,
+  .sum-kpi .kpi-value {
+    font-size: 1.5rem;
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

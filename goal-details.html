@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Goal Details · LifeOS</title>
+  <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
+
+  <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
+
+  <script src="./vendor/jquery/jquery-3.7.1.min.js" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
+  <script src="./data/translations-fallback.js"></script>
+  <script src="./data/quotes-fallback.js"></script>
+  <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/tasks.js" defer></script>
+  <script src="./js/goal-details.js" defer></script>
+</head>
+<body>
+  <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
+
+  <!-- ===== Shared layout: identical on all 7 pages ===== -->
+
+  <!-- Phone / tablet (< 992px): top bar with the menu button -->
+  <header class="mobile-bar d-lg-none">
+    <button class="btn btn-tool" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" data-i18n-aria-label="layout.openMenu" aria-label="Open menu">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <a class="brand brand-small" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+      <span class="brand-name" data-i18n="app.name">LifeOS</span>
+    </a>
+  </header>
+
+  <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
+  <aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-labelledby="sidebar-title">
+    <div class="offcanvas-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+        <span class="brand-text">
+          <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+        </span>
+      </a>
+      <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="sidebar-nav" data-i18n-aria-label="layout.mainNav" aria-label="Main navigation">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span data-i18n="page.dashboard">Dashboard</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="goals.html"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="page.goals">Goals</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="planner.html"><i class="bi bi-calendar3" aria-hidden="true"></i><span data-i18n="page.planner">Planner</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="progress.html"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="page.progress">Progress</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="sport.html"><i class="bi bi-heart-pulse" aria-hidden="true"></i><span data-i18n="page.sport">Sport</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html"><i class="bi bi-gear" aria-hidden="true"></i><span data-i18n="page.settings">Settings</span></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="app-content">
+    <main class="app-main" id="main-content" tabindex="-1">
+      <header class="page-header gd-header">
+        <div class="gd-heading">
+          <a class="back-link" href="goals.html"><i class="bi bi-arrow-left" aria-hidden="true"></i><span data-i18n="details.back">All goals</span></a>
+          <h1 class="page-title" data-i18n="page.goalDetails">Goal Details</h1>
+        </div>
+        <div class="page-tools">
+          <div class="btn-group" role="group" data-i18n-aria-label="layout.language" aria-label="Interface language">
+            <button type="button" class="btn btn-tool" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en.short">EN</button>
+            <button type="button" class="btn btn-tool" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru.short">RU</button>
+            <button type="button" class="btn btn-tool" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk.short">ҚZ</button>
+          </div>
+          <button type="button" class="btn btn-tool" id="theme-toggle" data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+            <i class="bi bi-moon-stars" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== Page content starts here ===== -->
+
+      <!-- No ?id= in the address, or no goal with this id -->
+      <div class="empty-state" id="details-missing" hidden>
+        <span class="empty-state-icon" aria-hidden="true"><i class="bi bi-search"></i></span>
+        <h2 class="h5" data-i18n="details.missing.title">Goal not found</h2>
+        <p id="details-missing-text"></p>
+        <a class="btn btn-primary" href="goals.html" data-i18n="details.missing.button">Back to goals</a>
+      </div>
+
+      <div id="details-content" hidden>
+        <!-- Goal card: icon | title + category and status badges | Edit, Mark as completed;
+             then the % bar and 4 numbers: Now, Target, Deadline, Pace -->
+        <section class="panel gd-hero" id="details-hero" data-color="teal" aria-labelledby="details-title">
+          <div class="gd-hero-top">
+            <span class="goal-icon gd-icon" aria-hidden="true"><i class="bi bi-stars" id="details-icon"></i></span>
+            <div class="gd-hero-title">
+              <h2 class="details-title" id="details-title"></h2>
+              <div class="gd-badges">
+                <span class="badge-status" id="details-category"></span>
+                <span class="badge-status" id="details-badge"></span>
+              </div>
+            </div>
+            <div class="gd-actions">
+              <a class="btn btn-tool" id="details-edit" href="goals.html">
+                <i class="bi bi-pencil me-2" aria-hidden="true"></i><span data-i18n="goal.action.edit">Edit</span>
+              </a>
+              <!-- Outline below 100 %, filled at 100 % (js/goal-details.js) -->
+              <button class="btn btn-tool" type="button" id="details-complete">
+                <i class="bi bi-check2 me-2" aria-hidden="true"></i><span data-i18n="goal.action.complete">Mark as completed</span>
+              </button>
+            </div>
+          </div>
+          <p class="details-description" id="details-description" hidden></p>
+
+          <div class="gd-progress">
+            <span class="details-percent" id="details-percent">0%</span>
+            <div class="progress" id="details-progress" role="progressbar" aria-labelledby="details-title"
+                 aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar" id="details-progress-bar"></div>
+            </div>
+          </div>
+
+          <dl class="gd-stats">
+            <div>
+              <dt data-i18n="details.current">Current</dt>
+              <dd id="details-current"></dd>
+            </div>
+            <div>
+              <dt data-i18n="details.target">Target</dt>
+              <dd id="details-target"></dd>
+            </div>
+            <div>
+              <dt data-i18n="wizard.values.deadline">Deadline</dt>
+              <dd id="details-deadline"></dd>
+              <dd class="gd-stat-note" id="details-days"></dd>
+            </div>
+            <div>
+              <dt data-i18n="details.pace.title">Pace</dt>
+              <dd id="details-pace"></dd>
+              <dd class="gd-stat-note" id="details-pace-note"></dd>
+            </div>
+          </dl>
+        </section>
+
+        <!-- Row 1: the entry form | the history -->
+        <div class="gd-row gd-row-main">
+          <!-- Add an entry: the fields depend on the progress type (data-entry-field) -->
+          <section class="panel" aria-labelledby="entry-title">
+            <h2 class="panel-title" id="entry-title" data-i18n="details.entry.title">Add an entry</h2>
+            <p class="text-secondary mb-0" id="entry-checklist-hint" data-i18n="details.entry.checklistHint" hidden>Progress is counted from the checklist.</p>
+            <form id="entry-form" novalidate>
+              <div class="row g-3">
+                <fieldset class="col-12" data-entry-field="sign">
+                  <legend class="form-label fs-6" data-i18n="details.entry.operation">Operation</legend>
+                  <div class="gd-switch">
+                    <input class="btn-check" type="radio" name="entry-sign" id="entry-sign-plus" value="1" checked>
+                    <label class="btn" for="entry-sign-plus"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="details.entry.deposit">Deposit (+)</span></label>
+                    <input class="btn-check" type="radio" name="entry-sign" id="entry-sign-minus" value="-1">
+                    <label class="btn" for="entry-sign-minus"><i class="bi bi-dash-lg me-2" aria-hidden="true"></i><span data-i18n="details.entry.withdraw">Withdrawal (−)</span></label>
+                  </div>
+                </fieldset>
+
+                <div class="col-sm-6" data-entry-field="amount">
+                  <label class="form-label" for="entry-amount" id="entry-amount-label" data-i18n="details.entry.amount">Amount</label>
+                  <div class="input-group">
+                    <input class="form-control" type="text" id="entry-amount" inputmode="decimal" autocomplete="off" data-group-digits
+                           data-i18n-placeholder="details.entry.amountPlaceholder" aria-describedby="entry-amount-hint">
+                    <span class="input-group-text entry-unit"></span>
+                  </div>
+                  <div class="form-text" id="entry-amount-hint" data-i18n="details.entry.amountHint">Only the change, not the new total.</div>
+                  <p class="field-error" id="entry-amount-error"></p>
+                </div>
+
+                <div class="col-sm-6" data-entry-field="pages">
+                  <label class="form-label" for="entry-pages" data-i18n="details.entry.pages">Pages read</label>
+                  <div class="input-group">
+                    <input class="form-control" type="text" id="entry-pages" inputmode="numeric" autocomplete="off" data-group-digits>
+                    <span class="input-group-text" data-i18n="details.entry.pagesUnit">pages</span>
+                  </div>
+                  <p class="field-error" id="entry-pages-error"></p>
+                </div>
+                <div class="col-sm-6 entry-check" data-entry-field="pages">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="entry-finished">
+                    <label class="form-check-label" for="entry-finished" data-i18n="details.entry.finished">I finished a book</label>
+                  </div>
+                </div>
+
+                <div class="col-sm-6" data-entry-field="value">
+                  <label class="form-label" for="entry-value" data-i18n="details.entry.newValue">New value</label>
+                  <div class="input-group">
+                    <input class="form-control" type="text" id="entry-value" inputmode="decimal" autocomplete="off" data-group-digits>
+                    <span class="input-group-text entry-unit"></span>
+                  </div>
+                  <p class="field-error" id="entry-value-error"></p>
+                </div>
+
+                <div class="col-sm-6" data-entry-field="level">
+                  <label class="form-label" for="entry-level" data-i18n="details.entry.newLevel">New level</label>
+                  <select class="form-select" id="entry-level"></select>
+                </div>
+
+                <div class="col-sm-6">
+                  <label class="form-label" for="entry-date" data-i18n="details.entry.date">Date</label>
+                  <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="entry-date">
+                  <p class="field-error" id="entry-date-error"></p>
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label" for="entry-note" data-i18n="details.entry.noteOptional">Note (optional)</label>
+                  <input class="form-control" type="text" id="entry-note" maxlength="200" autocomplete="off"
+                         data-i18n-placeholder="details.entry.notePlaceholder" aria-describedby="entry-note-hint">
+                  <div class="visually-hidden" id="entry-note-hint" data-i18n="details.entry.noteHint">Optional, up to 200 characters.</div>
+                  <p class="field-error" id="entry-note-error"></p>
+                </div>
+
+                <div class="col-12">
+                  <button class="btn btn-primary w-100 gd-submit" type="submit">
+                    <i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span id="entry-submit-label">Add entry</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel" aria-labelledby="history-title">
+            <h2 class="panel-title" id="history-title" tabindex="-1" data-i18n="details.history.titleLong">History of entries</h2>
+            <div class="gd-empty" id="history-empty">
+              <i class="bi bi-clock-history" aria-hidden="true"></i>
+              <span data-i18n="details.history.empty">No entries yet.</span>
+            </div>
+            <ul class="gd-history" id="history-list"></ul>
+          </section>
+        </div>
+
+        <!-- Row 2: milestones, checklist (only for a checklist goal), notes, related tasks -->
+        <div class="gd-row gd-row-bottom">
+          <section class="panel" aria-labelledby="milestones-title">
+            <h2 class="panel-title gd-icon-title" id="milestones-title"><i class="bi bi-signpost-split" aria-hidden="true"></i><span data-i18n="wizard.step.6">Milestones</span></h2>
+            <div class="gd-empty" id="milestones-empty">
+              <i class="bi bi-flag" aria-hidden="true"></i>
+              <span data-i18n="wizard.milestones.empty">No milestones yet.</span>
+            </div>
+            <ul class="gd-milestones" id="milestone-list"></ul>
+          </section>
+
+          <section class="panel" id="checklist-panel" aria-labelledby="checklist-title" hidden>
+            <h2 class="panel-title gd-icon-title" id="checklist-title"><i class="bi bi-list-check" aria-hidden="true"></i><span data-i18n="progressType.checklist">Checklist</span></h2>
+            <ul class="edit-list" id="checklist-list"></ul>
+          </section>
+
+          <section class="panel" aria-labelledby="notes-title">
+            <h2 class="panel-title gd-icon-title" id="notes-title"><i class="bi bi-file-text" aria-hidden="true"></i><span data-i18n="details.notes.title">Notes</span></h2>
+            <label class="visually-hidden" for="goal-notes" data-i18n="details.notes.label">Your notes about this goal</label>
+            <textarea class="form-control gd-notes" id="goal-notes" rows="5" maxlength="2000" data-i18n-placeholder="details.notes.placeholder"></textarea>
+            <button class="btn btn-tool mt-2" type="button" id="notes-save">
+              <i class="bi bi-save me-2" aria-hidden="true"></i><span data-i18n="details.notes.save">Save notes</span>
+            </button>
+          </section>
+
+          <!-- Tasks linked to this goal (list and dialog: js/tasks.js) -->
+          <section class="panel" aria-labelledby="tasks-title">
+            <h2 class="panel-title gd-icon-title" id="tasks-title"><i class="bi bi-check2-square" aria-hidden="true"></i><span data-i18n="details.tasks.title">Related tasks</span></h2>
+            <div id="goal-tasks"></div>
+            <button class="btn btn-outline-primary w-100 mt-3" type="button" id="goal-task-add">
+              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="task.form.create">Add task</span>
+            </button>
+          </section>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="app-footer">
+      <p class="mb-0">
+        © <span id="footer-year">2026</span> <span data-i18n="app.name">LifeOS</span> ·
+        <span data-i18n="layout.author">Vilgelm Feller</span>
+      </p>
+      <p class="mb-0">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        <span data-i18n="layout.storageNote">Your data is stored only in this browser.</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- First run: shown by app.js only when there is no lifeos_profile.
+       Static backdrop + keyboard="false": it cannot be closed without creating a profile. -->
+  <div class="modal fade" id="first-run-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="first-run-title" aria-describedby="first-run-intro">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <form class="modal-content" id="first-run-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-4" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
+          <p id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
+          <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
+            <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
+            <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+            <p class="field-error" id="first-run-name-error"></p>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+            <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
+            <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
+            <p class="field-error" id="first-run-start-error"></p>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
+              <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
+              <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
+              <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
+              <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
+              <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
+            </div>
+          </fieldset>
+
+          <p class="storage-note mb-0">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span data-i18n="firstRun.storageNote">LifeOS has no account or server. Your data is stored only in this browser on this device: clearing browser data deletes it.</span>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- ===== End of shared layout ===== -->
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Settings · LifeOS</title>
+  <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
+
+  <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./css/style.css">
+  <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
+
+  <script src="./vendor/jquery/jquery-3.7.1.min.js" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js" defer></script>
+  <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
+  <script src="./data/translations-fallback.js"></script>
+  <script src="./data/quotes-fallback.js"></script>
+  <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/settings.js" defer></script>
+</head>
+<body>
+  <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
+
+  <!-- ===== Shared layout: identical on all 7 pages ===== -->
+
+  <!-- Phone / tablet (< 992px): top bar with the menu button -->
+  <header class="mobile-bar d-lg-none">
+    <button class="btn btn-tool" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" data-i18n-aria-label="layout.openMenu" aria-label="Open menu">
+      <i class="bi bi-list" aria-hidden="true"></i>
+    </button>
+    <a class="brand brand-small" href="index.html">
+      <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+      <span class="brand-name" data-i18n="app.name">LifeOS</span>
+    </a>
+  </header>
+
+  <!-- Sidebar: Offcanvas below 992px, fixed panel from 992px (Bootstrap "offcanvas-lg") -->
+  <aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-labelledby="sidebar-title">
+    <div class="offcanvas-header">
+      <a class="brand" href="index.html">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+        <span class="brand-text">
+          <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.0</span>
+        </span>
+      </a>
+      <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
+    </div>
+    <div class="offcanvas-body">
+      <nav class="sidebar-nav" data-i18n-aria-label="layout.mainNav" aria-label="Main navigation">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html"><i class="bi bi-grid-1x2" aria-hidden="true"></i><span data-i18n="page.dashboard">Dashboard</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="goals.html"><i class="bi bi-bullseye" aria-hidden="true"></i><span data-i18n="page.goals">Goals</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="planner.html"><i class="bi bi-calendar3" aria-hidden="true"></i><span data-i18n="page.planner">Planner</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="progress.html"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="page.progress">Progress</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="sport.html"><i class="bi bi-heart-pulse" aria-hidden="true"></i><span data-i18n="page.sport">Sport</span></a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="settings.html"><i class="bi bi-gear" aria-hidden="true"></i><span data-i18n="page.settings">Settings</span></a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+
+  <div class="app-content">
+    <main class="app-main" id="main-content" tabindex="-1">
+      <header class="page-header">
+        <h1 class="page-title" data-i18n="page.settings">Settings</h1>
+        <div class="page-tools">
+          <div class="btn-group" role="group" data-i18n-aria-label="layout.language" aria-label="Interface language">
+            <button type="button" class="btn btn-tool" data-lang="en" lang="en" aria-pressed="true" data-i18n="language.en.short">EN</button>
+            <button type="button" class="btn btn-tool" data-lang="ru" lang="ru" aria-pressed="false" data-i18n="language.ru.short">RU</button>
+            <button type="button" class="btn btn-tool" data-lang="kk" lang="kk" aria-pressed="false" data-i18n="language.kk.short">ҚZ</button>
+          </div>
+          <button type="button" class="btn btn-tool" id="theme-toggle" data-i18n-aria-label="layout.themeToDark" aria-label="Switch to dark theme">
+            <i class="bi bi-moon-stars" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ===== Page content starts here ===== -->
+
+      <!-- A calm note on top: there is no server -->
+      <p class="set-note" role="note">
+        <i class="bi bi-info-circle" aria-hidden="true"></i><span data-i18n="layout.storageNote">Your data is stored only in this browser.</span>
+      </p>
+
+      <div class="set-grid">
+        <!-- Profile -->
+        <section class="panel" aria-labelledby="profile-title">
+          <h2 class="panel-title" id="profile-title" data-i18n="settings.profile.title">Profile</h2>
+          <form id="profile-form" novalidate>
+            <div class="mb-3">
+              <label class="form-label" for="settings-name" data-i18n="firstRun.nameLabel">Your name</label>
+              <input class="form-control" type="text" id="settings-name" autocomplete="given-name" aria-describedby="settings-name-hint">
+              <div class="form-text" id="settings-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+              <p class="field-error" id="settings-name-error"></p>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="settings-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+              <input class="form-control" type="text" id="settings-start" inputmode="numeric" maxlength="10" autocomplete="off"
+                     data-date-field data-i18n-placeholder="date.placeholder" aria-describedby="settings-start-hint">
+              <div class="form-text" id="settings-start-hint" data-i18n="settings.profile.startHint">Quarters and the personal year in the Planner and Progress are counted from this date.</div>
+              <p class="field-error" id="settings-start-error"></p>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 set-save" data-i18n="settings.profile.save">Save profile</button>
+            <p class="set-save-note">
+              <i class="bi bi-check2-circle" aria-hidden="true"></i><span data-i18n="settings.profile.autoNote">Language and theme are saved automatically.</span>
+            </p>
+          </form>
+        </section>
+
+        <!-- Appearance: every change is applied and saved at once. Rows: name | choices -->
+        <section class="panel" aria-labelledby="appearance-title">
+          <h2 class="panel-title" id="appearance-title" data-i18n="settings.appearance.title">Appearance</h2>
+          <fieldset class="set-row">
+            <legend class="set-row-label" data-i18n="firstRun.languageLabel">Language</legend>
+            <div class="set-row-control">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="settings-language" id="settings-lang-en" value="en">
+                <label class="form-check-label" for="settings-lang-en" lang="en" data-i18n="language.en">English</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="settings-language" id="settings-lang-ru" value="ru">
+                <label class="form-check-label" for="settings-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="settings-language" id="settings-lang-kk" value="kk">
+                <label class="form-check-label" for="settings-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset class="set-row">
+            <legend class="set-row-label" data-i18n="firstRun.themeLabel">Theme</legend>
+            <div class="set-row-control">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="settings-theme" id="settings-theme-light" value="light">
+                <label class="form-check-label" for="settings-theme-light" data-i18n="theme.light">Light</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="settings-theme" id="settings-theme-dark" value="dark">
+                <label class="form-check-label" for="settings-theme-dark" data-i18n="theme.dark">Dark</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="settings-theme" id="settings-theme-system" value="system">
+                <label class="form-check-label" for="settings-theme-system" data-i18n="theme.system">As in the system</label>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset class="set-row">
+            <legend class="set-row-label" data-i18n="settings.appearance.accent">Accent color</legend>
+            <div class="set-row-control set-accents" id="settings-accents"></div>
+          </fieldset>
+          <div class="set-row set-row-switch">
+            <div class="set-row-label">
+              <label for="settings-compact" data-i18n="settings.appearance.compact">Compact mode</label>
+              <span class="form-text" id="settings-compact-hint" data-i18n="settings.appearance.compactHint">Smaller spaces: more fits on the screen.</span>
+            </div>
+            <div class="form-check form-switch set-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="settings-compact" aria-describedby="settings-compact-hint">
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Personal years: the current year (dates and a bar) + the archive of past years -->
+      <section class="panel mb-3" aria-labelledby="years-title">
+        <h2 class="panel-title" id="years-title" data-i18n="settings.years.title">Personal years</h2>
+        <div class="set-year">
+          <div class="set-year-main" id="current-year"></div>
+          <a class="btn btn-outline-primary set-btn" href="progress.html?view=summary">
+            <i class="bi bi-trophy me-2" aria-hidden="true"></i><span data-i18n="settings.years.summary">Year summary</span>
+          </a>
+        </div>
+        <h3 class="set-subtitle" data-i18n="settings.years.past">Past years</h3>
+        <div id="past-years"></div>
+      </section>
+
+      <!-- Data: icon | title + text | one outline button of the same width -->
+      <section class="panel mb-3" aria-labelledby="data-title">
+        <h2 class="panel-title" id="data-title" data-i18n="settings.data.title">Data</h2>
+        <ul class="set-data">
+          <li class="set-data-row">
+            <span class="set-data-icon" aria-hidden="true"><i class="bi bi-download"></i></span>
+            <div class="set-data-text">
+              <h3 class="set-data-title" data-i18n="settings.export.title">Backup copy</h3>
+              <p data-i18n="settings.export.text">Everything in one JSON file: profile, goals, tasks, plans, results and settings.</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary set-btn" id="export-json">
+              <i class="bi bi-download me-2" aria-hidden="true"></i><span data-i18n="settings.export.button">Export JSON</span>
+            </button>
+          </li>
+          <li class="set-data-row">
+            <span class="set-data-icon" aria-hidden="true"><i class="bi bi-upload"></i></span>
+            <div class="set-data-text">
+              <h3 class="set-data-title" id="import-file-title" data-i18n="settings.import.title">Restore from a file</h3>
+              <p data-i18n="settings.import.text">The file is checked first. Your current data changes only after you confirm.</p>
+              <p class="file-name" id="import-file-name" data-i18n="settings.import.noFile">No file chosen</p>
+              <p class="field-error" id="import-file-error"></p>
+            </div>
+            <!-- The real file input is hidden: the browser would show its own button text in the browser language.
+                 It still gets keyboard focus; the styled label opens it. -->
+            <div class="file-picker">
+              <input class="visually-hidden" type="file" id="import-file" accept=".json,application/json" aria-labelledby="import-file-title import-file-choose">
+              <label class="btn btn-outline-primary set-btn" for="import-file" id="import-file-choose">
+                <i class="bi bi-upload me-2" aria-hidden="true"></i><span data-i18n="settings.import.chooseJson">Choose file (.json)</span>
+              </label>
+            </div>
+          </li>
+          <li class="set-data-row">
+            <span class="set-data-icon" aria-hidden="true"><i class="bi bi-file-earmark-text"></i></span>
+            <div class="set-data-text">
+              <h3 class="set-data-title" data-i18n="settings.report.title">Yearly report</h3>
+              <p data-i18n="settings.report.text">A table for Excel: goals with start, current and target values, percent and tasks.</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary set-btn" id="export-csv">
+              <i class="bi bi-filetype-csv me-2" aria-hidden="true"></i><span data-i18n="settings.report.button">Download CSV</span>
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Reset: a red card at the very bottom; the dialog asks to type the name -->
+      <section class="set-danger" aria-labelledby="reset-title">
+        <h2 class="visually-hidden" id="reset-title" data-i18n="settings.reset.title">Reset profile</h2>
+        <button type="button" class="btn set-danger-btn" id="reset-open">
+          <i class="bi bi-trash me-2" aria-hidden="true"></i><span data-i18n="settings.reset.button">Reset profile…</span>
+        </button>
+        <p class="set-danger-text" data-i18n="settings.reset.text">Deletes all LifeOS data from this browser. This cannot be undone.</p>
+      </section>
+
+    </main>
+
+    <footer class="app-footer">
+      <p class="mb-0">
+        © <span id="footer-year">2026</span> <span data-i18n="app.name">LifeOS</span> ·
+        <span data-i18n="layout.author">Vilgelm Feller</span>
+      </p>
+      <p class="mb-0">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        <span data-i18n="layout.storageNote">Your data is stored only in this browser.</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- First run: shown by app.js only when there is no lifeos_profile.
+       Static backdrop + keyboard="false": it cannot be closed without creating a profile. -->
+  <div class="modal fade" id="first-run-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="first-run-title" aria-describedby="first-run-intro">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <form class="modal-content" id="first-run-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-4" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
+          <p id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
+          <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
+            <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
+            <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+            <p class="field-error" id="first-run-name-error"></p>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+            <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
+            <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
+            <p class="field-error" id="first-run-start-error"></p>
+          </div>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
+              <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
+              <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+              <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
+              <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="mb-3">
+            <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
+            <div class="choice-group">
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
+              <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
+              <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
+              <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
+            </div>
+          </fieldset>
+
+          <p class="storage-note mb-0">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span data-i18n="firstRun.storageNote">LifeOS has no account or server. Your data is stored only in this browser on this device: clearing browser data deletes it.</span>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- ===== End of shared layout ===== -->
+
+  <!-- Import: confirmation with a preview of the file -->
+  <div class="modal fade" id="import-modal" tabindex="-1" aria-labelledby="import-modal-title">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="import-modal-title" data-i18n="settings.import.confirmTitle">Replace your data?</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="fw-semibold" id="import-summary"></p>
+          <!-- Broken records (a wrong date, no id) are not imported -->
+          <p class="text-warning-emphasis small" id="import-skipped" hidden></p>
+          <p class="mb-0" data-i18n="settings.import.confirmText">All current LifeOS data in this browser will be replaced by the data from the file.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-tool" id="import-cancel" data-bs-dismiss="modal" data-i18n="delete.cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="import-confirm" data-i18n="settings.import.confirm">Replace data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset: the user types their name to confirm -->
+  <div class="modal fade" id="reset-modal" tabindex="-1" aria-labelledby="reset-modal-title">
+    <div class="modal-dialog modal-dialog-centered">
+      <form class="modal-content" id="reset-form" novalidate>
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="reset-modal-title" data-i18n="settings.reset.confirmTitle">Delete all data?</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p data-i18n="settings.reset.confirmText">Profile, goals, tasks, plans, results and settings will be deleted from this browser.</p>
+          <div class="storage-note mb-3">
+            <i class="bi bi-lightbulb" aria-hidden="true"></i>
+            <span>
+              <span data-i18n="settings.reset.advice">First make a backup copy — then you can restore everything.</span>
+              <button type="button" class="btn btn-link p-0 align-baseline" id="reset-export" data-i18n="settings.export.button">Export JSON</button>
+            </span>
+          </div>
+          <label class="form-label" for="reset-name" id="reset-name-label"></label>
+          <input class="form-control" type="text" id="reset-name" autocomplete="off">
+          <p class="field-error" id="reset-name-error"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-tool" id="reset-cancel" data-bs-dismiss="modal" data-i18n="delete.cancel">Cancel</button>
+          <button type="submit" class="btn btn-danger" id="reset-confirm" data-i18n="settings.reset.confirm">Delete everything</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
