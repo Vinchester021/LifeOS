@@ -19,6 +19,7 @@
   <script src="./data/quotes-fallback.js"></script>
   <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
   <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js" defer></script> <!-- example data, first steps, tour, help tips -->
   <script src="./js/goal-wizard.js" defer></script>
   <script src="./js/goals.js" defer></script>
 </head>
@@ -62,7 +63,7 @@
         <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.2</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.3.0</span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
@@ -274,6 +275,8 @@
           </p>
         </div>
         <div class="modal-footer">
+          <!-- Fills the example data and shows the banner "This is example data" (js/onboarding.js) -->
+          <button class="btn btn-tool" type="button" data-demo-start data-i18n="onboarding.demo.start">See an example first</button>
           <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
         </div>
       </form>
@@ -283,196 +286,7 @@
 
   <!-- ===== Goals page dialogs ===== -->
 
-  <!-- Goal wizard: 7 steps, used for creating and editing (js/goal-wizard.js).
-       Choice lists (categories, icons, colors, types) are filled by JS from the lists in app.js. -->
-  <div class="modal fade" id="goal-wizard" tabindex="-1" data-bs-backdrop="static" aria-labelledby="wizard-title">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
-      <form class="modal-content" id="wizard-form" novalidate>
-        <div class="modal-header">
-          <div>
-            <h2 class="modal-title fs-5" id="wizard-title">New goal</h2>
-            <h3 class="wizard-step-label" id="wizard-step-label" tabindex="-1"></h3>
-          </div>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close" aria-label="Close"></button>
-        </div>
-        <ol class="wizard-steps" aria-hidden="true">
-          <li></li><li></li><li></li><li></li><li></li><li></li><li></li>
-        </ol>
-
-        <div class="modal-body">
-          <!-- Step 1: category -->
-          <section class="wizard-step" data-step="1">
-            <!-- Templates (create mode only): fill the fields, everything can be changed later -->
-            <div class="wizard-templates" id="wiz-templates">
-              <h4 class="h6 mb-1" data-i18n="wizard.templates.title">Start from a template (optional)</h4>
-              <p class="form-text mt-0" data-i18n="wizard.templates.hint">A template fills in the fields; you can change everything on the next steps.</p>
-              <div class="template-list" id="wiz-template-list"></div>
-            </div>
-            <fieldset id="wiz-category">
-              <legend class="wizard-intro" data-i18n="wizard.category.intro">What area of life is this goal about?</legend>
-              <div class="choice-grid" id="wiz-category-list"></div>
-            </fieldset>
-            <p class="field-error" id="wiz-category-error"></p>
-          </section>
-
-          <!-- Step 2: title and description -->
-          <section class="wizard-step" data-step="2" hidden>
-            <div class="mb-3">
-              <label class="form-label" for="wiz-title" data-i18n="wizard.title.label">Goal title</label>
-              <input class="form-control" type="text" id="wiz-title" autocomplete="off" aria-describedby="wiz-title-hint">
-              <div class="form-text" id="wiz-title-hint" data-i18n="wizard.title.hint">From 2 to 80 characters.</div>
-              <p class="field-error" id="wiz-title-error"></p>
-            </div>
-            <div>
-              <label class="form-label" for="wiz-description" data-i18n="wizard.description.label">Description</label>
-              <textarea class="form-control" id="wiz-description" rows="3" aria-describedby="wiz-description-hint"></textarea>
-              <div class="form-text" id="wiz-description-hint" data-i18n="wizard.description.hint">Optional, up to 300 characters.</div>
-              <p class="field-error" id="wiz-description-error"></p>
-            </div>
-          </section>
-
-          <!-- Step 3: icon and color -->
-          <section class="wizard-step" data-step="3" hidden>
-            <div class="goal-preview mb-3" id="wiz-preview" data-color="teal">
-              <span class="goal-icon" aria-hidden="true"><i class="bi bi-stars"></i></span>
-              <span class="goal-preview-title" id="wiz-preview-title"></span>
-            </div>
-            <fieldset class="mb-3">
-              <legend class="form-label fs-6" data-i18n="wizard.icon.label">Icon</legend>
-              <div class="choice-grid choice-grid-icons" id="wiz-icon-list"></div>
-            </fieldset>
-            <fieldset>
-              <legend class="form-label fs-6" data-i18n="wizard.color.label">Color</legend>
-              <div class="choice-grid-colors" id="wiz-color-list"></div>
-            </fieldset>
-          </section>
-
-          <!-- Step 4: progress type -->
-          <section class="wizard-step" data-step="4" hidden>
-            <fieldset id="wiz-type">
-              <legend class="wizard-intro" data-i18n="wizard.type.intro">How will you measure progress?</legend>
-              <div class="choice-grid choice-grid-wide" id="wiz-type-list"></div>
-            </fieldset>
-            <p class="field-error" id="wiz-type-error"></p>
-          </section>
-
-          <!-- Step 5: values and deadline. JS shows only the fields of the chosen type (data-field). -->
-          <section class="wizard-step" data-step="5" hidden>
-            <p class="wizard-intro" id="wiz-type-hint"></p>
-            <div class="row g-3">
-              <div class="col-sm-6" data-field="start">
-                <label class="form-label" for="wiz-start" data-i18n="wizard.values.start">Start value</label>
-                <input class="form-control" type="text" id="wiz-start" inputmode="decimal" autocomplete="off" data-group-digits>
-                <p class="field-error" id="wiz-start-error"></p>
-              </div>
-              <div class="col-sm-6" data-field="target">
-                <label class="form-label" for="wiz-target" data-i18n="wizard.values.target">Target value</label>
-                <input class="form-control" type="text" id="wiz-target" inputmode="decimal" autocomplete="off" data-group-digits>
-                <p class="field-error" id="wiz-target-error"></p>
-              </div>
-              <div class="col-sm-6" data-field="current">
-                <label class="form-label" for="wiz-current" data-i18n="wizard.values.current">Current value</label>
-                <input class="form-control" type="text" id="wiz-current" inputmode="decimal" autocomplete="off" data-group-digits>
-                <p class="field-error" id="wiz-current-error"></p>
-              </div>
-              <div class="col-sm-6" data-field="unit">
-                <label class="form-label" for="wiz-unit" data-i18n="wizard.values.unit">Unit</label>
-                <input class="form-control" type="text" id="wiz-unit" maxlength="20" autocomplete="off" aria-describedby="wiz-unit-hint">
-                <div class="form-text" id="wiz-unit-hint" data-i18n="wizard.values.unitHint">Optional, e.g. books, kg, days.</div>
-              </div>
-              <div class="col-sm-6" data-field="currency">
-                <label class="form-label" for="wiz-currency" data-i18n="wizard.values.currency">Currency</label>
-                <select class="form-select" id="wiz-currency">
-                  <option value="KZT" data-i18n="currency.KZT">Tenge (₸)</option>
-                  <option value="USD" data-i18n="currency.USD">US dollar ($)</option>
-                  <option value="EUR" data-i18n="currency.EUR">Euro (€)</option>
-                  <option value="RUB" data-i18n="currency.RUB">Russian ruble (₽)</option>
-                </select>
-              </div>
-
-              <div class="col-12" data-field="levels">
-                <label class="form-label" for="wiz-levels" data-i18n="wizard.values.levels">Levels in order</label>
-                <input class="form-control" type="text" id="wiz-levels" autocomplete="off" aria-describedby="wiz-levels-hint">
-                <div class="form-text" id="wiz-levels-hint" data-i18n="wizard.values.levelsHint">Separate with commas, from lowest to highest.</div>
-                <p class="field-error" id="wiz-levels-error"></p>
-                <div class="row g-3 mt-0">
-                  <div class="col-sm-4">
-                    <label class="form-label" for="wiz-level-start" data-i18n="wizard.values.levelStart">Start level</label>
-                    <select class="form-select" id="wiz-level-start"></select>
-                  </div>
-                  <div class="col-sm-4">
-                    <label class="form-label" for="wiz-level-target" data-i18n="wizard.values.levelTarget">Target level</label>
-                    <select class="form-select" id="wiz-level-target"></select>
-                    <p class="field-error" id="wiz-level-target-error"></p>
-                  </div>
-                  <div class="col-sm-4" data-field="levelCurrent">
-                    <label class="form-label" for="wiz-level-current" data-i18n="wizard.values.levelCurrent">Current level</label>
-                    <select class="form-select" id="wiz-level-current"></select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-12" data-field="checklist">
-                <label class="form-label" for="wiz-check-input" data-i18n="wizard.values.checkItem">New item</label>
-                <div class="add-row">
-                  <input class="form-control" type="text" id="wiz-check-input" maxlength="120" autocomplete="off" aria-describedby="wiz-check-input-hint">
-                  <button type="button" class="btn btn-tool" id="wiz-check-add"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i><span data-i18n="wizard.add">Add</span></button>
-                </div>
-                <div class="form-text" id="wiz-check-input-hint" data-i18n="wizard.values.checkHint">Press Enter to add. Tick items that are already done.</div>
-                <p class="field-error" id="wiz-check-input-error"></p>
-                <ul class="edit-list" id="wiz-check-list"></ul>
-              </div>
-
-              <div class="col-sm-6">
-                <label class="form-label" for="wiz-deadline" data-i18n="wizard.values.deadline">Deadline</label>
-                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="wiz-deadline" aria-describedby="wiz-deadline-hint">
-                <div class="form-text" id="wiz-deadline-hint" data-i18n="wizard.values.deadlineHint">Optional. Cannot be in the past.</div>
-                <p class="field-error" id="wiz-deadline-error"></p>
-              </div>
-            </div>
-          </section>
-
-          <!-- Step 6: milestones (optional) -->
-          <section class="wizard-step" data-step="6" hidden>
-            <p class="wizard-intro" data-i18n="wizard.milestones.intro">Split the goal into stages with dates. This step is optional.</p>
-            <div class="row g-3 align-items-start">
-              <div class="col-sm-6">
-                <label class="form-label" for="wiz-ms-title" data-i18n="wizard.milestones.title">Milestone</label>
-                <input class="form-control" type="text" id="wiz-ms-title" maxlength="80" autocomplete="off">
-                <p class="field-error" id="wiz-ms-title-error"></p>
-              </div>
-              <div class="col-sm-4">
-                <label class="form-label" for="wiz-ms-date" data-i18n="wizard.milestones.date">Date</label>
-                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="wiz-ms-date">
-                <p class="field-error" id="wiz-ms-date-error"></p>
-              </div>
-              <div class="col-sm-2 milestone-add">
-                <button type="button" class="btn btn-tool w-100" id="wiz-ms-add"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i><span data-i18n="wizard.add">Add</span></button>
-              </div>
-            </div>
-            <p class="text-secondary mt-3 mb-0" id="wiz-ms-empty" data-i18n="wizard.milestones.empty">No milestones yet.</p>
-            <ul class="edit-list" id="wiz-ms-list"></ul>
-            <p class="field-error" id="wiz-ms-list-error"></p>
-          </section>
-
-          <!-- Step 7: review -->
-          <section class="wizard-step" data-step="7" hidden>
-            <p class="wizard-intro" data-i18n="wizard.review.intro">Check the goal before saving.</p>
-            <div class="goal-preview mb-3" id="wiz-review-preview" data-color="teal">
-              <span class="goal-icon" aria-hidden="true"><i class="bi bi-stars"></i></span>
-              <span class="goal-preview-title" id="wiz-review-title"></span>
-            </div>
-            <dl class="review-list" id="wiz-review"></dl>
-          </section>
-        </div>
-
-        <div class="modal-footer justify-content-between">
-          <button type="button" class="btn btn-tool" id="wiz-back"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i><span data-i18n="wizard.back">Back</span></button>
-          <button type="submit" class="btn btn-primary" id="wiz-next"><span id="wiz-next-label">Next</span></button>
-        </div>
-      </form>
-    </div>
-  </div>
+  <!-- The goal wizard (7 steps) is added by js/goal-wizard.js: it is also used on the Dashboard. -->
 
   <!-- Delete confirmation: the only way to delete a goal -->
   <div class="modal fade" id="delete-goal-modal" tabindex="-1" aria-labelledby="delete-goal-heading">

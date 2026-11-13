@@ -2,32 +2,13 @@
 // One goal: big percent, values, deadline and the pace needed, the "Add an entry" form,
 // history, milestones, checklist, notes, related tasks. Entries are stored in lifeos_progress
 // (see app.js, section "Progress entries"); every entry recalculates goal.currentValue.
+// The entry form logic (fields by type, checks, saving) is shared with the Dashboard: js/entry-form.js.
 'use strict';
-
-const ENTRY_NOTE_MAX_LENGTH = 200;
-
-// Which blocks of the entry form are visible (data-entry-field in the HTML).
-// A checklist has no form: its progress comes from ticking items.
-const ENTRY_FIELDS = {
-  money: ['sign', 'amount'],
-  number: ['amount'],
-  books: ['pages'],
-  percent: ['value'],
-  measurements: ['value'],
-  levels: ['level'],
-  streak: []
-};
 
 // The id from the address; the goal itself is read fresh from storage every time.
 const goalDetails = { id: new URLSearchParams(window.location.search).get('id') };
 
 /* ---------- Reading and saving the goal ---------- */
-
-// Book goals ("number" in the "books" category) get a special form: pages / finished book.
-function entryMode(goal) {
-  if (goal.progressType === 'number' && goal.category === 'books') return 'books';
-  return goal.progressType;
-}
 
 function loadGoal() {
   const goal = goalDetails.id ? getGoalById(goalDetails.id) : null;
@@ -45,17 +26,6 @@ function updateGoal(change) {
 }
 
 /* ---------- Overview ---------- */
-
-// "3 200 000 ₸", "B1", "2" (checklist items done)
-function currentText(goal) {
-  if (goal.progressType === 'checklist') return String(asArray(goal.checklist).filter((item) => item.done).length);
-  return formatGoalValue(goal, goal.currentValue);
-}
-
-function targetText(goal) {
-  if (goal.progressType === 'checklist') return String(asArray(goal.checklist).length);
-  return formatGoalValue(goal, goal.targetValue);
-}
 
 // Status badge: the text says the status, the tone only helps (the same tones as on the Goals page).
 const DETAILS_STATUS = {
@@ -188,146 +158,27 @@ function renderPace(goal, percent) {
 
 /* ---------- Entry form ---------- */
 
-// The unit next to the number field: "₸", "%", "kg", "books".
-function unitLabel(goal) {
-  if (goal.progressType === 'money') {
-    const parts = new Intl.NumberFormat(I18n.locale(), {
-      style: 'currency', currency: goal.unit || DEFAULT_CURRENCY, currencyDisplay: 'narrowSymbol'
-    }).formatToParts(0);
-    return parts.find((part) => part.type === 'currency')?.value ?? '';
-  }
-  if (goal.progressType === 'percent') return '%';
-  return goal.unit ?? '';
-}
+// The "Add an entry" form: the same logic as the Dashboard "Quick result" dialog (js/entry-form.js).
+const entryForm = createEntryForm('entry');
 
-// Shows the fields for this goal type. Values the user typed are not touched.
+// A checklist has no form here: its progress comes from ticking items in the list.
 function renderEntryForm(goal) {
-  const fields = ENTRY_FIELDS[entryMode(goal)];
-  byId('entry-form').hidden = !fields;
-  byId('entry-checklist-hint').hidden = Boolean(fields);
-  if (!fields) return;
-
-  document.querySelectorAll('[data-entry-field]').forEach((block) => {
-    block.hidden = !fields.includes(block.dataset.entryField);
-  });
-  const amountLabel = byId('entry-amount-label');
-  amountLabel.dataset.i18n = goal.progressType === 'money' ? 'details.entry.amount' : 'details.entry.count';
-  amountLabel.textContent = t(amountLabel.dataset.i18n);
-
-  const unit = unitLabel(goal);
-  document.querySelectorAll('.entry-unit').forEach((span) => {
-    span.textContent = unit;
-    span.hidden = unit === '';
-  });
-
-  if (goal.progressType === 'levels') renderLevelOptions(goal);
-  byId('entry-submit-label').textContent = t(goal.progressType === 'streak' ? 'details.entry.markDay' : 'details.entry.submit');
-}
-
-// Level names are user data: set with textContent. The next level is preselected.
-function renderLevelOptions(goal) {
-  const select = byId('entry-level');
-  const levels = asArray(goal.levels);
-  const previous = select.value;
-  select.replaceChildren(...levels.map((level, index) => createEl('option', { value: String(index) }, level)));
-  const nextLevel = Math.min((Number(goal.currentValue) || 0) + 1, levels.length - 1);
-  select.value = previous !== '' && Number(previous) < levels.length ? previous : String(nextLevel);
-}
-
-function resetEntryForm() {
-  ['entry-amount', 'entry-pages', 'entry-value', 'entry-note'].forEach((id) => { byId(id).value = ''; });
-  byId('entry-finished').checked = false;
-  byId('entry-sign-plus').checked = true;
-  setDateValue(byId('entry-date'), Dates.toISO(Dates.today()));
-}
-
-function entryDateError(value, mode, goalEntries) {
-  const date = Dates.parse(value);
-  if (!date) return 'profile.error.dateInvalid';
-  if (date > Dates.today()) return 'details.error.dateFuture';
-  if (mode === 'streak' && goalEntries.some((entry) => entry.date === value)) return 'details.error.dayMarked';
-  return null;
-}
-
-// Reads the form. Returns { errors: Map(input -> key|null), entry } — entry is null if invalid.
-function readEntry(goal, goalEntries) {
-  const mode = entryMode(goal);
-  const errors = new Map();
-  const date = getDateValue(byId('entry-date'));
-  const note = byId('entry-note').value.trim();
-  const extra = {};
-  let value = 0;
-
-  errors.set(byId('entry-date'), entryDateError(date, mode, goalEntries));
-  errors.set(byId('entry-note'), note.length > ENTRY_NOTE_MAX_LENGTH ? 'details.error.noteLength' : null);
-
-  if (mode === 'money' || mode === 'number') {
-    const amount = readNumber(byId('entry-amount'));
-    const sign = mode === 'money' && byId('entry-sign-minus').checked ? -1 : 1;
-    let error = numberError(amount, { positive: true });
-    if (!error && sign < 0 && amount > (Number(goal.currentValue) || 0)) error = 'details.error.notEnough';
-    errors.set(byId('entry-amount'), error);
-    value = sign * amount;
-  }
-  if (mode === 'books') {
-    const pagesInput = byId('entry-pages');
-    const pages = pagesInput.value.trim() === '' ? 0 : Number(pagesInput.value);
-    const finished = byId('entry-finished').checked;
-    let error = numberError(pages, { min: 0 });
-    if (!error && pages === 0 && !finished) error = 'details.error.pagesOrFinished';
-    errors.set(pagesInput, error);
-    value = finished ? 1 : 0;
-    if (pages > 0) extra.pages = Math.round(pages);
-  }
-  if (mode === 'percent' || mode === 'measurements') {
-    value = readNumber(byId('entry-value'));
-    const limits = mode === 'percent' ? { min: 0, max: 100 } : { positive: true };
-    errors.set(byId('entry-value'), numberError(value, limits));
-  }
-  if (mode === 'levels') value = Number(byId('entry-level').value);
-  if (mode === 'streak') value = 1;
-
-  const isValid = [...errors.values()].every((key) => key === null);
-  const entry = isValid ? { id: createId('entry'), date, goalId: goal.id, value, note, ...extra } : null;
-  return { errors, entry };
+  const isChecklist = goal.progressType === 'checklist';
+  byId('entry-form').hidden = isChecklist;
+  byId('entry-checklist-hint').hidden = !isChecklist;
+  if (!isChecklist) entryForm.render(goal);
 }
 
 function submitEntry(event) {
   event.preventDefault();
   const goal = loadGoal();
-  if (!goal) return;
-  const entries = getProgressEntries();
-  const { errors, entry } = readEntry(goal, getGoalEntries(goal.id, entries));
-  errors.forEach((errorKey, input) => setFieldError(input, errorKey));
-  if (!entry) {
-    byId('entry-form').querySelector('.is-invalid')?.focus();
-    return;
-  }
-
-  if (!recordProgress(goal.id, entry)) return; // adds the entry and recalculates currentValue (app.js)
+  if (!goal || !entryForm.save(goal)) return; // errors are shown next to the fields
   showToast('toast.entryAdded', 'success');
-  resetEntryForm();
+  entryForm.reset();
   renderDetailsPage();
 }
 
 /* ---------- History ---------- */
-
-// "+₸50,000", "−₸10,000", "Book finished · 45 pages", "→ 86.5 kg", "→ B2", "Day marked"
-function entryChangeText(goal, entry) {
-  const mode = entryMode(goal);
-  const value = Number(entry.value) || 0;
-  if (mode === 'streak') return t('details.history.dayMarked');
-  if (mode === 'books') {
-    const parts = [];
-    if (value > 0) parts.push(t('details.history.bookFinished'));
-    if (entry.pages) parts.push(tPlural('details.history.pages', Number(entry.pages)));
-    return parts.join(' · ');
-  }
-  if (DELTA_TYPES.includes(goal.progressType)) {
-    return `${value < 0 ? '−' : '+'}${formatGoalValue(goal, Math.abs(value))}`;
-  }
-  return `→ ${formatGoalValue(goal, value)}`;
-}
 
 // "Deposit: bonus" / "Withdrawal" for money, otherwise just the note.
 function entryLabel(goal, entry) {
@@ -434,15 +285,7 @@ function toggleMilestone(index, done) {
 }
 
 function toggleChecklistItem(index, done) {
-  const saved = updateGoal((goal) => {
-    goal.checklist[index].done = done;
-    // For a checklist goal, the current value is the number of done items.
-    if (goal.progressType === 'checklist') {
-      goal.currentValue = goal.checklist.filter((item) => item.done).length;
-      goal.targetValue = goal.checklist.length;
-    }
-  });
-  if (!saved) return;
+  if (!setChecklistItemDone(goalDetails.id, index, done)) return; // js/entry-form.js
   showToast('toast.checklistUpdated', 'success');
   renderDetailsPage();
   byId(`check-item-${index}`)?.focus();
@@ -532,7 +375,7 @@ function bindDetailsEvents() {
 
 onAppReady(() => {
   bindDetailsEvents();
-  resetEntryForm();
+  entryForm.reset();
   renderDetailsPage();
   // Notes are filled once, so a re-render never overwrites what is being typed.
   byId('goal-notes').value = loadGoal()?.notes ?? '';

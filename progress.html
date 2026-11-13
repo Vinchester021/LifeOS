@@ -19,6 +19,7 @@
   <script src="./data/quotes-fallback.js"></script>
   <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
   <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js" defer></script> <!-- example data, first steps, tour, help tips -->
   <!-- Chart.js only on this page; if it does not load, progress-charts.js shows tables -->
   <script src="./vendor/chartjs/chart.umd.min.js" defer></script>
   <script src="./js/progress-charts.js" defer></script>
@@ -64,7 +65,7 @@
         <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.2</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.3.0</span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
@@ -185,8 +186,10 @@
 
       <!-- One row: period type | ‹ 9–15 November 2026 › | Current period | Summary of the personal year.
            The choice is kept in the address: ?period=month&date=2026-11-01 -->
+      <!-- data-tour: what the Progress page tour highlights (js/onboarding.js). Step "period" = the period type
+           and the navigator together (one frame around both); "year-summary" = only the summary button. -->
       <div class="prog-toolbar">
-        <div class="segmented" role="group" data-i18n-aria-label="progress.periodLabel" aria-label="Period">
+        <div class="segmented" role="group" data-i18n-aria-label="progress.periodLabel" aria-label="Period" data-tour="period">
           <button type="button" class="segmented-btn" data-period="week" aria-pressed="false" data-i18n="planner.level.week">Week</button>
           <button type="button" class="segmented-btn" data-period="month" aria-pressed="false" data-i18n="planner.level.month">Month</button>
           <button type="button" class="segmented-btn" data-period="quarter" aria-pressed="false" data-i18n="planner.level.quarter">Quarter</button>
@@ -194,7 +197,7 @@
         </div>
         <!-- The period navigator (the same on Planner and Progress): ‹  title + dates  ›  [To this week]
              On a phone it is one card; "To this …" is shown only when another period is open. -->
-        <div class="period-nav">
+        <div class="period-nav" data-tour="period">
           <button type="button" class="btn period-nav-arrow" id="period-prev"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
           <!-- The middle: the title, its dates (hidden when there are none) and "To this week".
                On a computer it is "display: contents", so its parts line up as ‹ title › [To this week]. -->
@@ -209,7 +212,7 @@
           </div>
           <button type="button" class="btn period-nav-arrow" id="period-next"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
         </div>
-        <a class="btn btn-tool btn-pill prog-summary-link" href="progress.html?view=summary">
+        <a class="btn btn-tool btn-pill prog-summary-link" href="progress.html?view=summary" data-tour="year-summary">
           <i class="bi bi-trophy me-2" aria-hidden="true"></i><span data-i18n="progress.summary.link">Summary of the personal year</span>
         </a>
       </div>
@@ -343,6 +346,8 @@
           </p>
         </div>
         <div class="modal-footer">
+          <!-- Fills the example data and shows the banner "This is example data" (js/onboarding.js) -->
+          <button class="btn btn-tool" type="button" data-demo-start data-i18n="onboarding.demo.start">See an example first</button>
           <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
         </div>
       </form>

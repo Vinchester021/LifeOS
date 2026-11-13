@@ -379,154 +379,16 @@ function handleGoalsHash() {
   history.replaceState(null, '', window.location.pathname + window.location.search);
 }
 
-/* ---------- Demo data (only with ?debug=1) ---------- */
-
-// Examples from the concept. Titles are taken in the current language once
-// and then saved as normal user data (they are not translated later).
-function createDemoGoals() {
-  const today = Dates.today();
-  const inDays = (count) => Dates.toISO(Dates.addDays(today, count));
-  const daysAgo = (count) => new Date(Date.now() - count * MS_PER_DAY).toISOString();
-  const goal = (fields) => ({
-    id: createId('goal'),
-    description: '',
-    startValue: 0,
-    currentValue: 0,
-    unit: '',
-    levels: [],
-    checklist: [],
-    milestones: [],
-    deadline: null,
-    status: 'active',
-    ...fields,
-    updatedAt: fields.createdAt
-  });
-  const item = (key, done) => ({ id: createId('item'), text: t(key), done });
-
-  return [
-    goal({ title: t('demo.finance.title'), category: 'finance', icon: 'bi-piggy-bank', color: 'teal',
-      progressType: 'money', targetValue: 10000000, currentValue: 3200000, unit: 'KZT',
-      deadline: inDays(290), createdAt: daysAgo(70) }),
-    goal({ title: t('demo.books.title'), category: 'books', icon: 'bi-book', color: 'clay',
-      progressType: 'number', targetValue: 13, currentValue: 5, unit: t('demo.books.unit'),
-      deadline: inDays(200), createdAt: daysAgo(60) }),
-    goal({ title: t('demo.languages.title'), category: 'languages', icon: 'bi-translate', color: 'blue',
-      progressType: 'levels', levels: ['A2', 'B1', 'B2', 'C1'], startValue: 0, targetValue: 3, currentValue: 1,
-      deadline: inDays(320), createdAt: daysAgo(50) }),
-    goal({ title: t('demo.projects.title'), category: 'projects', icon: 'bi-kanban', color: 'plum',
-      progressType: 'checklist',
-      checklist: [item('demo.projects.item1', true), item('demo.projects.item2', false), item('demo.projects.item3', false)],
-      deadline: inDays(150), createdAt: daysAgo(40) }),
-    goal({ title: t('demo.health.title'), category: 'health', icon: 'bi-heart-pulse', color: 'green',
-      progressType: 'measurements', startValue: 92, targetValue: 80, currentValue: 86.5, unit: t('demo.health.unit'),
-      deadline: inDays(120), createdAt: daysAgo(30) }),
-    goal({ title: t('demo.habit.title'), category: 'personal', icon: 'bi-sunrise', color: 'clay',
-      progressType: 'streak', targetValue: 100, currentValue: 12, unit: t('demo.habit.unit'),
-      deadline: inDays(-3), createdAt: daysAgo(20) }),
-    goal({ title: t('demo.course.title'), category: 'education', icon: 'bi-mortarboard', color: 'blue',
-      progressType: 'percent', targetValue: 100, currentValue: 100, status: 'completed',
-      deadline: inDays(-10), createdAt: daysAgo(90) }),
-    goal({ title: t('demo.portfolio.title'), category: 'career', icon: 'bi-briefcase', color: 'teal',
-      progressType: 'percent', targetValue: 100, currentValue: 40, status: 'archived',
-      deadline: inDays(-30), createdAt: daysAgo(100) })
-  ];
-}
-
-// History for the demo goals. The numbers add up to the demo currentValue
-// (3 200 000 ₸, 5 books, B1, 86.5 kg, 12 days in a row).
-function createDemoEntries(goals) {
-  const today = Dates.today();
-  const find = (category) => goals.find((goal) => goal.category === category);
-  const entry = (goal, daysAgo, value, extra = {}) => ({
-    id: createId('entry'),
-    date: Dates.toISO(Dates.addDays(today, -daysAgo)),
-    goalId: goal.id,
-    value,
-    note: '',
-    ...extra
-  });
-  const finance = find('finance');
-  const books = find('books');
-  const health = find('health');
-  const habit = find('personal');
-  return [
-    entry(finance, 60, 1500000), entry(finance, 30, 1000000), entry(finance, 5, 700000),
-    ...[52, 41, 30, 19, 8].map((daysAgo) => entry(books, daysAgo, 1, { pages: 320 })),
-    entry(books, 2, 0, { pages: 45 }),
-    entry(find('languages'), 25, 1),
-    entry(health, 25, 90), entry(health, 12, 88), entry(health, 2, 86.5),
-    ...Array.from({ length: 12 }, (_, index) => entry(habit, index + 1, 1)),
-    // Workouts (no goal): squat and push-ups during the last weeks
-    ...[[20, 70], [13, 75], [6, 80], [1, 80]].map(([daysAgo, weight]) => workout(daysAgo, t('demo.workout.squat'), 3, 5, weight)),
-    workout(3, t('demo.workout.pushups'), 3, 15, null),
-    // Body measurements (no goal), the same weights as the weight goal history
-    bodyMeasure(25, { weight: 90, waist: 98, belly: 101, chest: 106, hips: 104, biceps: 34, thigh: 60, calf: 39 }),
-    bodyMeasure(12, { weight: 88, waist: 96, belly: 99, chest: 105, hips: 103 }),
-    bodyMeasure(2, { weight: 86.5, waist: 94, belly: 97, chest: 105, hips: 102, biceps: 35, thigh: 59, calf: 39 })
-  ];
-}
-
-function bodyMeasure(daysAgo, values) {
-  return {
-    id: createId('body'), kind: 'body', goalId: null, note: '',
-    date: Dates.toISO(Dates.addDays(Dates.today(), -daysAgo)),
-    ...values, value: values.weight
-  };
-}
-
-function workout(daysAgo, exercise, sets, reps, weight) {
-  return {
-    id: createId('workout'), kind: 'workout', goalId: null,
-    date: Dates.toISO(Dates.addDays(Dates.today(), -daysAgo)),
-    exercise, sets, reps, weight, note: '', value: sets * reps
-  };
-}
-
-// Demo week plan for the Sport page: 3 workouts, rest days in between.
-function createDemoSportPlan() {
-  const exercise = (nameKey, sets, reps, weight) => ({ id: createId('ex'), name: t(nameKey), sets, reps, weight, note: '' });
-  const fullBody = () => ({
-    type: 'workout', title: t('demo.sport.fullBody'),
-    exercises: [exercise('demo.workout.squat', 3, 5, 80), exercise('demo.workout.pushups', 3, 15, null)]
-  });
-  return {
-    1: fullBody(),
-    2: { type: 'rest' },
-    3: { type: 'workout', title: t('demo.sport.upper'),
-         exercises: [exercise('demo.workout.bench', 4, 8, 60), exercise('demo.workout.pushups', 3, 15, null)] },
-    4: fullBody(),
-    5: { type: 'rest' },
-    6: { type: 'workout', title: t('demo.sport.legs'), exercises: [exercise('demo.workout.squat', 4, 8, 70)] },
-    7: { type: 'rest' }
-  };
-}
-
-// A few tasks linked to the demo goals: one daily, one weekly, one one-time.
-function createDemoTasks(goals) {
-  const today = Dates.toISO(Dates.today());
-  const find = (category) => goals.find((goal) => goal.category === category);
-  const task = (fields) => normalizeTask({ id: createId('task'), date: today, ...fields });
-  return [
-    task({ title: t('demo.task.read'), priority: 'medium', category: 'books', goalId: find('books').id, recurrence: 'daily' }),
-    task({ title: t('demo.task.save'), priority: 'high', category: 'finance', goalId: find('finance').id, recurrence: 'weekly', period: 'week' }),
-    task({ title: t('demo.task.exam'), priority: 'high', category: 'languages', goalId: find('languages').id,
-      date: Dates.toISO(Dates.addDays(Dates.today(), 14)) })
-  ];
-}
+/* ---------- Debug tools (only with ?debug=1). The demo data is created in js/onboarding.js. ---------- */
 
 function initDebugTools() {
   if (new URLSearchParams(window.location.search).get('debug') !== '1') return;
   document.getElementById('debug-tools').hidden = false;
+  // The same example data as "See an example first", but the demo mode (the banner) stays off.
   document.getElementById('debug-fill-demo').addEventListener('click', () => {
-    const goals = createDemoGoals();
-    if (saveGoals(goals) && saveProgressEntries(createDemoEntries(goals)) && saveTasks(createDemoTasks(goals))) {
-      // Demo workouts and measurements are written the old way and moved to Sport like real old data.
-      AppStorage.remove(STORAGE_KEYS.sport);
-      migrateSportData();
-      saveSport({ ...getSport(), plan: createDemoSportPlan() });
-      showToast('debug.demoAdded', 'success');
-      renderGoalsPage();
-    }
+    if (!fillDemoData()) return;
+    showToast('debug.demoAdded', 'success');
+    renderGoalsPage();
   });
 }
 

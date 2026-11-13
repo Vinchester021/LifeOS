@@ -19,6 +19,7 @@
   <script src="./data/quotes-fallback.js"></script>
   <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
   <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js" defer></script> <!-- example data, first steps, tour, help tips -->
   <script src="./js/sport.js" defer></script>
 </head>
 <body>
@@ -61,7 +62,7 @@
         <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.2</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.3.0</span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
@@ -286,6 +287,8 @@
           </p>
         </div>
         <div class="modal-footer">
+          <!-- Fills the example data and shows the banner "This is example data" (js/onboarding.js) -->
+          <button class="btn btn-tool" type="button" data-demo-start data-i18n="onboarding.demo.start">See an example first</button>
           <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
         </div>
       </form>

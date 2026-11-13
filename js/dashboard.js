@@ -359,6 +359,7 @@ function renderDashboard() {
   const profile = getProfile();
   const year = profile ? Dates.personalYear(profile.personalYearStart) : null;
   renderGreeting();
+  FirstSteps.render(); // js/onboarding.js
   byId('year-ended').hidden = year?.status !== 'finished';
   renderPlanPath(year);
   renderYearCard(year);
@@ -389,4 +390,8 @@ onAppReady(() => {
   }
   document.addEventListener('lifeos:languagechange', renderDashboard);
   document.addEventListener('lifeos:profilechange', renderDashboard);
+  // A result from the "Quick result" dialog (js/entry-form.js): goal cards and First steps change
+  document.addEventListener('lifeos:progresschange', renderDashboard);
+  // A goal from the wizard opened by First steps (js/goal-wizard.js): we stay on the Dashboard
+  document.addEventListener('lifeos:goalschange', renderDashboard);
 });

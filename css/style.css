@@ -638,6 +638,86 @@ a:hover {
   font-size: var(--fs-small);
 }
 
+/* Computer: the content is bigger and in the middle of the card. A wide card puts the numbers
+   next to the ring; a narrow one (3 cards in a row on a laptop) puts them under it. */
+@media (min-width: 992px) {
+  .dash-year-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dash-year-panel #dash-year {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    container-type: inline-size;
+  }
+
+  .dash-year-panel .year-card {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--space-3);
+  }
+
+  .dash-year-panel .ring {
+    flex-basis: 11.875rem; /* 190px */
+    width: 11.875rem;
+    height: 11.875rem;
+  }
+
+  .dash-year-panel .ring-label {
+    font-size: 0.875rem;
+  }
+
+  .dash-year-panel .ring-label strong {
+    font-size: 2.25rem; /* 36px */
+  }
+
+  /* Under the ring: the two numbers side by side */
+  .dash-year-panel .year-numbers {
+    grid-template-columns: repeat(2, auto);
+    gap: var(--space-4);
+    padding-left: 0;
+    border-left: 0;
+    text-align: center;
+  }
+
+  .dash-year-panel .year-numbers > div + div {
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--lifeos-border);
+  }
+
+  .dash-year-panel .year-numbers dt {
+    font-size: 1.5rem; /* 24px */
+  }
+
+  .dash-year-panel .year-numbers dd {
+    font-size: 0.875rem; /* 14px */
+  }
+
+  /* A wide card: ring | the two numbers one under the other */
+  @container (min-width: 26rem) {
+    .dash-year-panel .year-card {
+      display: grid;
+      grid-template-columns: auto auto;
+      justify-content: center;
+      align-items: center;
+      column-gap: var(--space-5);
+    }
+
+    .dash-year-panel .year-numbers {
+      grid-template-columns: 1fr;
+      text-align: left;
+    }
+
+    .dash-year-panel .year-numbers > div + div {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+}
+
 /* Today: "+ Quickly add a task…" */
 .dash-quick {
   margin-bottom: var(--space-3);
@@ -5607,6 +5687,12 @@ small,
   margin: 0;
 }
 
+/* Help: "Take the tour again" — one line, as wide as its text (on a phone: full width, see below) */
+.set-btn-auto {
+  width: auto;
+  white-space: nowrap;
+}
+
 /* Personal years: the line, the bar "72 of 365 days (20 %)", the button on the right */
 .set-year {
   display: flex;
@@ -5775,6 +5861,10 @@ small,
   .set-btn,
   .set-data-row .file-picker {
     width: 100%;
+  }
+
+  .set-btn-auto {
+    white-space: normal;
   }
 
   .set-danger-btn {
@@ -6828,6 +6918,593 @@ small,
   .goals-toolbar.is-compact .goals-new .bi {
     margin: 0 !important;
   }
+}
+
+/* ---------- First-run dialog on a phone: "Create profile" on top, "See an example first" under it ---------- */
+@media (max-width: 575.98px) {
+  #first-run-modal .modal-footer {
+    flex-direction: column-reverse; /* in the HTML the example button comes first (on a computer it is on the left) */
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  #first-run-modal .modal-footer > .btn {
+    width: 100%;
+    min-height: 3rem; /* 48px */
+    margin: 0;
+  }
+}
+
+/* ---------- Recording a result (js/entry-form.js): Goal Details form and the Quick result dialog ---------- */
+
+/* "Example: +20 pages since the last entry" above the fields */
+.entry-example {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+  font-size: var(--fs-small);
+}
+
+/* "Now: 300,000 ₸ of 1,000,000 ₸" under the goal select */
+.quick-entry-now {
+  margin: var(--space-1) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+/* No goals yet: "Create a goal first" */
+.quick-entry-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text-muted);
+}
+
+.quick-entry-empty .bi {
+  color: var(--lifeos-primary-text);
+  font-size: 1.5rem;
+}
+
+/* ---------- Onboarding (js/onboarding.js): example banner, first steps, help tips, tour ---------- */
+
+/* "This is example data. Start your own plan →" — on top of every page in the demo mode */
+.demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: 0.6rem var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--palette-clay) 45%, var(--lifeos-border));
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-warning-bg);
+  color: var(--tone-warning-fg);
+}
+
+.demo-banner > .bi {
+  font-size: 1.1rem;
+}
+
+.demo-banner p {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.demo-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  border: 1px solid currentColor;
+  background-color: var(--lifeos-surface);
+  color: var(--tone-warning-fg);
+  font-weight: 700;
+}
+
+.demo-banner-btn:hover,
+.demo-banner-btn:focus-visible {
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text);
+}
+
+/* First steps (js/onboarding.js, FirstSteps): "First steps | Done: 1 of 5 … ✕ Hide", a bar, then
+   computer — a stepper of 5 pills + the block of one step; phone — an accordion */
+.first-steps {
+  margin-bottom: var(--space-3);
+}
+
+.first-steps-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.first-steps-head .panel-title {
+  margin: 0;
+}
+
+.first-steps-divider {
+  width: 1px;
+  height: 1.25rem;
+  background-color: var(--lifeos-border-strong);
+}
+
+.first-steps-count {
+  color: var(--lifeos-text-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* "✕ Hide": a ghost button — no border, a soft background on hover */
+.first-steps-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2.25rem;
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.first-steps-hide:hover {
+  background-color: var(--tone-neutral-bg);
+  color: var(--lifeos-text);
+}
+
+.first-steps-bar {
+  --bs-progress-height: 0.5rem;
+  --bs-progress-bg: var(--tone-neutral-bg);
+  --bs-progress-bar-bg: var(--lifeos-primary);
+  --bs-progress-border-radius: var(--radius-pill);
+  margin-bottom: var(--space-3);
+}
+
+/* The number (or a tick) in a circle: open — grey, current — accent, done — soft green */
+.fs-mark {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--lifeos-border-strong);
+  border-radius: 50%;
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.is-current .fs-mark,
+.fs-item.is-open .fs-mark,
+.fs-block .fs-mark {
+  border-color: var(--lifeos-primary);
+  color: var(--lifeos-primary-text);
+}
+
+.is-done .fs-mark,
+.fs-block.is-done .fs-mark {
+  border-color: var(--tone-success-bg);
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+}
+
+/* Computer: the stepper — pills joined by a line (the line after a done step is accent) */
+.fs-stepper {
+  display: flex;
+  align-items: center;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.fs-stepper li {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  min-width: 0;
+}
+
+.fs-stepper li:last-child {
+  flex: 0 0 auto;
+}
+
+.fs-stepper li:not(:last-child)::after {
+  content: "";
+  flex: 1 1 auto;
+  min-width: var(--space-2);
+  height: 2px;
+  margin: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-border);
+}
+
+.fs-stepper li.is-done:not(:last-child)::after {
+  background-color: var(--lifeos-primary);
+}
+
+.fs-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0.35rem var(--space-3) 0.35rem 0.45rem;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fs-pill:hover {
+  border-color: color-mix(in srgb, var(--lifeos-primary) 55%, var(--lifeos-border-strong));
+}
+
+.fs-pill.is-done {
+  border-color: var(--lifeos-border);
+  background-color: var(--lifeos-surface-2);
+  color: var(--lifeos-text-muted);
+}
+
+/* A narrow computer screen (768–1199px): smaller pills, so the lines between them stay visible */
+@media (max-width: 1199.98px) {
+  .fs-pill {
+    gap: 0.375rem;
+    padding: 0.3rem 0.65rem 0.3rem 0.35rem;
+    font-size: var(--fs-small);
+  }
+
+  .fs-pill .fs-mark {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .fs-stepper li:not(:last-child)::after {
+    min-width: 0.75rem;
+    margin: 0 0.25rem;
+  }
+}
+
+/* The current step: only an accent border */
+.fs-pill.is-current {
+  border-color: var(--lifeos-primary);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+  color: var(--lifeos-text);
+}
+
+/* Computer: the block of the chosen step — the card background and a thin accent border */
+.fs-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--lifeos-primary);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+}
+
+.fs-block.is-done {
+  border-color: var(--lifeos-border);
+}
+
+.fs-mark-lg {
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.1rem;
+}
+
+.fs-block-text {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.fs-block-title {
+  margin: 0 0 var(--space-1);
+  font-size: 1.5rem; /* 24px */
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.fs-hint {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+}
+
+.fs-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding-inline: var(--space-4);
+  font-weight: 700;
+}
+
+/* "Done ✓" instead of the button */
+.fs-done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0.5rem var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+  font-weight: 700;
+}
+
+/* Phone: the accordion */
+.fs-accordion {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fs-item {
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+}
+
+.fs-item.is-open {
+  border-color: var(--lifeos-primary);
+}
+
+.fs-item.is-done {
+  border-color: var(--lifeos-border);
+  background-color: var(--lifeos-surface-2);
+}
+
+.fs-item-heading {
+  margin: 0;
+  font-size: inherit;
+}
+
+.fs-item-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius);
+  background-color: transparent;
+  color: var(--lifeos-text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+
+.fs-item-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fs-item.is-done .fs-item-title {
+  color: var(--lifeos-text-muted);
+  font-weight: 600;
+}
+
+.fs-chevron {
+  flex-shrink: 0;
+  color: var(--lifeos-text-muted);
+}
+
+.fs-item.is-open .fs-chevron {
+  transform: rotate(180deg);
+}
+
+.fs-item-body {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.fs-item-body .fs-hint {
+  margin-bottom: var(--space-3);
+  padding-left: calc(1.75rem + var(--space-3)); /* under the title, not under the number */
+}
+
+/* Keyboard focus and the pressed state of pills and accordion heads */
+.fs-pill:focus-visible,
+.fs-item-head:focus-visible {
+  outline: 2px solid var(--lifeos-focus);
+  outline-offset: 2px;
+}
+
+.fs-pill:active,
+button.fs-item-head:active {
+  background-color: color-mix(in srgb, var(--lifeos-primary) 14%, var(--lifeos-surface));
+}
+
+/* Steps 2 and 3: the field / checkbox the step leads to is highlighted for 2 seconds */
+.is-spotlight {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lifeos-primary) 35%, transparent) !important;
+}
+
+/* Motion only when the user does not ask for less: the tick of a just done step pops in,
+   pressed pills shrink a little, the chevron turns */
+@media (prefers-reduced-motion: no-preference) {
+  .is-new .fs-mark {
+    animation: first-step-tick 0.5s ease-out;
+  }
+
+  .fs-pill,
+  .fs-item-head,
+  .is-spotlight {
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease, transform 0.1s ease;
+  }
+
+  .fs-pill:active,
+  button.fs-item-head:active {
+    transform: scale(0.98);
+  }
+
+  .fs-chevron {
+    transition: transform 0.2s ease;
+  }
+}
+
+@keyframes first-step-tick {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* "?" help tips next to a title */
+.help-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.help-title .panel-title {
+  margin-bottom: 0;
+}
+
+.panel > .help-title {
+  margin-bottom: var(--space-3);
+}
+
+.help-tip {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--lifeos-text-muted);
+  font-size: 1rem;
+}
+
+.help-tip:hover,
+.help-tip[aria-describedby] {
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+}
+
+.help-popover {
+  --bs-popover-max-width: 18rem;
+  --bs-popover-bg: var(--lifeos-surface);
+  --bs-popover-border-color: var(--lifeos-border-strong);
+  --bs-popover-body-color: var(--lifeos-text);
+  --bs-popover-body-padding-x: var(--space-3);
+  --bs-popover-body-padding-y: var(--space-2);
+  font-size: var(--fs-small);
+}
+
+/* The wizard: "Example: read 12 books" under every progress type */
+.choice-example {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--lifeos-primary-text);
+  font-size: var(--fs-small);
+  font-style: italic;
+}
+
+/* Tour: a blocker over the page, a spot over the element (its huge shadow dims the rest), a tip */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.tour-blocker {
+  position: absolute;
+  inset: 0;
+}
+
+.tour-spot {
+  position: fixed;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55);
+  outline: 2px solid var(--lifeos-surface);
+  pointer-events: none;
+}
+
+.tour-tip {
+  position: fixed;
+  width: min(21rem, calc(100vw - 2rem));
+  padding: var(--space-3);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.25);
+  color: var(--lifeos-text);
+}
+
+.tour-tip:focus-visible {
+  outline: 2px solid var(--lifeos-primary);
+  outline-offset: 2px;
+}
+
+.tour-count {
+  margin: 0 0 var(--space-1);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.tour-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-card);
+  font-weight: 700;
+}
+
+.tour-text {
+  margin: 0 0 var(--space-3);
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tour-actions .tour-skip {
+  margin-right: auto;
+  padding-inline: 0;
+  color: var(--lifeos-text-muted);
+}
+
+.tour-actions .btn-sm {
+  min-height: 2.5rem;
+  padding-inline: var(--space-3);
+}
+
+/* the spot and the tip move smoothly — only when the user does not ask for less motion */
+@media (prefers-reduced-motion: no-preference) {
+  .tour-spot,
+  .tour-tip {
+    transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+  }
+}
+
+/* Phone: the tip is a sheet at the bottom of the screen */
+@media (max-width: 767.98px) {
+  .tour-tip {
+    top: auto !important;
+    right: var(--space-3);
+    bottom: var(--space-3);
+    left: var(--space-3) !important;
+    width: auto;
+  }
+
 }
 
 /* ---------- Reduced motion ---------- */

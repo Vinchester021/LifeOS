@@ -186,6 +186,12 @@ function sanitizeBackup(data) {
   if (Array.isArray(data.progress)) clean.progress = keep(data.progress, (entry) => isIsoDate(entry.date)).map(cleanEntry);
   if (Array.isArray(data.archive)) clean.archive = keep(data.archive, (year) => isIsoDate(year.yearStart) && isIsoDate(year.yearEnd)).map(cleanYear);
   if (isPlainObject(data.sport)) clean.sport = cleanSport(data.sport, keep);
+  // lifeos_settings.onboarding: only true / false flags; the demo mode is never imported
+  // (only the button in the first-run dialog turns it on, js/onboarding.js).
+  if (isPlainObject(data.settings) && 'onboarding' in data.settings) {
+    const { demoMode, ...onboarding } = cleanOnboarding(data.settings.onboarding);
+    clean.settings = { ...data.settings, onboarding };
+  }
   return { data: clean, skipped };
 }
 
@@ -571,6 +577,8 @@ function runSettingsSelfTest() {
   check('import: a bad milestone date becomes null', dirty.data.goals[0].milestones[0].dueDate, null);
   check('import: a non-number measurement is removed', `${'weight' in dirty.data.sport.body[0]}/${dirty.data.sport.body[0].waist}`, 'false/90');
   check('strict date', `${isIsoDate('2026-11-12')}/${isIsoDate('12.11.2026')}/${isIsoDate('2026-02-30')}`, 'true/false/false');
+  const withOnboarding = sanitizeBackup({ settings: { accent: 'teal', onboarding: { demoMode: true, tourDone: true, junk: '<b>' } } });
+  check('import: onboarding keeps flags, never the demo mode', JSON.stringify(withOnboarding.data.settings.onboarding), '{"tourDone":true}');
 
   console.group('[LifeOS] Settings self-test');
   console.table(results);

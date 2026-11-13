@@ -2,7 +2,7 @@
 
 **[Русский](#русский) · [English](#english)**
 
-**Демо / Live demo:** ` https://vinchester021.github.io/LifeOS/` ← *ссылка на GitHub Pages / GitHub Pages link*
+**Демо / Live demo:** `https://<username>.github.io/<repository>/` ← *ссылка на GitHub Pages / GitHub Pages link*
 
 ---
 

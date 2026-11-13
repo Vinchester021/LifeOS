@@ -19,7 +19,9 @@
   <script src="./data/quotes-fallback.js"></script>
   <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
   <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js" defer></script> <!-- example data, first steps, tour, help tips -->
   <script src="./js/tasks.js" defer></script>
+  <script src="./js/entry-form.js" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
   <script src="./js/goal-details.js" defer></script>
 </head>
 <body>
@@ -62,7 +64,7 @@
         <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.2</span>
+          <span class="brand-version" data-i18n="app.version">Beta v1.3.0</span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>
@@ -185,6 +187,9 @@
             <p class="text-secondary mb-0" id="entry-checklist-hint" data-i18n="details.entry.checklistHint" hidden>Progress is counted from the checklist.</p>
             <form id="entry-form" novalidate>
               <div class="row g-3">
+                <!-- What to type for this goal type: "Example: +20 pages since the last entry" -->
+                <div class="col-12"><p class="entry-example" id="entry-example"></p></div>
+
                 <fieldset class="col-12" data-entry-field="sign">
                   <legend class="form-label fs-6" data-i18n="details.entry.operation">Operation</legend>
                   <div class="gd-switch">
@@ -235,13 +240,13 @@
                   <select class="form-select" id="entry-level"></select>
                 </div>
 
-                <div class="col-sm-6">
+                <div class="col-sm-6" data-entry-common>
                   <label class="form-label" for="entry-date" data-i18n="details.entry.date">Date</label>
                   <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="entry-date">
                   <p class="field-error" id="entry-date-error"></p>
                 </div>
 
-                <div class="col-12">
+                <div class="col-12" data-entry-common>
                   <label class="form-label" for="entry-note" data-i18n="details.entry.noteOptional">Note (optional)</label>
                   <input class="form-control" type="text" id="entry-note" maxlength="200" autocomplete="off"
                          data-i18n-placeholder="details.entry.notePlaceholder" aria-describedby="entry-note-hint">
@@ -373,6 +378,8 @@
           </p>
         </div>
         <div class="modal-footer">
+          <!-- Fills the example data and shows the banner "This is example data" (js/onboarding.js) -->
+          <button class="btn btn-tool" type="button" data-demo-start data-i18n="onboarding.demo.start">See an example first</button>
           <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
         </div>
       </form>

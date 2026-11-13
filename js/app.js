@@ -178,7 +178,7 @@ async function loadQuotesData() {
 // (Texts written in the HTML stay as they are, see I18n.apply.)
 const FALLBACK_DICTIONARY = {
   'app.name': 'LifeOS',
-  'app.version': 'Beta v1.2',
+  'app.version': 'Beta v1.3.0',
   'page.dashboard': 'Dashboard',
   'page.goals': 'Goals',
   'page.goalDetails': 'Goal Details',
@@ -1255,7 +1255,8 @@ const FirstRun = {
     this.removePreferenceCopies();
     bootstrap.Modal.getInstance(this.modalEl).hide();
     showToast('firstRun.saved', 'success', { name: profile.name });
-    document.dispatchEvent(new CustomEvent('lifeos:profilechange', { detail: { profile } }));
+    // created: a brand-new profile (js/onboarding.js starts the tour once)
+    document.dispatchEvent(new CustomEvent('lifeos:profilechange', { detail: { profile, created: true } }));
   },
 
   // Before the profile existed, language/theme were kept in settings. Now the profile owns them.
