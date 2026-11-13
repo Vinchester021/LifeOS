@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16705F"/>
+      <stop offset="1" stop-color="#0B4237"/>
+    </linearGradient>
+    <g id="long">
+      <polygon points="256,82 256,256 228,256" fill="#F4EFE6"/>
+      <polygon points="256,82 256,256 284,256" fill="#CFC6B4"/>
+    </g>
+    <g id="short">
+      <polygon points="256,152 256,256 238,256" fill="#E6DFD1"/>
+      <polygon points="256,152 256,256 274,256" fill="#BDB3A0"/>
+    </g>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="122" fill="none" stroke="#F4EFE6" stroke-opacity="0.22" stroke-width="4"/>
+  <use xlink:href="#short" transform="rotate(45 256 256)"/>
+  <use xlink:href="#short" transform="rotate(135 256 256)"/>
+  <use xlink:href="#short" transform="rotate(225 256 256)"/>
+  <use xlink:href="#short" transform="rotate(315 256 256)"/>
+  <use xlink:href="#long" transform="rotate(90 256 256)"/>
+  <use xlink:href="#long" transform="rotate(180 256 256)"/>
+  <use xlink:href="#long" transform="rotate(270 256 256)"/>
+  <polygon points="256,82 256,256 228,256" fill="#F2B54E"/>
+  <polygon points="256,82 256,256 284,256" fill="#D48A26"/>
+  <circle cx="256" cy="256" r="12" fill="#0B4237" stroke="#F4EFE6" stroke-width="5"/>
+</svg>
