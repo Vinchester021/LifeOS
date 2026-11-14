@@ -128,6 +128,7 @@ const WhatsNew = {
     const seen = getMeta().lastSeenVersion ?? LEGACY_VERSION;
     if (!needsWhatsNew(seen)) return;
     this.changelog = await loadChangelog();
+    if (!isCurrentChangelog(this.changelog)) return; // an old list (cache): not "seen", try on the next page
     const versions = unseenVersions(this.changelog, seen);
     if (versions.length === 0) {
       updateMeta({ lastSeenVersion: APP_VERSION }); // nothing to tell
@@ -155,6 +156,8 @@ function runWhatsNewSelfTest() {
   check('newer than seen, not newer than the app', unseenVersions(log, '1.0.0', '1.1.1').map((v) => v.version).join(), '1.1.1,1.1.0');
   check('nothing seen: everything up to the app', unseenVersions(log, null, '1.1.0').map((v) => v.version).join(), '1.1.0,1.0.0');
   check('the text falls back to English', changeText({ text: { en: 'A' } }), 'A');
+  check('a list without the app version is old', isCurrentChangelog([{ version: '1.0.0' }]), false);
+  check('a list with the app version is current', isCurrentChangelog([{ version: APP_VERSION }]), true);
   console.group('[LifeOS] What\'s new self-test');
   console.table(results);
   const failed = results.filter((row) => row.ok === '✗').length;

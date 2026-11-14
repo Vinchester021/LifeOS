@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.3.5",
+    "date": "2026-11-14",
+    "items": [
+      {
+        "type": "fixed",
+        "text": {
+          "en": "Updates now apply right away, without old data from the cache.",
+          "ru": "Обновления теперь применяются сразу, без старых данных из кэша.",
+          "kk": "Жаңартулар енді бірден қолданылады, кэштегі ескі деректерсіз."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.3.4",
     "date": "2026-11-14",
     "items": [

@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.3.4';
+const APP_VERSION = '1.3.5';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -135,7 +135,7 @@ const DEFAULT_LANGUAGE = 'en';
 const LOCALES = { en: 'en-US', ru: 'ru-RU', kk: 'kk-KZ' };
 
 /* ----- Loading data/*.json: through a server AND as file:// -----
-   http:// or https://  -> fetch("./data/translations.json") (the real JSON file);
+   http:// or https://  -> the real JSON file data/translations.json (fetchDataJson);
                            if that fails -> the copy from data/translations-fallback.js.
    file:// (double click on an HTML file) -> browsers block fetch() of local files,
                            so the copy window.LIFEOS_TRANSLATIONS is used and fetch is not even tried
@@ -152,12 +152,20 @@ function warnIfFallbackDiffers(fromJson, fallback, fileName) {
   }
 }
 
+// Reads data/<fileName> through the server. Protection from an old copy in the browser cache:
+//   - ?v=APP_VERSION: a new version of the site asks for a new address, the old cached file is not used;
+//   - cache: 'no-cache': the browser asks the server whether the file changed before it uses its copy;
+//     cache: 'reload' (see loadChangelog): the browser ignores its copy completely.
+async function fetchDataJson(fileName, cache = 'no-cache') {
+  const response = await fetch(`./data/${fileName}?v=${APP_VERSION}`, { cache });
+  if (!response.ok) throw new Error(`data/${fileName} loading failed: ${response.status}`);
+  return response.json();
+}
+
 async function loadTranslations() {
   if (isOpenedAsFile()) return window.LIFEOS_TRANSLATIONS ?? null;
   try {
-    const response = await fetch('./data/translations.json');
-    if (!response.ok) throw new Error(`Translations loading failed: ${response.status}`);
-    const translations = await response.json();
+    const translations = await fetchDataJson('translations.json');
     warnIfFallbackDiffers(translations, window.LIFEOS_TRANSLATIONS, 'translations-fallback.js');
     return translations;
   } catch (error) {
@@ -167,18 +175,37 @@ async function loadTranslations() {
 }
 
 // The list of versions for "What's new": data/changelog.json, the same two ways as the translations.
+// The list must already know the current version (its first entry = APP_VERSION). If it is older
+// (an old copy from the cache or an error): the copy changelog-fallback.js; if that is old too —
+// changelog.json once more, past the browser cache (cache: 'reload').
 async function loadChangelog() {
-  if (isOpenedAsFile()) return window.LIFEOS_CHANGELOG ?? [];
-  try {
-    const response = await fetch('./data/changelog.json');
-    if (!response.ok) throw new Error(`Changelog loading failed: ${response.status}`);
-    const changelog = await response.json();
+  const fallback = window.LIFEOS_CHANGELOG ?? [];
+  if (isOpenedAsFile()) return fallback;
+  const changelog = await fetchChangelog('no-cache');
+  if (isCurrentChangelog(changelog)) {
     warnIfFallbackDiffers(changelog, window.LIFEOS_CHANGELOG, 'changelog-fallback.js');
     return changelog;
-  } catch (error) {
-    console.warn('[LifeOS] JSON changelog is unavailable. Fallback is used.', error);
-    return window.LIFEOS_CHANGELOG ?? [];
   }
+  if (isCurrentChangelog(fallback)) return fallback;
+  const reloaded = await fetchChangelog('reload');
+  if (isCurrentChangelog(reloaded)) return reloaded;
+  return reloaded ?? changelog ?? fallback; // nothing knows APP_VERSION: show what there is
+}
+
+// changelog.json or null (the error is written to the Console).
+async function fetchChangelog(cache) {
+  try {
+    const changelog = await fetchDataJson('changelog.json', cache);
+    return Array.isArray(changelog) ? changelog : null;
+  } catch (error) {
+    console.warn('[LifeOS] JSON changelog is unavailable.', error);
+    return null;
+  }
+}
+
+// true: the newest entry of the list is not older than the app itself.
+function isCurrentChangelog(changelog) {
+  return Array.isArray(changelog) && compareVersions(changelog[0]?.version, APP_VERSION) >= 0;
 }
 
 // lifeos_meta: facts about the app itself, not the user's plans ({ lastSeenVersion }).
@@ -205,9 +232,7 @@ function compareVersions(a, b) {
 async function loadQuotesData() {
   if (isOpenedAsFile()) return window.LIFEOS_QUOTES ?? [];
   try {
-    const response = await fetch('./data/quotes.json');
-    if (!response.ok) throw new Error(`Quotes loading failed: ${response.status}`);
-    const quotes = await response.json();
+    const quotes = await fetchDataJson('quotes.json');
     warnIfFallbackDiffers(quotes, window.LIFEOS_QUOTES, 'quotes-fallback.js');
     return quotes;
   } catch (error) {
