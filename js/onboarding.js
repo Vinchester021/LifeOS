@@ -12,7 +12,8 @@
    1. State: lifeos_settings.onboarding = { demoMode, checklistHidden, ... } (all true / false)
    ========================================================= */
 
-const ONBOARDING_FLAGS = ['demoMode', 'checklistHidden', 'checklistCelebrated', 'visitedProgress', 'tourDone', 'tourPending', 'progressTourDone'];
+// feedbackAsked: the Dashboard invitation "Like LifeOS? Leave feedback" was answered (js/feedback.js).
+const ONBOARDING_FLAGS = ['demoMode', 'checklistHidden', 'checklistCelebrated', 'visitedProgress', 'tourDone', 'tourPending', 'progressTourDone', 'feedbackAsked'];
 
 function getOnboarding() {
   const value = getSettings().onboarding;

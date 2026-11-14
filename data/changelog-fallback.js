@@ -2,6 +2,28 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.4.0",
+    "date": "2026-11-14",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "You can now leave feedback — the button is in the menu.",
+          "ru": "Можно оставить отзыв — кнопка в меню.",
+          "kk": "Енді пікір қалдыруға болады — түйме мәзірде."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "If you missed several updates, the \"What's new\" window shows them all at once.",
+          "ru": "Если вы пропустили несколько обновлений, в окне «Что нового» видны все сразу.",
+          "kk": "Бірнеше жаңартуды өткізіп алсаңыз, «Не жаңа» терезесінде бәрі бірден көрінеді."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.3.5",
     "date": "2026-11-14",
     "items": [
@@ -10,7 +32,7 @@ window.LIFEOS_CHANGELOG = [
         "text": {
           "en": "Updates now apply right away, without old data from the cache.",
           "ru": "Обновления теперь применяются сразу, без старых данных из кэша.",
-          "kk": "Жаңартулар енді бірден қолданылады, кэштегі ескі деректерсіз."
+          "kk": "Жаңартулар енді бірден көрінеді, ескі кэш кедергі жасамайды."
         }
       }
     ]

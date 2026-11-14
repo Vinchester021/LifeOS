@@ -3457,7 +3457,8 @@ fieldset.is-invalid .choice-card {
   gap: 0.25rem;
 }
 
-.sidebar-nav .nav-link {
+.sidebar-nav .nav-link,
+.sidebar-feedback {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -3467,11 +3468,13 @@ fieldset.is-invalid .choice-card {
   font-weight: 500;
 }
 
-.sidebar-nav .nav-link .bi {
+.sidebar-nav .nav-link .bi,
+.sidebar-feedback .bi {
   font-size: 1.1rem;
 }
 
-.sidebar-nav .nav-link:hover {
+.sidebar-nav .nav-link:hover,
+.sidebar-feedback:hover {
   background-color: var(--lifeos-primary-soft);
   color: var(--lifeos-text);
 }
@@ -3756,7 +3759,8 @@ small,
   letter-spacing: -0.02em;
 }
 
-.sidebar-nav .nav-link {
+.sidebar-nav .nav-link,
+.sidebar-feedback {
   gap: 0.85rem;
   padding: 0.7rem 0.9rem;
   border-radius: var(--radius-sm);
@@ -3765,7 +3769,8 @@ small,
   font-weight: 500;
 }
 
-.sidebar-nav .nav-link .bi {
+.sidebar-nav .nav-link .bi,
+.sidebar-feedback .bi {
   font-size: 1.2rem;
 }
 
@@ -7042,7 +7047,7 @@ small,
 }
 
 /* ---------- "What's new" (js/whats-new.js) ---------- */
-.whats-new-date {
+.whats-new-subtitle {
   margin: 0.15rem 0 0;
   color: var(--lifeos-text-muted);
   font-size: var(--fs-small);
@@ -7058,6 +7063,57 @@ small,
   margin: 0 0 var(--space-2);
   font-size: var(--fs-card);
   font-weight: 700;
+}
+
+/* Several missed versions: an accordion "v1.4.0 — 20.11.2026 ▾" (<details>), the newest one is open */
+.whats-new-fold + .whats-new-fold {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+}
+
+.whats-new-fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 2.75rem; /* 44px: easy to tap */
+  margin: 0;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.whats-new-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.whats-new-fold > summary:hover {
+  color: var(--lifeos-primary-text);
+}
+
+.whats-new-fold > summary:focus-visible {
+  outline: 2px solid var(--lifeos-primary);
+  outline-offset: 2px;
+}
+
+.whats-new-fold > summary .bi {
+  color: var(--lifeos-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.whats-new-fold[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+.whats-new-fold[open] > summary .bi {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whats-new-fold > summary .bi {
+    transition: none;
+  }
 }
 
 .whats-new-group + .whats-new-group {
@@ -7100,6 +7156,77 @@ small,
   .whats-new-modal .modal-footer > .btn-primary {
     flex: 1 1 auto;
     min-height: 3rem;
+  }
+}
+
+/* ---------- "Leave feedback" (js/feedback.js) ---------- */
+
+/* Side menu: under the links, above the quote. It looks like a menu item (the same rules as .sidebar-nav .nav-link
+   above), but it is a button that opens a window: never active, no aria-current. A thin line separates it. */
+.sidebar-feedback {
+  position: relative;
+  width: 100%;
+  margin-top: 0.75rem;
+  text-align: left;
+}
+
+.sidebar-feedback::before {
+  content: "";
+  position: absolute;
+  top: calc(-0.375rem - 1px);
+  right: 0.9rem;
+  left: 0.9rem;
+  border-top: 1px solid var(--lifeos-border);
+}
+
+/* Dashboard: the one-time invitation "Like LifeOS? Leave feedback" above First steps */
+.feedback-invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: 0.75rem var(--space-3);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+}
+
+.feedback-invite-icon {
+  color: var(--lifeos-primary-text);
+  font-size: 1.25rem;
+}
+
+.feedback-invite-text {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.feedback-invite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Phone: the two buttons share the width */
+@media (max-width: 575.98px) {
+  .feedback-invite-actions {
+    flex: 1 1 100%;
+  }
+
+  .feedback-invite-actions .btn {
+    flex: 1 1 0;
+    min-height: 2.75rem;
+  }
+
+  .feedback-modal .modal-footer .btn {
+    flex: 1 1 100%;
+    min-height: 3rem;
+  }
+
+  .feedback-modal .modal-footer .btn-primary {
+    order: -1; /* "Open the feedback form" on top */
   }
 }
 

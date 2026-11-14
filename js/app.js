@@ -14,9 +14,15 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.3.5';
+const APP_VERSION = '1.4.0';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
+
+// "Leave feedback" (js/feedback.js): the Google Form and the ids of its two pre-filled fields
+// (found in FB_PUBLIC_LOAD_DATA_ of the form page). Nothing else is sent: no localStorage data.
+const FEEDBACK_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc4vmGWG_aNA7N7-N3XXQzDsN2oSWfGR2feJI9-J1rnkjMyng/viewform';
+const FEEDBACK_FIELD_VERSION = 'entry.1219306091'; // "VERSION" <- APP_VERSION
+const FEEDBACK_FIELD_DEVICE = 'entry.1989146373'; // "DEVICE" <- "телефон, ru" / "компьютер, en"
 
 const STORAGE_KEYS = {
   profile: 'lifeos_profile',
