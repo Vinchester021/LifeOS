@@ -2,8 +2,6 @@
 
 **[Русский](#русский) · [English](#english)**
 
-![LifeOS — Dashboard](screenshots/dashboard.png)
-
 **Демо / Live demo:** `https://<username>.github.io/<repository>/` ← *ссылка на GitHub Pages / GitHub Pages link*
 
 ---
@@ -54,12 +52,6 @@
 
 На страницах с `?debug=1` в консоли браузера (F12) запускаются самопроверки расчётов (`All … tests passed`).
 
-### Скриншоты
-
-| Прогресс | Планировщик (месяц) |
-|---|---|
-| ![Прогресс](screenshots/progress.png) | ![Планировщик](screenshots/planner.png) |
-
 ---
 
 ## English
@@ -107,12 +99,6 @@ Final project for the **Web Technologies 1 (Front End)** course. Author: **Vilge
 3. Demo data **replaces** your current goals and tasks. If you have your own data, export it first.
 
 With `?debug=1` the pages also run self-tests of the calculations in the browser console (F12: `All … tests passed`).
-
-### Screenshots
-
-| Progress | Planner (month) |
-|---|---|
-| ![Progress](screenshots/progress.png) | ![Planner](screenshots/planner.png) |
 
 ---
 

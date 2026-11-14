@@ -8,9 +8,9 @@ window.LIFEOS_CHANGELOG = [
       {
         "type": "new",
         "text": {
-          "en": "A new LifeOS icon; the site can be added to a phone's home screen or installed on a computer as an app.",
-          "ru": "Новая иконка LifeOS; сайт можно добавить на экран телефона или установить на компьютер как приложение.",
-          "kk": "LifeOS-тың жаңа белгішесі; сайтты телефон экранына қосуға немесе компьютерге қолданба ретінде орнатуға болады."
+          "en": "A new site icon in the browser tab; LifeOS can be added to a phone's home screen or installed on a computer as an app.",
+          "ru": "Новая иконка сайта во вкладке браузера; LifeOS можно добавить на экран телефона или установить на компьютер как приложение.",
+          "kk": "Браузер қойындысында сайттың жаңа белгішесі; LifeOS-ты телефон экранына қосуға немесе компьютерге қолданба ретінде орнатуға болады."
         }
       },
       {

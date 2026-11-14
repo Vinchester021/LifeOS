@@ -3695,18 +3695,6 @@ small,
   font-size: 1.5rem;
 }
 
-/* The logo: the LifeOS wind rose (images/icons/favicon.svg, the same as the tab icon) */
-.brand-mark img {
-  display: block;
-  width: 2.25rem;
-  height: 2.25rem;
-}
-
-.brand-small .brand-mark img {
-  width: 1.9rem;
-  height: 1.9rem;
-}
-
 .brand-name {
   font-size: 1.5rem;
   font-weight: 800;
