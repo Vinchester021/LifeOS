@@ -3369,16 +3369,14 @@ fieldset.is-invalid .choice-card {
 }
 
 /* ---------- Sidebar quote (js/quote-widget.js) ----------
-   Menu = column: logo and links, free space, the quote card, free space.
-   Phone (Offcanvas): the spacer pushes the card to the bottom of the menu.
-   Computer: the free space is split 2 : 1 (see the >= 992px block), so the card
-   sits between the middle and the bottom, not glued to the bottom. */
+   Menu = column: logo and links, "Leave feedback", then the quote card close under them
+   (a fixed gap on the computer and in the phone menu; the free space stays below the card). */
 .sidebar-spacer {
-  flex: 1 0 1.5rem;
+  flex: 0 0 var(--space-4);
 }
 
 .sidebar-quote {
-  padding: 0.75rem 0.75rem 0.4rem;
+  padding: 0.75rem;
   border: 1px solid var(--lifeos-border);
   border-radius: 0.75rem;
   background-color: var(--lifeos-bg);
@@ -3447,10 +3445,34 @@ fieldset.is-invalid .choice-card {
   font-size: 0.8rem;
 }
 
+/* "Another quote", "Copy", "To favorites": a group on the right, big enough to see and to tap */
 .sidebar-quote-actions {
   display: flex;
-  gap: 0.1rem;
-  margin: 0.2rem 0 0 -0.5rem; /* icons line up with the text */
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.sidebar-quote-actions .btn-icon {
+  --bs-btn-color: var(--lifeos-primary-text);
+  --bs-btn-border-color: var(--lifeos-border-strong);
+  --bs-btn-hover-color: var(--lifeos-primary-text);
+  --bs-btn-hover-border-color: var(--lifeos-primary);
+  --bs-btn-active-border-color: var(--lifeos-primary);
+  min-width: 2.75rem; /* 44px */
+  min-height: 2.75rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-surface);
+  font-size: 1.15rem;
+}
+
+.sidebar-quote-actions .btn-icon:hover {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.sidebar-quote-actions .btn-icon[aria-pressed="true"] {
+  border-color: var(--lifeos-primary);
+  background-color: var(--lifeos-primary-soft);
 }
 
 .sidebar-nav .nav {
@@ -3556,7 +3578,7 @@ fieldset.is-invalid .choice-card {
     padding: 0 0.5rem 1.5rem;
   }
 
-  /* Full-height column: links on top, then the quote card with free space 2 : 1 around it */
+  /* Full-height column: links on top, the quote card close under them, the free space below */
   .sidebar {
     display: flex;
     flex-direction: column;
@@ -3564,15 +3586,6 @@ fieldset.is-invalid .choice-card {
 
   .sidebar .offcanvas-body {
     flex-grow: 1;
-  }
-
-  .sidebar-spacer {
-    flex: 2 1 0;
-  }
-
-  .sidebar .offcanvas-body::after {
-    content: "";
-    flex: 1 1 0;
   }
 
   .app-content {

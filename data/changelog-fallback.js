@@ -2,6 +2,28 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.4.1",
+    "date": "2026-11-14",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "The quote of the day is closer to the menu; the \"another quote\", \"copy\" and \"to favorites\" buttons are bigger and easier to see.",
+          "ru": "Цитата дня ближе к меню, кнопки «другая цитата», «копировать» и «в избранное» крупнее и заметнее.",
+          "kk": "Күннің дәйексөзі мәзірге жақындады, «басқа дәйексөз», «көшіру» және «таңдаулыларға» түймелері үлкейіп, көзге көбірек түседі."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Improved Kazakh translation.",
+          "ru": "Улучшен казахский перевод.",
+          "kk": "Қазақша аударма жақсартылды: «Не жаңа» терезесі енді «Жаңалықтар» деп аталады."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.4.0",
     "date": "2026-11-14",
     "items": [
@@ -18,7 +40,7 @@ window.LIFEOS_CHANGELOG = [
         "text": {
           "en": "If you missed several updates, the \"What's new\" window shows them all at once.",
           "ru": "Если вы пропустили несколько обновлений, в окне «Что нового» видны все сразу.",
-          "kk": "Бірнеше жаңартуды өткізіп алсаңыз, «Не жаңа» терезесінде бәрі бірден көрінеді."
+          "kk": "Бірнеше жаңартуды өткізіп алсаңыз, «Жаңалықтар» терезесінде бәрі бірден көрінеді."
         }
       }
     ]
@@ -100,7 +122,7 @@ window.LIFEOS_CHANGELOG = [
         "text": {
           "en": "The “What's new” window: after an update you see at once what has changed.",
           "ru": "Окно «Что нового»: после обновления сразу видно, что изменилось.",
-          "kk": "«Не жаңа» терезесі: жаңартудан кейін не өзгергені бірден көрінеді."
+          "kk": "«Жаңалықтар» терезесі: жаңартудан кейін не өзгергені бірден көрінеді."
         }
       },
       {
@@ -108,7 +130,7 @@ window.LIFEOS_CHANGELOG = [
         "text": {
           "en": "Settings → Help: a “What's new” line with the whole version history.",
           "ru": "В Настройках → «Помощь» — строка «Что нового» со всей историей версий.",
-          "kk": "Баптаулар → «Көмек»: барлық нұсқалар тарихы бар «Не жаңа» жолы."
+          "kk": "Баптаулар → «Көмек»: барлық нұсқалар тарихы бар «Жаңалықтар» жолы."
         }
       },
       {

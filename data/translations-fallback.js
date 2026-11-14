@@ -2195,7 +2195,7 @@ window.LIFEOS_TRANSLATIONS = {
   "kk": {
     "app.name": "LifeOS",
     "app.version": "Beta v{version}",
-    "whatsNew.title": "LifeOS v{version}: не жаңа",
+    "whatsNew.title": "LifeOS v{version} — жаңалықтар",
     "whatsNew.historyTitle": "LifeOS жаңартулар тарихы",
     "whatsNew.version": "{version} нұсқасы · {date}",
     "whatsNew.new": "Жаңа",
@@ -2208,7 +2208,7 @@ window.LIFEOS_TRANSLATIONS = {
     "whatsNew.missed.other": "Сіз болмаған кезде {count} жаңарту шықты",
     "whatsNew.versionShort": "v{version} — {date}",
     "whatsNew.empty": "Тарих қазір қолжетімсіз.",
-    "whatsNew.help.title": "Не жаңа",
+    "whatsNew.help.title": "Жаңалықтар",
     "whatsNew.help.text": "LifeOS-тың барлық өзгерістері, жаңасынан бастап.",
     "whatsNew.help.button": "Көрсету",
     "feedback.button": "Пікір қалдыру",
