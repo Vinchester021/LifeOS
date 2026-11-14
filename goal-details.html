@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.4.2">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.4.2">
-  <link rel="stylesheet" href="./css/style.css?v=1.4.2">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.4.3">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.4.3">
+  <link rel="stylesheet" href="./css/style.css?v=1.4.3">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.4.2">
+  <link rel="manifest" href="./manifest.json?v=1.4.3">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,20 +19,20 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.4.2" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.4.2" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.4.3" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.4.3" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.4.2"></script>
-  <script src="./data/quotes-fallback.js?v=1.4.2"></script>
-  <script src="./data/changelog-fallback.js?v=1.4.2"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.4.2"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.4.2" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.4.2" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.4.2" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.4.2" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
-  <script src="./js/tasks.js?v=1.4.2" defer></script>
-  <script src="./js/entry-form.js?v=1.4.2" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
-  <script src="./js/goal-details.js?v=1.4.2" defer></script>
+  <script src="./data/translations-fallback.js?v=1.4.3"></script>
+  <script src="./data/quotes-fallback.js?v=1.4.3"></script>
+  <script src="./data/changelog-fallback.js?v=1.4.3"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.4.3"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.4.3" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.4.3" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.4.3" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.4.3" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./js/tasks.js?v=1.4.3" defer></script>
+  <script src="./js/entry-form.js?v=1.4.3" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
+  <script src="./js/goal-details.js?v=1.4.3" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -192,12 +192,28 @@
           </dl>
         </section>
 
-        <!-- Row 1: the entry form | the history -->
-        <div class="gd-row gd-row-main">
+        <!-- Row 1: the entry form | the history. A checklist goal has no entries: the checklist takes the whole row. -->
+        <div class="gd-row gd-row-main" id="details-main-row">
+          <!-- Checklist (only a checklist goal): tick, add, rename and delete items right here (js/goal-details.js) -->
+          <section class="panel gd-checklist" id="checklist-panel" aria-labelledby="checklist-title" hidden>
+            <div class="panel-head">
+              <h2 class="panel-title gd-icon-title" id="checklist-title" tabindex="-1"><i class="bi bi-list-check" aria-hidden="true"></i><span data-i18n="progressType.checklist">Checklist</span></h2>
+              <span class="badge-status is-accent" id="checklist-count"></span>
+            </div>
+            <ul class="edit-list gd-checklist-list" id="checklist-list"></ul>
+            <form class="gd-checklist-add" id="checklist-add-form" novalidate>
+              <label class="form-label" for="checklist-new" data-i18n="details.checklist.newLabel">New item</label>
+              <div class="input-group">
+                <input class="form-control" type="text" id="checklist-new" maxlength="120" autocomplete="off" data-i18n-placeholder="details.checklist.newPlaceholder">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="details.checklist.add">Add</span></button>
+              </div>
+              <p class="field-error" id="checklist-new-error"></p>
+            </form>
+          </section>
+
           <!-- Add an entry: the fields depend on the progress type (data-entry-field) -->
-          <section class="panel" aria-labelledby="entry-title">
+          <section class="panel" id="entry-panel" aria-labelledby="entry-title">
             <h2 class="panel-title" id="entry-title" data-i18n="details.entry.title">Add an entry</h2>
-            <p class="text-secondary mb-0" id="entry-checklist-hint" data-i18n="details.entry.checklistHint" hidden>Progress is counted from the checklist.</p>
             <form id="entry-form" novalidate>
               <div class="row g-3">
                 <!-- What to type for this goal type: "Example: +20 pages since the last entry" -->
@@ -276,7 +292,7 @@
             </form>
           </section>
 
-          <section class="panel" aria-labelledby="history-title">
+          <section class="panel" id="history-panel" aria-labelledby="history-title">
             <h2 class="panel-title" id="history-title" tabindex="-1" data-i18n="details.history.titleLong">History of entries</h2>
             <div class="gd-empty" id="history-empty">
               <i class="bi bi-clock-history" aria-hidden="true"></i>
@@ -286,7 +302,7 @@
           </section>
         </div>
 
-        <!-- Row 2: milestones, checklist (only for a checklist goal), notes, related tasks -->
+        <!-- Row 2: milestones, notes, related tasks -->
         <div class="gd-row gd-row-bottom">
           <section class="panel" aria-labelledby="milestones-title">
             <h2 class="panel-title gd-icon-title" id="milestones-title"><i class="bi bi-signpost-split" aria-hidden="true"></i><span data-i18n="wizard.step.6">Milestones</span></h2>
@@ -295,11 +311,6 @@
               <span data-i18n="wizard.milestones.empty">No milestones yet.</span>
             </div>
             <ul class="gd-milestones" id="milestone-list"></ul>
-          </section>
-
-          <section class="panel" id="checklist-panel" aria-labelledby="checklist-title" hidden>
-            <h2 class="panel-title gd-icon-title" id="checklist-title"><i class="bi bi-list-check" aria-hidden="true"></i><span data-i18n="progressType.checklist">Checklist</span></h2>
-            <ul class="edit-list" id="checklist-list"></ul>
           </section>
 
           <section class="panel" aria-labelledby="notes-title">

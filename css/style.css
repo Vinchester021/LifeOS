@@ -1393,7 +1393,18 @@ a:hover {
   transform: rotate(180deg);
 }
 
-/* The panel: closed until "Filters" opens it (jQuery slideToggle; open at start on a computer) */
+/* "Filters 2": the number of filters that are on, in the accent */
+.filters-toggle .filters-count {
+  margin-left: 0.4rem;
+  background-color: var(--lifeos-primary);
+  color: var(--lifeos-on-primary);
+}
+
+.filters-count[hidden] {
+  display: none;
+}
+
+/* The panel: closed until "Filters" opens it (jQuery slideToggle), at every visit and on every screen */
 .filters-panel {
   display: none;
   margin-top: var(--space-2);
@@ -4331,6 +4342,55 @@ small,
 .gd-row-bottom {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   align-items: start;
+}
+
+/* A checklist goal has no entries: the checklist is the big block of the first row (js/goal-details.js) */
+@media (min-width: 992px) {
+  .gd-row-main.is-checklist {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.gd-checklist .panel-head {
+  margin-bottom: 0;
+}
+
+.gd-checklist-list li {
+  min-height: 3rem;
+}
+
+.gd-checklist-list .btn-icon {
+  flex: none;
+}
+
+/* The last item cannot be deleted: a dimmed bin without a frame (the reason is in its title) */
+.gd-checklist-list .btn-icon:disabled {
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-disabled-bg: transparent;
+}
+
+/* Renaming an item: [text field] ✓ ✕, the error under it */
+.gd-checklist-list li.gd-check-edit {
+  flex-wrap: wrap;
+  padding-left: 0.35rem;
+}
+
+.gd-check-edit .form-control {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.gd-check-edit .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.gd-checklist-add {
+  margin-top: var(--space-3);
+}
+
+.gd-checklist-add .field-error {
+  margin-bottom: 0;
 }
 
 .gd-icon-title {

@@ -198,5 +198,205 @@
   { "id": "q50", "author": "LifeOS", "text": {
     "en": "Your future is built on ordinary days.",
     "ru": "Будущее строится в обычные дни.",
-    "kk": "Болашақ қарапайым күндерде құрылады." } }
+    "kk": "Болашақ қарапайым күндерде құрылады." } },
+  { "id": "q51", "author": "Seneca", "text": {
+    "en": "Nothing is ours except time.",
+    "ru": "Ничто нам не принадлежит, только время.",
+    "kk": "Бізге ештеңе тиесілі емес, тек уақыт қана." } },
+  { "id": "q52", "author": "Seneca", "text": {
+    "en": "It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult.",
+    "ru": "Не потому мы не решаемся, что трудно; потому и трудно, что не решаемся.",
+    "kk": "Қиын болғандықтан батылымыз бармайды емес, батылымыз бармағандықтан қиын болады." } },
+  { "id": "q53", "author": "Seneca", "text": {
+    "en": "If you do not know which port you are sailing to, no wind is favourable.",
+    "ru": "Кто не знает, в какую гавань плывёт, для того нет попутного ветра.",
+    "kk": "Қай айлаққа жүзіп бара жатқанын білмейтінге ешбір жел оңды емес." } },
+  { "id": "q54", "author": "Seneca", "text": {
+    "en": "While we teach, we learn.",
+    "ru": "Обучая, мы учимся.",
+    "kk": "Үйрете жүріп, өзіміз үйренеміз." } },
+  { "id": "q55", "author": "Marcus Aurelius", "text": {
+    "en": "The soul becomes dyed with the colour of its thoughts.",
+    "ru": "Душа окрашивается в цвет своих мыслей.",
+    "kk": "Жан өз ойларының түсіне боялады." } },
+  { "id": "q56", "author": "Marcus Aurelius", "text": {
+    "en": "Do not live as if you had ten thousand years. While you live, while it is in your power, be good.",
+    "ru": "Не живи так, будто впереди у тебя десять тысяч лет. Пока живёшь, пока это в твоей власти, будь хорошим.",
+    "kk": "Алда он мың жыл бар сияқты өмір сүрме. Тірі кезіңде, қолыңнан келгенде — жақсы бол." } },
+  { "id": "q57", "author": "Marcus Aurelius", "text": {
+    "en": "Look within. Within is the fountain of good.",
+    "ru": "Загляни внутрь себя. Внутри — источник добра.",
+    "kk": "Ішіңе үңіл. Жақсылықтың бұлағы — ішіңде." } },
+  { "id": "q58", "author": "Marcus Aurelius", "text": {
+    "en": "The universe is change; our life is what our thoughts make it.",
+    "ru": "Мир — это изменение, жизнь — то, какой её делают наши мысли.",
+    "kk": "Әлем — өзгеріс, ал өміріміз — ойларымыз оны қандай етсе, сондай." } },
+  { "id": "q59", "author": "Epictetus", "text": {
+    "en": "People are disturbed not by things, but by their opinions about things.",
+    "ru": "Людей мучают не вещи, а представления о вещах.",
+    "kk": "Адамдарды заттар емес, заттар туралы пікірлері мазалайды." } },
+  { "id": "q60", "author": "Epictetus", "text": {
+    "en": "No great thing is created suddenly, any more than a bunch of grapes or a fig.",
+    "ru": "Ничто великое не рождается сразу — как и гроздь винограда или смоква.",
+    "kk": "Ешбір ұлы нәрсе бірден пайда болмайды — жүзім шоғыры мен інжір сияқты." } },
+  { "id": "q61", "author": "Epictetus", "text": {
+    "en": "Some things are within our power, and some are not.",
+    "ru": "Одно в нашей власти, другое — нет.",
+    "kk": "Бір нәрсе біздің еркімізде, бір нәрсе — жоқ." } },
+  { "id": "q62", "author": "Epictetus", "text": {
+    "en": "Every habit and faculty is preserved and increased by its corresponding actions.",
+    "ru": "Всякая привычка и способность сохраняется и растёт от соответствующих дел.",
+    "kk": "Әрбір әдет пен қабілет сәйкес істер арқылы сақталып, күшейеді." } },
+  { "id": "q63", "author": "Confucius", "text": {
+    "en": "To make a mistake and not correct it — that is the real mistake.",
+    "ru": "Совершить ошибку и не исправить её — вот это и есть ошибка.",
+    "kk": "Қателесіп, оны түзетпеу — нағыз қателік осы." } },
+  { "id": "q64", "author": "Confucius", "text": {
+    "en": "Review the old to understand the new.",
+    "ru": "Повторяй старое, чтобы узнавать новое.",
+    "kk": "Жаңаны тану үшін ескіні қайтала." } },
+  { "id": "q65", "author": "Confucius", "text": {
+    "en": "What you do not wish for yourself, do not do to others.",
+    "ru": "Не делай другим того, чего не желаешь себе.",
+    "kk": "Өзіңе тілемегенді өзгеге жасама." } },
+  { "id": "q66", "author": "Confucius", "text": {
+    "en": "When you see a worthy person, think of becoming their equal; when you see an unworthy one, look within yourself.",
+    "ru": "Видя достойного, думай о том, как сравняться с ним; видя недостойного, загляни в себя.",
+    "kk": "Лайықты адамды көрсең, оған теңелуді ойла; лайықсызды көрсең, өзіңе үңіл." } },
+  { "id": "q67", "author": "Lao Tzu", "text": {
+    "en": "Knowing others is wisdom; knowing yourself is enlightenment.",
+    "ru": "Знающий людей разумен, знающий себя просвещён.",
+    "kk": "Өзгені білген — ақылды, өзін білген — көзі ашық." } },
+  { "id": "q68", "author": "Lao Tzu", "text": {
+    "en": "A tree as wide as an embrace grows from a tiny sprout.",
+    "ru": "Дерево в обхват вырастает из крошечного ростка.",
+    "kk": "Құшаққа сыймас ағаш кішкентай өскіннен өседі." } },
+  { "id": "q69", "author": "Lao Tzu", "text": {
+    "en": "Whoever knows they have enough is rich.",
+    "ru": "Кто знает, что ему достаточно, тот богат.",
+    "kk": "Барына қанағат еткен — бай." } },
+  { "id": "q70", "author": "Lao Tzu", "text": {
+    "en": "Do difficult things while they are easy, and great things while they are small.",
+    "ru": "Трудное делай, пока оно легко; великое — пока оно мало.",
+    "kk": "Қиынды оңай кезінде, ұлыны кішкентай кезінде істе." } },
+  { "id": "q71", "author": "Aristotle", "text": {
+    "en": "We become just by doing just acts, and brave by doing brave acts.",
+    "ru": "Справедливыми мы становимся, совершая справедливые поступки, а мужественными — мужественные.",
+    "kk": "Әділ істер жасап әділ, батыл істер жасап батыл боламыз." } },
+  { "id": "q72", "author": "Aristotle", "text": {
+    "en": "One swallow does not make a spring, nor does one fine day.",
+    "ru": "Одна ласточка не делает весны, как и один погожий день.",
+    "kk": "Бір қарлығашпен көктем келмейді, бір ашық күнмен де келмейді." } },
+  { "id": "q73", "author": "Benjamin Franklin", "text": {
+    "en": "Early to bed and early to rise makes a man healthy, wealthy and wise.",
+    "ru": "Рано ложиться и рано вставать — значит быть здоровым, богатым и мудрым.",
+    "kk": "Ерте жатып, ерте тұрған — дені сау, ауқатты әрі дана." } },
+  { "id": "q74", "author": "Benjamin Franklin", "text": {
+    "en": "Have you something to do tomorrow? Do it today.",
+    "ru": "Есть дело на завтра? Сделай его сегодня.",
+    "kk": "Ертеңге ісің бар ма? Оны бүгін істе." } },
+  { "id": "q75", "author": "Benjamin Franklin", "text": {
+    "en": "Do you love life? Then do not squander time, for that is the stuff life is made of.",
+    "ru": "Любишь жизнь? Тогда не трать время зря: из него состоит жизнь.",
+    "kk": "Өмірді сүйесің бе? Онда уақытты босқа өткізбе: өмір содан тұрады." } },
+  { "id": "q76", "author": "Benjamin Franklin", "text": {
+    "en": "Little strokes fell great oaks.",
+    "ru": "Маленькие удары валят большие дубы.",
+    "kk": "Кішкентай соққылар үлкен емендерді құлатады." } },
+  { "id": "q77", "author": "Abai Kunanbaev", "text": {
+    "en": "Aspiration, work, deep thought, contentment, kindness — think on these: five noble deeds, if you accept them.",
+    "ru": "Стремление, труд, глубокая мысль, довольство малым, милосердие — подумай: вот пять благородных дел, если примешь их.",
+    "kk": "Талап, еңбек, терең ой, қанағат, рақым, ойлап қой — бес асыл іс, көнсеңіз." } },
+  { "id": "q78", "author": "Abai Kunanbaev", "text": {
+    "en": "Walk slowly but tread surely — your work will not be wasted.",
+    "ru": "Иди не спеша, но ступай уверенно — твой труд не пропадёт даром.",
+    "kk": "Ақырын жүріп, анық бас, еңбегің кетпес далаға." } },
+  { "id": "q79", "author": "Abai Kunanbaev", "text": {
+    "en": "A person is not born wise: by hearing, seeing, touching and tasting, they learn the good and the bad in the world…",
+    "ru": "Человек не рождается разумным: слушая, видя, трогая и пробуя, он узнаёт, что в мире хорошо и что плохо…",
+    "kk": "Адам ата-анадан туғанда есті болмайды: естіп, көріп, ұстап, татып ескерсе, дүниедегі жақсы, жаманды таниды…" } },
+  { "id": "q80", "author": "Ovid", "text": {
+    "en": "Add a little to a little, and there will be a great heap.",
+    "ru": "Прибавляй понемногу к малому — и получится большая куча.",
+    "kk": "Аз-аздан қоса берсең, үлкен үйінді болады." } },
+  { "id": "q81", "author": "Horace", "text": {
+    "en": "Life gives nothing to mortals without great effort.",
+    "ru": "Жизнь ничего не даёт смертным без большого труда.",
+    "kk": "Өмір адамға үлкен еңбексіз ештеңе бермейді." } },
+  { "id": "q82", "author": "Publilius Syrus", "text": {
+    "en": "Each day is the pupil of the day before.",
+    "ru": "Каждый день — ученик предыдущего.",
+    "kk": "Әр күн — алдыңғы күннің шәкірті." } },
+  { "id": "q83", "author": "Publilius Syrus", "text": {
+    "en": "He conquers twice who conquers himself in victory.",
+    "ru": "Дважды побеждает тот, кто в победе побеждает себя.",
+    "kk": "Жеңіс кезінде өзін жеңген адам екі рет жеңеді." } },
+  { "id": "q84", "author": "Cicero", "text": {
+    "en": "Anyone can make a mistake, but only a fool persists in it.",
+    "ru": "Каждому свойственно ошибаться, но только глупцу — упорствовать в ошибке.",
+    "kk": "Әр адам қателесуі мүмкін, ал қатесінде қасарысу — тек ақымаққа тән." } },
+  { "id": "q85", "author": "Seneca", "text": {
+    "en": "Whoever is everywhere is nowhere.",
+    "ru": "Кто везде, тот нигде.",
+    "kk": "Бәр жерде жүрген еш жерде болмайды." } },
+  { "id": "q86", "author": "Sophocles", "text": {
+    "en": "Without labour nothing prospers.",
+    "ru": "Без труда ничто не процветает.",
+    "kk": "Еңбексіз ештеңе өркендемейді." } },
+  { "id": "q87", "author": "Virgil", "text": {
+    "en": "Relentless work conquers all.",
+    "ru": "Упорный труд всё побеждает.",
+    "kk": "Табанды еңбек бәрін жеңеді." } },
+  { "id": "q88", "author": "Virgil", "text": {
+    "en": "They can because they think they can.",
+    "ru": "Они могут, потому что верят, что могут.",
+    "kk": "Олар қолдарынан келетініне сенгендіктен, қолдарынан келеді." } },
+  { "id": "q89", "author": "LifeOS", "text": {
+    "en": "Start small, but start today.",
+    "ru": "Начни с малого, но начни сегодня.",
+    "kk": "Аздан баста, бірақ бүгін баста." } },
+  { "id": "q90", "author": "LifeOS", "text": {
+    "en": "One step a day is 365 steps a year.",
+    "ru": "Один шаг в день — 365 шагов в год.",
+    "kk": "Күніне бір қадам — жылына 365 қадам." } },
+  { "id": "q91", "author": "LifeOS", "text": {
+    "en": "A goal written down becomes a plan.",
+    "ru": "Записанная цель становится планом.",
+    "kk": "Жазылған мақсат жоспарға айналады." } },
+  { "id": "q92", "author": "LifeOS", "text": {
+    "en": "The best time for the first step is now.",
+    "ru": "Лучшее время для первого шага — сейчас.",
+    "kk": "Алғашқы қадамға ең жақсы уақыт — қазір." } },
+  { "id": "q93", "author": "LifeOS", "text": {
+    "en": "A small win today beats a big plan for later.",
+    "ru": "Маленькая победа сегодня лучше большого плана на потом.",
+    "kk": "Бүгінгі кішкентай жеңіс кейінге қалған үлкен жоспардан артық." } },
+  { "id": "q94", "author": "LifeOS", "text": {
+    "en": "Mark what is done: that is progress too.",
+    "ru": "Отмечай сделанное: это тоже движение вперёд.",
+    "kk": "Орындалғанды белгіле: бұл да алға жылжу." } },
+  { "id": "q95", "author": "LifeOS", "text": {
+    "en": "Goals for the year, attention for today.",
+    "ru": "Цели — на год, внимание — на сегодня.",
+    "kk": "Мақсат — жылға, назар — бүгінге." } },
+  { "id": "q96", "author": "LifeOS", "text": {
+    "en": "A missed day is no reason to give up.",
+    "ru": "Пропущенный день — не повод сдаваться.",
+    "kk": "Өткізіп алған күн — берілуге себеп емес." } },
+  { "id": "q97", "author": "LifeOS", "text": {
+    "en": "A clear goal saves energy.",
+    "ru": "Ясная цель бережёт силы.",
+    "kk": "Айқын мақсат күшті үнемдейді." } },
+  { "id": "q98", "author": "LifeOS", "text": {
+    "en": "Move at your own pace, but keep moving.",
+    "ru": "Двигайся в своём темпе, но не останавливайся.",
+    "kk": "Өз қарқыныңмен жүр, бірақ тоқтама." } },
+  { "id": "q99", "author": "LifeOS", "text": {
+    "en": "Every month is a new chapter of your year.",
+    "ru": "Каждый месяц — новая глава твоего года.",
+    "kk": "Әр ай — жылыңның жаңа тарауы." } },
+  { "id": "q100", "author": "LifeOS", "text": {
+    "en": "Track your progress and you will see yourself grow.",
+    "ru": "Записывай прогресс — и увидишь, как растёшь.",
+    "kk": "Прогресіңді жазып отыр — өскеніңді көресің." } }
 ]

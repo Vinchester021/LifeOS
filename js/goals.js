@@ -184,12 +184,27 @@ function activeFilterCount() {
   return [goalsView.search.trim() !== '', goalsView.category !== 'all', statusIsOn].filter(Boolean).length;
 }
 
-// "Reset (2)" with an accent border; hidden when nothing is filtered.
+// The filters inside the panel (category, status): the badge on "Filters" — the panel is closed, the search is not.
+function panelFilterCount() {
+  const statusIsOn = goalsView.tab !== 'archive' && goalsView.status !== 'all';
+  return [goalsView.category !== 'all', statusIsOn].filter(Boolean).length;
+}
+
+// "Reset (2)" with an accent border; hidden when nothing is filtered. "Filters 2" on the button.
 function renderResetButton() {
   const count = activeFilterCount();
   const button = document.getElementById('filters-reset');
   button.hidden = count === 0;
   document.getElementById('filters-reset-label').textContent = t('goals.filters.resetCount', { count });
+  const panelCount = panelFilterCount();
+  const badge = document.getElementById('filters-count');
+  badge.hidden = panelCount === 0;
+  badge.textContent = Format.number(panelCount);
+  badge.title = panelCount ? tPlural('goals.filters.active', panelCount) : '';
+  // Screen readers: "Filters, 2 active filters"
+  const toggle = document.getElementById('filters-toggle');
+  if (panelCount) toggle.setAttribute('aria-label', `${t('goals.filters.toggle')}, ${tPlural('goals.filters.active', panelCount)}`);
+  else toggle.removeAttribute('aria-label');
 }
 
 // Three different empty states, chosen by why the list is empty.
@@ -233,7 +248,7 @@ function resetFilters() {
   document.getElementById('goal-search').focus(); // the reset button is hidden now
 }
 
-// The filter panel folds open/closed with jQuery. It starts open on a computer, closed on a phone.
+// The filter panel folds open/closed with jQuery. It is closed at every visit, on every screen (not remembered).
 // Without jQuery (it did not load) the panel is simply shown or hidden — the same as jQuery's toggle().
 function showFiltersPanel(isOpen, animate) {
   const panel = document.getElementById('filters-panel');
@@ -243,9 +258,8 @@ function showFiltersPanel(isOpen, animate) {
 }
 
 function initFiltersPanel() {
-  const isOpen = window.matchMedia('(min-width: 992px)').matches;
-  document.getElementById('filters-toggle').setAttribute('aria-expanded', String(isOpen));
-  showFiltersPanel(isOpen, false);
+  document.getElementById('filters-toggle').setAttribute('aria-expanded', 'false');
+  showFiltersPanel(false, false);
 }
 
 function toggleFiltersPanel() {

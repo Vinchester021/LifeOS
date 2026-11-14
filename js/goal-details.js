@@ -162,11 +162,18 @@ function renderPace(goal, percent) {
 const entryForm = createEntryForm('entry');
 
 // A checklist has no form here: its progress comes from ticking items in the list.
+// Every progress type records entries except a checklist: its progress comes from the ticked items.
+function usesEntries(goal) {
+  return goal.progressType !== 'checklist';
+}
+
+// A checklist goal: no "Add an entry" and no history (unless old entries exist, e.g. the type was changed);
+// the checklist takes the whole first row.
 function renderEntryForm(goal) {
-  const isChecklist = goal.progressType === 'checklist';
-  byId('entry-form').hidden = isChecklist;
-  byId('entry-checklist-hint').hidden = !isChecklist;
-  if (!isChecklist) entryForm.render(goal);
+  const withEntries = usesEntries(goal);
+  byId('entry-panel').hidden = !withEntries;
+  byId('details-main-row').classList.toggle('is-checklist', !withEntries);
+  if (withEntries) entryForm.render(goal);
 }
 
 function submitEntry(event) {
@@ -196,6 +203,7 @@ function entryTone(goal, entry) {
 // Notes and values are escaped before going into the HTML string.
 function renderHistory(goal) {
   const entries = getGoalEntries(goal.id);
+  byId('history-panel').hidden = !usesEntries(goal) && entries.length === 0;
   byId('history-empty').hidden = entries.length > 0;
   byId('history-list').innerHTML = entries.map((entry) => {
     const date = Format.shortDate(entry.date);
@@ -231,7 +239,7 @@ function deleteEntry(entryId) {
   byId('history-title').focus(); // the deleted button is gone; keep focus in the same area
 }
 
-/* ---------- Milestones and checklist (tick to mark done) ---------- */
+/* ---------- Milestones and checklist ---------- */
 
 // The line under a milestone. doneAt is saved when a milestone is ticked (older ones have no date).
 function milestoneStatus(milestone) {
@@ -263,14 +271,146 @@ function renderMilestones(goal) {
   }).join('');
 }
 
-function renderChecklist(goal) {
-  const items = asArray(goal.checklist);
-  byId('checklist-panel').hidden = items.length === 0;
-  byId('checklist-list').innerHTML = items.map((item, index) => `
+/* ----- Checklist: tick, add, rename, delete (only a checklist goal) ----- */
+
+const CHECKLIST_ITEM_MAX = 120; // the same limit as in the goal wizard
+const checklistEdit = { index: null }; // the item being renamed (null = none)
+
+// One item: [ ] text  ✎  🗑. The last item cannot be deleted: a checklist needs at least one.
+function checklistItemHtml(item, index, count) {
+  const text = escapeHtml(item.text);
+  if (checklistEdit.index === index) {
+    return `
+      <li class="gd-check-edit">
+        <label class="visually-hidden" for="check-rename-${index}">${escapeHtml(t('details.checklist.editLabel'))}</label>
+        <input class="form-control" type="text" id="check-rename-${index}" maxlength="${CHECKLIST_ITEM_MAX}" autocomplete="off" value="${text}" data-check-rename-input="${index}">
+        <button type="button" class="btn btn-icon" data-check-save="${index}" aria-label="${escapeHtml(t('details.checklist.save'))}" title="${escapeHtml(t('details.checklist.save'))}"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-icon" data-check-cancel="${index}" aria-label="${escapeHtml(t('delete.cancel'))}" title="${escapeHtml(t('delete.cancel'))}"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        <p class="field-error" id="check-rename-${index}-error"></p>
+      </li>`;
+  }
+  const rename = t('details.checklist.rename', { text: item.text });
+  const remove = count > 1 ? t('details.checklist.delete', { text: item.text }) : t('details.checklist.lastItem');
+  return `
     <li class="${item.done ? 'is-done' : ''}">
       <input class="form-check-input mt-0" type="checkbox" id="check-item-${index}" data-check-index="${index}"${item.done ? ' checked' : ''}>
-      <label class="item-text" for="check-item-${index}">${escapeHtml(item.text)}</label>
-    </li>`).join('');
+      <label class="item-text" for="check-item-${index}">${text}</label>
+      <button type="button" class="btn btn-icon" data-check-rename="${index}" aria-label="${escapeHtml(rename)}" title="${escapeHtml(rename)}"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-icon" data-check-delete="${index}" aria-label="${escapeHtml(remove)}" title="${escapeHtml(remove)}"${count > 1 ? '' : ' disabled'}><i class="bi bi-trash" aria-hidden="true"></i></button>
+    </li>`;
+}
+
+function renderChecklist(goal) {
+  const isChecklist = goal.progressType === 'checklist';
+  byId('checklist-panel').hidden = !isChecklist;
+  if (!isChecklist) return;
+  const items = asArray(goal.checklist);
+  if (checklistEdit.index !== null && !items[checklistEdit.index]) checklistEdit.index = null;
+  byId('checklist-count').textContent = t('progress.tile.of', {
+    done: Format.number(items.filter((item) => item.done).length), total: Format.number(items.length)
+  });
+  byId('checklist-list').innerHTML = items.map((item, index) => checklistItemHtml(item, index, items.length)).join('');
+}
+
+// Changes the items and counts the goal again: done items = current value, all items = target.
+function saveChecklist(change) {
+  return updateGoal((goal) => {
+    goal.checklist = asArray(goal.checklist).map((item) => ({ ...item }));
+    change(goal.checklist);
+    goal.currentValue = goal.checklist.filter((item) => item.done).length;
+    goal.targetValue = goal.checklist.length;
+  });
+}
+
+// The text of a new or renamed item: 1–120 characters (the error is shown under the field).
+function checklistTextError(text) {
+  if (text === '') return 'wizard.error.itemRequired';
+  return text.length > CHECKLIST_ITEM_MAX ? 'details.checklist.tooLong' : null;
+}
+
+function addChecklistItem(event) {
+  event.preventDefault();
+  const input = byId('checklist-new');
+  const text = input.value.trim();
+  const error = checklistTextError(text);
+  setFieldError(input, error);
+  if (error) {
+    input.focus();
+    return;
+  }
+  if (!saveChecklist((items) => items.push({ id: createId('item'), text, done: false }))) return;
+  input.value = '';
+  showToast('toast.checklistAdded', 'success', { text });
+  renderDetailsPage();
+  input.focus(); // add the next one at once
+}
+
+function startRenameChecklistItem(index) {
+  checklistEdit.index = index;
+  renderDetailsPage();
+  const input = byId(`check-rename-${index}`);
+  input?.focus();
+  input?.select();
+}
+
+function cancelRenameChecklistItem(index) {
+  checklistEdit.index = null;
+  renderDetailsPage();
+  byId('checklist-list').querySelector(`[data-check-rename="${index}"]`)?.focus();
+}
+
+function saveRenameChecklistItem(index) {
+  const input = byId(`check-rename-${index}`);
+  const text = input.value.trim();
+  const error = checklistTextError(text);
+  setFieldError(input, error);
+  if (error) {
+    input.focus();
+    return;
+  }
+  if (!saveChecklist((items) => { items[index].text = text; })) return;
+  checklistEdit.index = null;
+  showToast('toast.checklistRenamed', 'success', { text });
+  renderDetailsPage();
+  byId('checklist-list').querySelector(`[data-check-rename="${index}"]`)?.focus();
+}
+
+function deleteChecklistItem(index) {
+  const items = asArray(loadGoal()?.checklist);
+  if (items.length <= 1 || !items[index]) return; // the last item stays
+  const { text } = items[index];
+  if (!saveChecklist((list) => list.splice(index, 1))) return;
+  checklistEdit.index = null;
+  showToast('toast.checklistDeleted', 'success', { text });
+  renderDetailsPage();
+  // The focus goes to the item that took this place (or the one above it), else to the title
+  const list = byId('checklist-list');
+  const next = list.querySelector(`[data-check-index="${Math.min(index, items.length - 2)}"]`);
+  (next ?? byId('checklist-title')).focus();
+}
+
+function onChecklistClick(event) {
+  const button = event.target.closest('button');
+  if (!button) return;
+  const { checkRename, checkSave, checkCancel, checkDelete } = button.dataset;
+  if (checkRename !== undefined) startRenameChecklistItem(Number(checkRename));
+  if (checkSave !== undefined) saveRenameChecklistItem(Number(checkSave));
+  if (checkCancel !== undefined) cancelRenameChecklistItem(Number(checkCancel));
+  if (checkDelete !== undefined) deleteChecklistItem(Number(checkDelete));
+}
+
+// In the rename field: Enter saves, Esc cancels.
+function onChecklistKeydown(event) {
+  const index = event.target.dataset.checkRenameInput;
+  if (index === undefined) return;
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    saveRenameChecklistItem(Number(index));
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    cancelRenameChecklistItem(Number(index));
+  }
 }
 
 function toggleMilestone(index, done) {
@@ -367,6 +507,9 @@ function bindDetailsEvents() {
     const box = event.target.closest('[data-check-index]');
     if (box) toggleChecklistItem(Number(box.dataset.checkIndex), box.checked);
   });
+  byId('checklist-list').addEventListener('click', onChecklistClick);
+  byId('checklist-list').addEventListener('keydown', onChecklistKeydown);
+  byId('checklist-add-form').addEventListener('submit', submitOnce(addChecklistItem));
   byId('notes-save').addEventListener('click', submitOnce(saveNotes));
   TaskList.bind(byId('goal-tasks'), onGoalTasksChanged);
   byId('goal-task-add').addEventListener('click', openNewGoalTask);
