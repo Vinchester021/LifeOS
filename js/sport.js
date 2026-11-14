@@ -264,9 +264,9 @@ function exerciseRowHtml(number) {
       <legend class="visually-hidden" data-i18n="sport.day.exercise">${escapeHtml(t('sport.day.exercise'))}</legend>
       <div class="row g-2">
         ${field('name', 'progress.workout.exercise', 'col-12 col-md-5', 'maxlength="60" data-i18n-placeholder="progress.workout.exercisePlaceholder"')}
-        ${field('sets', 'progress.workout.sets', 'col-4 col-md-2', 'inputmode="numeric" maxlength="2"')}
-        ${field('reps', 'progress.workout.reps', 'col-4 col-md-2', 'inputmode="numeric" maxlength="3"')}
-        ${field('weight', 'progress.workout.weight', 'col-4 col-md-3', 'inputmode="decimal" maxlength="6" data-i18n-placeholder="progress.workout.bodyweight"')}
+        ${field('sets', 'progress.workout.sets', 'col-4 col-md-2', 'inputmode="numeric" maxlength="2" data-number="integer"')}
+        ${field('reps', 'progress.workout.reps', 'col-4 col-md-2', 'inputmode="numeric" maxlength="3" data-number="integer"')}
+        ${field('weight', 'progress.workout.weight', 'col-4 col-md-3', 'inputmode="decimal" maxlength="6" data-number="decimal" data-decimals="1" data-i18n-placeholder="progress.workout.bodyweight"')}
         <div class="col-12 sport-ex-note-row">
           <div class="flex-grow-1">
             <label class="form-label" for="ex-note-${number}" data-i18n="sport.day.note">${escapeHtml(t('sport.day.note'))}</label>
@@ -290,9 +290,9 @@ function addExerciseRow(exercise = null) {
   if (exercise) {
     // .value never parses HTML: user text is safe here.
     byId(`ex-name-${number}`).value = exercise.name ?? '';
-    byId(`ex-sets-${number}`).value = exercise.sets ?? '';
-    byId(`ex-reps-${number}`).value = exercise.reps ?? '';
-    byId(`ex-weight-${number}`).value = Number.isFinite(exercise.weight) ? String(exercise.weight) : '';
+    setNumberValue(byId(`ex-sets-${number}`), exercise.sets);
+    setNumberValue(byId(`ex-reps-${number}`), exercise.reps);
+    setNumberValue(byId(`ex-weight-${number}`), exercise.weight);
     byId(`ex-note-${number}`).value = exercise.note ?? '';
     document.querySelector(`[data-ex-row="${number}"]`).dataset.exId = exercise.id ?? '';
   }
@@ -464,18 +464,18 @@ function workoutProgress(current) {
 function setRowHtml(exercise, e, set, s) {
   const id = `set-${e}-${s}`;
   const number = s + 1;
-  const value = (number) => (Number.isFinite(number) ? String(number) : '');
+  const value = (number) => formatNumberValue(number, { decimals: 1 }); // "82,5" in ru, "82.5" in en
   return `
     <li class="sport-set${set.done ? ' is-done' : ''}">
       <input class="form-check-input" type="checkbox" id="${id}-done" data-set="${e}-${s}" data-set-field="done"${set.done ? ' checked' : ''}>
       <label class="sport-set-label" for="${id}-done">${escapeHtml(t('sport.set.number', { number }))}</label>
       <span class="sport-set-inputs">
         <label class="visually-hidden" for="${id}-weight">${escapeHtml(t('sport.set.weightLabel', { number, exercise: exercise.name }))}</label>
-        <input class="form-control form-control-sm" type="text" id="${id}-weight" inputmode="decimal" maxlength="6"
+        <input class="form-control form-control-sm" type="text" id="${id}-weight" inputmode="decimal" maxlength="6" data-number="decimal" data-decimals="1"
                data-set="${e}-${s}" data-set-field="weight" value="${escapeHtml(value(set.weight))}" placeholder="—">
         <span class="sport-set-unit" aria-hidden="true">${escapeHtml(t('progress.unit.kg'))} ×</span>
         <label class="visually-hidden" for="${id}-reps">${escapeHtml(t('sport.set.repsLabel', { number, exercise: exercise.name }))}</label>
-        <input class="form-control form-control-sm" type="text" id="${id}-reps" inputmode="numeric" maxlength="3"
+        <input class="form-control form-control-sm" type="text" id="${id}-reps" inputmode="numeric" maxlength="3" data-number="integer"
                data-set="${e}-${s}" data-set-field="reps" value="${escapeHtml(value(set.reps))}">
       </span>
       <p class="field-error" id="${id}-weight-error"></p>
@@ -853,7 +853,7 @@ function buildBodyInputs() {
     <div class="col-6">
       <label class="form-label" for="body-${key}">${escapeHtml(t(`progress.body.${key}`))}</label>
       <div class="input-group">
-        <input class="form-control" type="text" id="body-${key}" inputmode="decimal" autocomplete="off">
+        <input class="form-control" type="text" id="body-${key}" inputmode="decimal" autocomplete="off" data-number="decimal" data-decimals="1">
         <span class="input-group-text">${escapeHtml(t(`progress.unit.${unit}`))}</span>
       </div>
       <p class="field-error" id="body-${key}-error"></p>

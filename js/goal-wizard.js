@@ -151,17 +151,26 @@ const GOAL_WIZARD_HTML = `
             <div class="row g-3">
               <div class="col-sm-6" data-field="start">
                 <label class="form-label" for="wiz-start" data-i18n="wizard.values.start">Start value</label>
-                <input class="form-control" type="text" id="wiz-start" inputmode="decimal" autocomplete="off" data-group-digits>
+                <div class="input-group">
+                  <input class="form-control" type="text" id="wiz-start" inputmode="decimal" autocomplete="off" data-number="decimal">
+                  <span class="input-group-text wiz-value-unit" hidden></span>
+                </div>
                 <p class="field-error" id="wiz-start-error"></p>
               </div>
               <div class="col-sm-6" data-field="target">
                 <label class="form-label" for="wiz-target" data-i18n="wizard.values.target">Target value</label>
-                <input class="form-control" type="text" id="wiz-target" inputmode="decimal" autocomplete="off" data-group-digits>
+                <div class="input-group">
+                  <input class="form-control" type="text" id="wiz-target" inputmode="decimal" autocomplete="off" data-number="decimal">
+                  <span class="input-group-text wiz-value-unit" hidden></span>
+                </div>
                 <p class="field-error" id="wiz-target-error"></p>
               </div>
               <div class="col-sm-6" data-field="current">
                 <label class="form-label" for="wiz-current" data-i18n="wizard.values.current">Current value</label>
-                <input class="form-control" type="text" id="wiz-current" inputmode="decimal" autocomplete="off" data-group-digits>
+                <div class="input-group">
+                  <input class="form-control" type="text" id="wiz-current" inputmode="decimal" autocomplete="off" data-number="decimal">
+                  <span class="input-group-text wiz-value-unit" hidden></span>
+                </div>
                 <p class="field-error" id="wiz-current-error"></p>
               </div>
               <div class="col-sm-6" data-field="unit">
@@ -214,7 +223,7 @@ const GOAL_WIZARD_HTML = `
 
               <div class="col-sm-6">
                 <label class="form-label" for="wiz-deadline" data-i18n="wizard.values.deadline">Deadline</label>
-                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="wiz-deadline" aria-describedby="wiz-deadline-hint">
+                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-min-error="wizard.error.deadlinePast" data-i18n-placeholder="date.placeholder" id="wiz-deadline" aria-describedby="wiz-deadline-hint">
                 <div class="form-text" id="wiz-deadline-hint" data-i18n="wizard.values.deadlineHint">Optional. Cannot be in the past.</div>
                 <p class="field-error" id="wiz-deadline-error"></p>
               </div>
@@ -232,7 +241,7 @@ const GOAL_WIZARD_HTML = `
               </div>
               <div class="col-sm-4">
                 <label class="form-label" for="wiz-ms-date" data-i18n="wizard.milestones.date">Date</label>
-                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="wiz-ms-date">
+                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-min-error="wizard.error.deadlinePast" data-max-error="wizard.error.milestoneAfterDeadline" data-i18n-placeholder="date.placeholder" id="wiz-ms-date">
                 <p class="field-error" id="wiz-ms-date-error"></p>
               </div>
               <div class="col-sm-2 milestone-add">
@@ -326,8 +335,8 @@ const GoalWizard = {
     this.touched = { icon: true, progressType: true }; // the template choice is not overwritten
 
     byId('wiz-title').value = this.templateTitle(name, template);
-    byId('wiz-start').value = template.start === undefined ? '' : formatDigitGroups(String(template.start));
-    byId('wiz-target').value = template.target === undefined ? '' : formatDigitGroups(String(template.target));
+    setNumberValue(byId('wiz-start'), template.start);
+    setNumberValue(byId('wiz-target'), template.target);
     byId('wiz-unit').value = template.unitKey ? t(template.unitKey) : '';
     byId('wiz-currency').value = DEFAULT_CURRENCY;
     if (template.type === 'levels') {
@@ -444,6 +453,8 @@ const GoalWizard = {
       this.applyTypeDefaults();
     }
     if (name === 'icon' || name === 'color') this.renderPreview();
+    if (id === 'wiz-currency') this.updateValueUnits();
+    if (id === 'wiz-deadline') this.updateDateLimits();
   },
 
   /* ----- Reading and setting radio groups ----- */
@@ -506,7 +517,6 @@ const GoalWizard = {
   fillFromGoal(goal) {
     const type = PROGRESS_TYPES.includes(goal.progressType) ? goal.progressType : 'number';
     // 10000000 -> "10 000 000", the same look as while typing.
-    const valueText = (value) => (value === null || value === undefined ? '' : formatDigitGroups(String(value)));
 
     this.check('category', goal.category in GOAL_CATEGORIES ? goal.category : 'custom');
     byId('wiz-title').value = goal.title ?? '';
@@ -516,9 +526,9 @@ const GoalWizard = {
     this.check('progressType', type);
     this.touched = { icon: true, progressType: true };
 
-    byId('wiz-start').value = valueText(goal.startValue);
-    byId('wiz-target').value = valueText(goal.targetValue);
-    byId('wiz-current').value = valueText(goal.currentValue);
+    setNumberValue(byId('wiz-start'), goal.startValue);
+    setNumberValue(byId('wiz-target'), goal.targetValue);
+    setNumberValue(byId('wiz-current'), goal.currentValue);
     if (type === 'money') byId('wiz-currency').value = goal.unit || DEFAULT_CURRENCY;
     else byId('wiz-unit').value = goal.unit ?? '';
 
@@ -587,6 +597,7 @@ const GoalWizard = {
     });
     if (this.step === 3) this.renderPreview();
     if (this.step === 5) this.updateValueFields();
+    if (this.step === 5 || this.step === 6) this.updateDateLimits();
     if (this.step === 7) this.renderReview();
     this.refreshStepTexts();
     this.form.querySelector('.modal-body').scrollTop = 0;
@@ -639,7 +650,7 @@ const GoalWizard = {
     if (step === 3) return this.ensureIconAndColor();
     if (step === 4) return this.requireChoice('wiz-type', 'progressType', 'wizard.error.type');
     if (step === 5) return this.validateValues();
-    if (step === 6) return this.validateMilestones();
+    if (step === 6) return this.addTypedMilestone() && this.validateMilestones();
     return true;
   },
 
@@ -743,6 +754,29 @@ const GoalWizard = {
 
   /* ----- Step 5: fields that depend on the progress type ----- */
 
+  // "₸" (money) or "%" (percent) as a label to the right of the number fields, not inside the text.
+  updateValueUnits() {
+    const type = this.selected('progressType');
+    let unit = '';
+    if (type === 'money') unit = Format.currencySymbol(byId('wiz-currency').value || DEFAULT_CURRENCY);
+    if (type === 'percent') unit = '%';
+    this.form.querySelectorAll('.wiz-value-unit').forEach((label) => {
+      label.textContent = unit;
+      label.hidden = unit === '';
+    });
+  },
+
+  // The limits of the dates — in the check when a field is left and in the calendar:
+  // the deadline is not in the past (an old deadline of an edited goal may stay),
+  // a milestone is between today and the deadline.
+  updateDateLimits() {
+    const today = Dates.toISO(Dates.today());
+    const oldDeadline = this.mode === 'edit' ? this.original?.deadline : null;
+    setDateLimits(byId('wiz-deadline'), { min: oldDeadline && oldDeadline < today ? oldDeadline : today });
+    const deadline = dateTextToIso(byId('wiz-deadline').value);
+    setDateLimits(byId('wiz-ms-date'), { min: today, max: deadline ?? '' });
+  },
+
   updateValueFields() {
     const type = this.selected('progressType') || 'number';
     const fields = this.visibleValueFields();
@@ -756,6 +790,7 @@ const GoalWizard = {
     const startLabel = this.form.querySelector('label[for="wiz-start"]');
     startLabel.dataset.i18n = this.isNewMoneyGoal() ? 'wizard.values.currentAmount' : 'wizard.values.start';
     startLabel.textContent = t(startLabel.dataset.i18n);
+    this.updateValueUnits();
     // Errors of fields that are now hidden are no longer relevant.
     this.form.querySelectorAll('[data-field][hidden] .is-invalid').forEach((input) => setFieldError(input, null));
   },
@@ -811,6 +846,13 @@ const GoalWizard = {
 
   /* ----- Step 6: milestones ----- */
 
+  // The title or the date of a milestone is typed, but "Add" was not pressed: add it now, so it is not lost.
+  addTypedMilestone() {
+    const isTyped = byId('wiz-ms-title').value.trim() !== '' || byId('wiz-ms-date').value.trim() !== '';
+    return isTyped ? this.addMilestone() : true;
+  },
+
+  // Returns true when the milestone was added (false: the errors are shown next to the fields).
   addMilestone() {
     const titleInput = byId('wiz-ms-title');
     const dateInput = byId('wiz-ms-date');
@@ -822,7 +864,7 @@ const GoalWizard = {
     setFieldError(dateInput, dateError);
     if (titleError || dateError) {
       (titleError ? titleInput : dateInput).focus();
-      return;
+      return false;
     }
     this.milestones.push({ id: createId('milestone'), title, dueDate, done: false });
     this.milestones.sort(byDueDate);
@@ -831,6 +873,7 @@ const GoalWizard = {
     this.renderMilestones();
     this.validateMilestones();
     titleInput.focus();
+    return true;
   },
 
   milestoneDateError(value) {

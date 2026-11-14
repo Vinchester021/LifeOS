@@ -255,7 +255,7 @@ const QUICK_ENTRY_HTML = `
             <div class="col-sm-6" data-entry-field="amount">
               <label class="form-label" for="quick-entry-amount" id="quick-entry-amount-label" data-i18n="details.entry.amount"></label>
               <div class="input-group">
-                <input class="form-control" type="text" id="quick-entry-amount" inputmode="decimal" autocomplete="off" data-group-digits
+                <input class="form-control" type="text" id="quick-entry-amount" inputmode="decimal" autocomplete="off" data-number="decimal"
                        data-i18n-placeholder="details.entry.amountPlaceholder" aria-describedby="quick-entry-amount-hint">
                 <span class="input-group-text entry-unit"></span>
               </div>
@@ -266,7 +266,7 @@ const QUICK_ENTRY_HTML = `
             <div class="col-sm-6" data-entry-field="pages">
               <label class="form-label" for="quick-entry-pages" data-i18n="details.entry.pages"></label>
               <div class="input-group">
-                <input class="form-control" type="text" id="quick-entry-pages" inputmode="numeric" autocomplete="off" data-group-digits>
+                <input class="form-control" type="text" id="quick-entry-pages" inputmode="numeric" autocomplete="off" data-number="integer">
                 <span class="input-group-text" data-i18n="details.entry.pagesUnit"></span>
               </div>
               <p class="field-error" id="quick-entry-pages-error"></p>
@@ -281,7 +281,7 @@ const QUICK_ENTRY_HTML = `
             <div class="col-sm-6" data-entry-field="value">
               <label class="form-label" for="quick-entry-value" data-i18n="details.entry.newValue"></label>
               <div class="input-group">
-                <input class="form-control" type="text" id="quick-entry-value" inputmode="decimal" autocomplete="off" data-group-digits>
+                <input class="form-control" type="text" id="quick-entry-value" inputmode="decimal" autocomplete="off" data-number="decimal">
                 <span class="input-group-text entry-unit"></span>
               </div>
               <p class="field-error" id="quick-entry-value-error"></p>
@@ -300,7 +300,7 @@ const QUICK_ENTRY_HTML = `
 
             <div class="col-sm-6" data-entry-common>
               <label class="form-label" for="quick-entry-date" data-i18n="details.entry.date"></label>
-              <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-i18n-placeholder="date.placeholder" id="quick-entry-date">
+              <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" id="quick-entry-date">
               <p class="field-error" id="quick-entry-date-error"></p>
             </div>
 
@@ -335,8 +335,6 @@ const QuickEntry = {
     document.body.insertAdjacentHTML('beforeend', QUICK_ENTRY_HTML);
     this.modalEl = byId('quick-entry-modal');
     this.entryForm = createEntryForm('quick-entry');
-    enhanceDateField(byId('quick-entry-date'));
-    this.modalEl.querySelectorAll('[data-group-digits]').forEach(groupDigitsWhileTyping);
     I18n.apply(this.modalEl);
     byId('quick-entry-form').addEventListener('submit', submitOnce((event) => this.submit(event)));
     byId('quick-entry-goal').addEventListener('change', () => this.showGoal());

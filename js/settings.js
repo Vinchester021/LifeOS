@@ -18,7 +18,8 @@ const BACKUP_KEYS = {
   quotes: 'object',
   settings: 'object',
   archive: 'array', // finished personal years (step 15)
-  sport: 'object' // week plan, workouts, body measurements
+  sport: 'object', // week plan, workouts, body measurements
+  meta: 'object' // { lastSeenVersion } for "What's new"
 };
 
 /* =========================================================
@@ -436,6 +437,8 @@ async function onImportFileChosen(event) {
 function confirmImport() {
   if (!pendingImport) return;
   const before = readStorageSnapshot();
+  // An older file has no lifeos_meta: keep ours, so "What's new" does not open again after the import.
+  if (!isPlainObject(pendingImport.data.meta)) pendingImport.data.meta = before.meta;
   const keys = Object.keys(BACKUP_KEYS);
   const write = (values) => keys.every((key) => (values[key] === null || values[key] === undefined
     ? AppStorage.remove(STORAGE_KEYS[key])
@@ -535,7 +538,8 @@ function runSettingsSelfTest() {
   const good = buildBackup({ profile: { name: 'Aida', personalYearStart: '2026-09-01' }, goals: [{ id: 'g', title: 'Read' }], tasks: [], progress: [{ date: '2026-11-01' }] }, new Date('2026-11-11T10:00:00Z'));
   check('file name', backupFileName('2026-11-11'), 'lifeos-backup-2026-11-11.json');
   check('backup has version', good.version, 2);
-  check('backup has all parts (with archive and sport)', Object.keys(good.data).length, 9);
+  check('backup has all parts (with archive, sport and meta)', Object.keys(good.data).length, 10);
+  check('an old file without meta is accepted', validateBackup({ ...good, data: { ...good.data, meta: undefined } }).ok, true);
   check('old version 1 is accepted', validateBackup({ ...good, version: 1 }).ok, true);
   check('sport: sessions must have dates', validateBackup({ ...good, data: { ...good.data, sport: { sessions: [{}] } } }).error, 'settings.import.error.structure');
   check('sport: a valid part', validateBackup({ ...good, data: { ...good.data, sport: { plan: {}, sessions: [{ date: '2026-11-10' }], body: [], current: null } } }).ok, true);

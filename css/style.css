@@ -318,22 +318,57 @@ a:hover {
   background-color: var(--lifeos-surface);
 }
 
-/* Date field: [dd/mm/yyyy | calendar button]. The real browser date input is invisible;
-   it stays in the page only so its calendar can open next to the button. */
+/* Date field: [DD.MM.YYYY | calendar button]. A real <input type="date"> lies over the icon
+   (invisible, the full size of the button): a tap on the icon opens the browser's own calendar,
+   also in Safari on iPhone and in Chrome on Android. */
 .date-field .btn-tool {
   min-height: 0;
 }
 
+.date-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 .date-native {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
   padding: 0;
   border: 0;
   opacity: 0;
-  pointer-events: none;
+  font-size: 16px; /* iPhone does not zoom into a field of 16px */
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Chrome: its own calendar icon covers the whole button, so a click anywhere opens the calendar */
+.date-native::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* The keyboard focus is on the invisible input: the button shows it */
+.date-native:focus-visible {
+  outline: none;
+}
+
+.date-pick:has(.date-native:focus-visible) {
+  z-index: 5;
+  outline: 3px solid var(--lifeos-focus);
+  outline-offset: 2px;
 }
 
 /* Checkboxes: visible border on the warm background, checked in the LifeOS accent */
@@ -3660,6 +3695,18 @@ small,
   font-size: 1.5rem;
 }
 
+/* The logo: the LifeOS wind rose (images/icons/favicon.svg, the same as the tab icon) */
+.brand-mark img {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.brand-small .brand-mark img {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
 .brand-name {
   font-size: 1.5rem;
   font-weight: 800;
@@ -6932,6 +6979,68 @@ small,
     width: 100%;
     min-height: 3rem; /* 48px */
     margin: 0;
+  }
+}
+
+/* ---------- "What's new" (js/whats-new.js) ---------- */
+.whats-new-date {
+  margin: 0.15rem 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.whats-new-entry + .whats-new-entry {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--lifeos-border);
+}
+
+.whats-new-version {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-card);
+  font-weight: 700;
+}
+
+.whats-new-group + .whats-new-group {
+  margin-top: var(--space-3);
+}
+
+.whats-new-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+
+.whats-new-group-title .bi {
+  color: var(--lifeos-primary-text);
+  font-size: 1.1rem;
+}
+
+.whats-new-group ul {
+  margin: 0;
+  padding-left: calc(1.1rem + var(--space-2) + 0.9rem);
+}
+
+.whats-new-group li + li {
+  margin-top: 0.2rem;
+}
+
+/* Phone: the window is the whole screen and comes up from below; its middle scrolls */
+@media (max-width: 575.98px) {
+  .whats-new-modal.fade .modal-dialog {
+    transform: translateY(100%);
+  }
+
+  .whats-new-modal.show .modal-dialog {
+    transform: none;
+  }
+
+  .whats-new-modal .modal-footer > .btn-primary {
+    flex: 1 1 auto;
+    min-height: 3rem;
   }
 }
 

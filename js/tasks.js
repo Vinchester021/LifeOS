@@ -256,7 +256,6 @@ const TaskForm = {
     document.body.insertAdjacentHTML('beforeend', TASK_FORM_HTML);
     this.modalEl = byId('task-modal');
     this.buildOptions();
-    enhanceDateField(byId('task-date'));
     I18n.apply(this.modalEl);
     byId('task-form').addEventListener('submit', submitOnce((event) => {
       event.preventDefault();

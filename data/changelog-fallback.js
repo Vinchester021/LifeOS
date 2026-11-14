@@ -1,0 +1,96 @@
+// LifeOS — a copy of data/changelog.json for opening the site as a file (file://), where fetch() is blocked.
+// Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
+window.LIFEOS_CHANGELOG = [
+  {
+    "version": "1.3.3",
+    "date": "2026-11-14",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "A new LifeOS icon; the site can be added to a phone's home screen or installed on a computer as an app.",
+          "ru": "Новая иконка LifeOS; сайт можно добавить на экран телефона или установить на компьютер как приложение.",
+          "kk": "LifeOS-тың жаңа белгішесі; сайтты телефон экранына қосуға немесе компьютерге қолданба ретінде орнатуға болады."
+        }
+      },
+      {
+        "type": "new",
+        "text": {
+          "en": "The “What's new” window: after an update you see at once what has changed.",
+          "ru": "Окно «Что нового»: после обновления сразу видно, что изменилось.",
+          "kk": "«Не жаңа» терезесі: жаңартудан кейін не өзгергені бірден көрінеді."
+        }
+      },
+      {
+        "type": "new",
+        "text": {
+          "en": "Settings → Help: a “What's new” line with the whole version history.",
+          "ru": "В Настройках → «Помощь» — строка «Что нового» со всей историей версий.",
+          "kk": "Баптаулар → «Көмек»: барлық нұсқалар тарихы бар «Не жаңа» жолы."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Dates are easier to type: the dots appear by themselves, and you can paste a date in a usual form, e.g. “15/01/2027”.",
+          "ru": "Даты вводятся проще: точки ставятся сами, дату можно вставить в привычном виде, например «15/01/2027».",
+          "kk": "Күндерді енгізу оңайырақ: нүктелер өзі қойылады, күнді әдеттегі түрде қоюға болады, мысалы «15/01/2027»."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Big amounts are split into groups (1,000,000); decimals can be typed with a comma or a dot.",
+          "ru": "Большие суммы делятся на разряды (1 000 000), дробные числа можно вводить и с запятой, и с точкой.",
+          "kk": "Үлкен сомалар разрядтарға бөлінеді (1 000 000), бөлшек сандарды үтірмен де, нүктемен де енгізуге болады."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "The ₸ sign stands separately to the right of an amount field.",
+          "ru": "Знак ₸ стоит отдельно справа от поля суммы.",
+          "kk": "₸ белгісі сома өрісінің оң жағында бөлек тұрады."
+        }
+      },
+      {
+        "type": "fixed",
+        "text": {
+          "en": "The calendar button opens the date choice on every device, iPhone included.",
+          "ru": "Кнопка календаря открывает выбор даты на всех устройствах, в том числе на iPhone.",
+          "kk": "Күнтізбе түймесі барлық құрылғыда, соның ішінде iPhone-да, күн таңдауды ашады."
+        }
+      },
+      {
+        "type": "fixed",
+        "text": {
+          "en": "The date of a goal milestone is saved correctly again.",
+          "ru": "Дата этапа цели снова сохраняется правильно.",
+          "kk": "Мақсат кезеңінің күні қайтадан дұрыс сақталады."
+        }
+      },
+      {
+        "type": "fixed",
+        "text": {
+          "en": "A milestone that was typed but not added with the button is no longer lost.",
+          "ru": "Этап, который ввели, но не добавили кнопкой, больше не теряется.",
+          "kk": "Енгізілген, бірақ түймемен қосылмаған кезең енді жоғалмайды."
+        }
+      }
+    ]
+  },
+  {
+    "version": "1.3.0",
+    "date": "2026-11-13",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "1.3.0 and earlier — the first versions of LifeOS.",
+          "ru": "1.3.0 и ранее — первые версии LifeOS.",
+          "kk": "1.3.0 және одан бұрынғы — LifeOS-тың алғашқы нұсқалары."
+        }
+      }
+    ]
+  }
+];

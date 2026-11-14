@@ -24,9 +24,11 @@
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
   <script src="./data/translations-fallback.js"></script>
   <script src="./data/quotes-fallback.js"></script>
+  <script src="./data/changelog-fallback.js"></script> <!-- copy of changelog.json for file:// -->
   <script src="./js/app.js"></script> <!-- no defer: sets the theme before the page is drawn -->
   <script src="./js/quote-widget.js" defer></script> <!-- quote of the day in the side menu -->
   <script src="./js/onboarding.js" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js" defer></script> <!-- the "What's new" window after an update -->
   <script src="./js/goal-wizard.js" defer></script>
   <script src="./js/goals.js" defer></script>
 </head>
@@ -41,7 +43,7 @@
       <i class="bi bi-list" aria-hidden="true"></i>
     </button>
     <a class="brand brand-small" href="index.html">
-      <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+      <span class="brand-mark" aria-hidden="true"><img src="./images/icons/favicon.svg" alt="" width="36" height="36"></span>
       <span class="brand-name" data-i18n="app.name">LifeOS</span>
     </a>
     <!-- Phone (< 768px): language and theme are here; on wider screens they are in the page header -->
@@ -67,10 +69,10 @@
   <aside class="sidebar offcanvas-lg offcanvas-start" id="sidebar" tabindex="-1" aria-labelledby="sidebar-title">
     <div class="offcanvas-header">
       <a class="brand" href="index.html">
-        <span class="brand-mark" aria-hidden="true"><i class="bi bi-compass"></i></span>
+        <span class="brand-mark" aria-hidden="true"><img src="./images/icons/favicon.svg" alt="" width="36" height="36"></span>
         <span class="brand-text">
           <span class="brand-name" id="sidebar-title" data-i18n="app.name">LifeOS</span>
-          <span class="brand-version" data-i18n="app.version">Beta v1.3.0</span>
+          <span class="brand-version" data-app-version></span>
         </span>
       </a>
       <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" data-i18n-aria-label="layout.closeMenu" aria-label="Close menu"></button>

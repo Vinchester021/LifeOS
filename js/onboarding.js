@@ -203,6 +203,7 @@ const DemoMode = {
     if (!AppStorage.set(STORAGE_KEYS.profile, profile)) return;
     FirstRun.removePreferenceCopies();
     if (!fillDemoData() || !updateOnboarding({ demoMode: true })) return;
+    updateMeta({ lastSeenVersion: APP_VERSION }); // a new user does not need "What's new" (js/whats-new.js)
     window.location.reload(); // every block of the page is drawn again with the example
   },
 

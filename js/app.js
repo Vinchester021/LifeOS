@@ -11,6 +11,13 @@
    1. Storage — the only code that touches localStorage
    ========================================================= */
 
+// The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
+// "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
+// raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
+const APP_VERSION = '1.3.3';
+// The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
+const LEGACY_VERSION = '1.3.0';
+
 const STORAGE_KEYS = {
   profile: 'lifeos_profile',
   goals: 'lifeos_goals',
@@ -20,7 +27,8 @@ const STORAGE_KEYS = {
   quotes: 'lifeos_quotes',
   settings: 'lifeos_settings',
   archive: 'lifeos_archive', // finished personal years (step 15)
-  sport: 'lifeos_sport' // week plan, workouts, body measurements (sport.html)
+  sport: 'lifeos_sport', // week plan, workouts, body measurements (sport.html)
+  meta: 'lifeos_meta' // { lastSeenVersion }: the newest version whose "What's new" the user has seen
 };
 
 const AppStorage = {
@@ -158,6 +166,41 @@ async function loadTranslations() {
   }
 }
 
+// The list of versions for "What's new": data/changelog.json, the same two ways as the translations.
+async function loadChangelog() {
+  if (isOpenedAsFile()) return window.LIFEOS_CHANGELOG ?? [];
+  try {
+    const response = await fetch('./data/changelog.json');
+    if (!response.ok) throw new Error(`Changelog loading failed: ${response.status}`);
+    const changelog = await response.json();
+    warnIfFallbackDiffers(changelog, window.LIFEOS_CHANGELOG, 'changelog-fallback.js');
+    return changelog;
+  } catch (error) {
+    console.warn('[LifeOS] JSON changelog is unavailable. Fallback is used.', error);
+    return window.LIFEOS_CHANGELOG ?? [];
+  }
+}
+
+// lifeos_meta: facts about the app itself, not the user's plans ({ lastSeenVersion }).
+function getMeta() {
+  const meta = AppStorage.get(STORAGE_KEYS.meta, {});
+  return isPlainObject(meta) ? meta : {};
+}
+
+function updateMeta(changes) {
+  return AppStorage.set(STORAGE_KEYS.meta, { ...getMeta(), ...changes });
+}
+
+// "1.10.0" > "1.9.2": compares the numbers, not the text. Returns -1, 0 or 1.
+function compareVersions(a, b) {
+  const parts = (version) => String(version ?? '0').split('.').map((part) => Number.parseInt(part, 10) || 0);
+  const [x, y] = [parts(a), parts(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0) ? 1 : -1;
+  }
+  return 0;
+}
+
 // Quotes for the Dashboard: the same two ways as the translations.
 async function loadQuotesData() {
   if (isOpenedAsFile()) return window.LIFEOS_QUOTES ?? [];
@@ -178,7 +221,7 @@ async function loadQuotesData() {
 // (Texts written in the HTML stay as they are, see I18n.apply.)
 const FALLBACK_DICTIONARY = {
   'app.name': 'LifeOS',
-  'app.version': 'Beta v1.3.0',
+  'app.version': 'Beta v{version}',
   'page.dashboard': 'Dashboard',
   'page.goals': 'Goals',
   'page.goalDetails': 'Goal Details',
@@ -835,6 +878,13 @@ const ScrollHints = {
 };
 
 const Layout = {
+  // "Beta v1.1.0" next to the logo (and in Settings → Help): always from APP_VERSION.
+  fillAppVersion() {
+    document.querySelectorAll('[data-app-version]').forEach((element) => {
+      element.textContent = t('app.version', { version: APP_VERSION });
+    });
+  },
+
   init() {
     this.markActiveLink();
     ScrollHints.init();
@@ -842,9 +892,11 @@ const Layout = {
     this.initThemeButton();
     this.fillFooterYear();
     this.updateDocumentTitle();
+    this.fillAppVersion();
     document.addEventListener('lifeos:languagechange', () => {
       this.updateLanguageButtons();
       this.updateDocumentTitle();
+      this.fillAppVersion();
     });
     document.addEventListener('lifeos:themechange', () => this.updateThemeButton());
   },
@@ -935,26 +987,89 @@ function validateDateValue(value) {
   return Dates.parse(value) ? null : 'profile.error.dateInvalid';
 }
 
-// "7 000 000" -> 7000000, "86,5" -> 86.5. An empty field gives NaN, so it fails the "is a number" check.
+/* ----- Input masks: numbers and dates (every form) -----
+   Number fields: <input data-number="decimal|integer" [data-decimals="1"]>
+     "1000000" -> "1 000 000" (ru, kk: a no-break space) / "1,000,000" (en);
+     decimal mark: "," in ru/kk, "." in en; both can be typed. The data keeps a plain number.
+   Date fields: <input data-date-field> -> DD.MM.YYYY in every language, dots appear by themselves,
+     plus a calendar button (a real <input type="date"> lies over it). The data keeps "YYYY-MM-DD".
+   The masks work through events on the whole document, so fields of dialogs added later work too. */
+
+const NUMBER_FORMATS = {
+  en: { group: ',', decimal: '.' },
+  ru: { group: ' ', decimal: ',' },
+  kk: { group: ' ', decimal: ',' }
+};
+
+function numberFormatOf(lang = I18n.lang) {
+  return NUMBER_FORMATS[lang] ?? NUMBER_FORMATS.en;
+}
+
+// Text -> number: "1 000 000" / "1,000,000" -> 1000000, "82,5" / "82.5" -> 82.5. Empty or wrong -> NaN.
+// The language decides only "1,000": a thousand in English, 1.0 in Russian.
+function parseNumber(text, lang = I18n.lang) {
+  let value = String(text ?? '').replace(/[\s  ']/g, '');
+  const negative = /^[-−]/.test(value);
+  value = value.replace(/^[-−]/, '');
+  if (!/^[\d.,]+$/.test(value)) return NaN;
+  const lastDot = value.lastIndexOf('.');
+  const lastComma = value.lastIndexOf(',');
+  const count = (mark) => value.split(mark).length - 1;
+  let decimal = null;
+  if (lastDot !== -1 && lastComma !== -1) decimal = lastDot > lastComma ? '.' : ',';
+  else if (lastComma !== -1) decimal = count(',') === 1 && !(lang === 'en' && value.length - lastComma - 1 === 3) ? ',' : null;
+  else if (lastDot !== -1) decimal = count('.') === 1 ? '.' : null;
+  const markAt = decimal ? value.lastIndexOf(decimal) : value.length;
+  const whole = value.slice(0, markAt).replace(/[.,]/g, '');
+  const fraction = decimal ? value.slice(markAt + 1) : '';
+  if (/[.,]/.test(fraction) || (whole === '' && fraction === '')) return NaN;
+  const number = Number(`${whole || '0'}.${fraction || '0'}`);
+  return negative ? -number : number;
+}
+
+// The text of a field while typing -> "1 000 000,5" (ru) / "1,000,000.5" (en).
+// decimals: digits allowed after the mark (0 = whole numbers only).
+function formatNumberTyping(text, { lang = I18n.lang, decimals = 2 } = {}) {
+  const { group, decimal } = numberFormatOf(lang);
+  let kept = '';
+  for (const char of String(text).split(group).join('')) {
+    if (/\d/.test(char)) kept += char;
+    else if (char === decimal && decimals > 0 && !kept.includes(decimal)) kept += char;
+  }
+  const [whole, fraction] = kept.split(decimal);
+  const grouped = whole.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, group);
+  return fraction === undefined ? grouped : `${grouped || '0'}${decimal}${fraction.slice(0, decimals)}`;
+}
+
+// A number from the data -> the text of a field: 82.5 -> "82,5" (ru), 1500000 -> "1,500,000" (en).
+function formatNumberValue(number, { lang = I18n.lang, decimals = 2 } = {}) {
+  if (!Number.isFinite(number)) return '';
+  const factor = 10 ** decimals;
+  const rounded = Math.round(Math.abs(number) * factor) / factor;
+  const text = formatNumberTyping(String(rounded).replace('.', numberFormatOf(lang).decimal), { lang, decimals });
+  return number < 0 ? `-${text}` : text;
+}
+
+function numberOptions(input) {
+  const decimals = input.dataset.number === 'integer' ? 0 : Number(input.dataset.decimals ?? 2);
+  return { lang: input.dataset.numberLang ?? I18n.lang, decimals };
+}
+
+// The value of a number field; the field remembers the language it was written in.
 function readNumber(input) {
-  const text = input.value.replace(/\s/g, '').replace(',', '.');
-  return text === '' ? NaN : Number(text);
+  return parseNumber(input.value, input.dataset.numberLang ?? I18n.lang);
 }
 
-// "7000000" -> "7 000 000", "1234,5" -> "1 234,5". Only digits and one decimal mark are kept.
-function formatDigitGroups(text) {
-  const cleaned = String(text).replace(/[^\d.,]/g, '');
-  const markIndex = cleaned.search(/[.,]/);
-  const whole = markIndex === -1 ? cleaned : cleaned.slice(0, markIndex);
-  const fraction = markIndex === -1 ? '' : cleaned[markIndex] + cleaned.slice(markIndex + 1).replace(/[.,]/g, '');
-  const grouped = whole.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return grouped + fraction;
+function setNumberValue(input, number) {
+  input.dataset.numberLang = I18n.lang;
+  input.value = formatNumberValue(number, numberOptions(input));
 }
 
-// Rewrites the field with `format(text)` and keeps the caret after the same digit,
-// so typing in the middle of "7 000 000" or "11/11/2026" still works.
+// Rewrites the field with `format(text)` and keeps the caret after the same counted characters,
+// so typing in the middle of "7 000 000" or "11.11.2026" still works (at the end it stays at the end).
 function reformatKeepingCaret(input, format, countedChar) {
   const caret = input.selectionStart ?? input.value.length;
+  const atEnd = caret === input.value.length;
   const countBefore = [...input.value.slice(0, caret)].filter((char) => countedChar.test(char)).length;
   input.value = format(input.value);
   let position = 0;
@@ -963,44 +1078,78 @@ function reformatKeepingCaret(input, format, countedChar) {
     if (countedChar.test(input.value[position])) seen++;
     position++;
   }
-  input.setSelectionRange(position, position);
+  if (atEnd) position = input.value.length;
+  if (document.activeElement === input) input.setSelectionRange(position, position);
 }
 
-// Fields with data-group-digits get spaces between thousands while the user types.
-function groupDigitsWhileTyping(input) {
-  input.addEventListener('input', () => reformatKeepingCaret(input, formatDigitGroups, /[\d.,]/));
+function onNumberInput(input, event) {
+  const type = event.inputType ?? '';
+  input.dataset.numberLang = I18n.lang;
+  const options = numberOptions(input);
+  const { decimal } = numberFormatOf(options.lang);
+  // Pasted "1 500 000,50" or "1,500,000.50": read as a number, then written in the field's language.
+  if (type.startsWith('insertFrom') || type === 'insertReplacementText') {
+    const number = parseNumber(input.value, options.lang);
+    input.value = Number.isFinite(number) ? formatNumberValue(number, options) : formatNumberTyping(input.value, options);
+    return;
+  }
+  // The other decimal mark was typed ("." in Russian, "," in English): it becomes the right one.
+  if (event.data && /^[.,]$/.test(event.data) && event.data !== decimal && options.decimals > 0) {
+    const caret = input.selectionStart;
+    input.value = `${input.value.slice(0, caret - 1)}${decimal}${input.value.slice(caret)}`;
+    input.setSelectionRange(caret, caret);
+  }
+  reformatKeepingCaret(input, (text) => formatNumberTyping(text, options), decimal === '.' ? /[\d.]/ : /[\d,]/);
 }
 
-/* ----- Date fields -----
-   The browser's own <input type="date"> shows the date in the BROWSER language
-   (in English that is often month/day/year). LifeOS uses a text field in
-   day/month/year order instead, plus a calendar button that opens the
-   browser's date picker. In code always use getDateValue / setDateValue:
-   they work with "YYYY-MM-DD", like the rest of the app. */
-
-const DATE_SEPARATORS = { en: '/', ru: '.', kk: '.' };
-
-function dateSeparator() {
-  return DATE_SEPARATORS[I18n.lang] ?? '/';
+// After a language change "1 000,5" becomes "1,000.5" (and back).
+function refreshNumberFields() {
+  document.querySelectorAll('[data-number]').forEach((input) => {
+    const number = readNumber(input);
+    if (Number.isFinite(number)) setNumberValue(input, number);
+    else input.dataset.numberLang = I18n.lang;
+  });
 }
 
-// "2026-11-05" -> "05/11/2026" (en) or "05.11.2026" (ru, kk)
+/* ----- Dates: DD.MM.YYYY in the fields, "YYYY-MM-DD" in the code and the data ----- */
+
+// "2026-11-05" -> "05.11.2026"
 function isoToDateText(iso) {
   const date = Dates.parse(iso);
   if (!date) return '';
   const [year, month, day] = Dates.toISO(date).split('-');
-  const separator = dateSeparator();
-  return `${day}${separator}${month}${separator}${year}`;
+  return `${day}.${month}.${year}`;
 }
 
-// "05/11/2026", "5.11.2026", "05-11-2026" -> "2026-11-05"; null if it is not a real date.
+// A whole pasted date -> "DD.MM.YYYY": "15012027", "15/01/2027", "15-1-2027", "2027-01-15". null if it is none of them.
+function normalizeDateText(text) {
+  const value = String(text ?? '').trim();
+  const pad = (part) => part.padStart(2, '0');
+  let match = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/.exec(value);
+  if (match) return `${pad(match[3])}.${pad(match[2])}.${match[1]}`;
+  match = /^(\d{1,2})[-./\s](\d{1,2})[-./\s](\d{4})$/.exec(value);
+  if (match) return `${pad(match[1])}.${pad(match[2])}.${match[3]}`;
+  match = /^(\d{2})(\d{2})(\d{4})$/.exec(value);
+  return match ? `${match[1]}.${match[2]}.${match[3]}` : null;
+}
+
+// "DD.MM.YYYY" (or a pasted form) -> "2026-11-05"; null if it is not a real date (31.02 -> null).
 function dateTextToIso(text) {
-  const match = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(String(text).trim());
-  if (!match) return null;
-  const [, day, month, year] = match;
-  const iso = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  const normalized = normalizeDateText(text);
+  if (!normalized) return null;
+  const [day, month, year] = normalized.split('.');
+  const iso = `${year}-${month}-${day}`;
   return Dates.parse(iso) ? iso : null;
 }
+
+// While typing digits: "1501" -> "15.01" (with `trailing`: "15" -> "15." so the next part starts at once)
+function formatDateDigits(digits, trailing = false) {
+  const value = String(digits).replace(/\D/g, '').slice(0, 8);
+  const text = [value.slice(0, 2), value.slice(2, 4), value.slice(4)].filter(Boolean).join('.');
+  return trailing && (value.length === 2 || value.length === 4) ? `${text}.` : text;
+}
+
+const digitsOf = (text) => String(text).replace(/\D/g, '');
 
 // "YYYY-MM-DD" for a valid date, "" for an empty field, or the typed text if it is wrong
 // (then Dates.parse() fails and the validator shows "Choose a valid date").
@@ -1012,59 +1161,147 @@ function getDateValue(input) {
 
 function setDateValue(input, iso) {
   input.value = iso ? isoToDateText(iso) : '';
+  input.dataset.prevDigits = digitsOf(input.value);
+  syncNativeDate(input);
 }
 
-// While typing digits: "11112026" -> "11/11/2026"
-function formatDateTyping(text) {
-  const digits = text.replace(/\D/g, '').slice(0, 8);
-  return [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)].filter(Boolean).join(dateSeparator());
+// The limits of a date field ("YYYY-MM-DD" or ''): checked when the field is left, and given to the calendar.
+function setDateLimits(input, { min = '', max = '' } = {}) {
+  input.dataset.min = min || '';
+  input.dataset.max = max || '';
+  const native = nativeDateOf(input);
+  if (native) {
+    native.min = min || '';
+    native.max = max || '';
+  }
 }
 
-// Turns <input data-date-field> into: [ text field | calendar button ].
-// A hidden native date input is used only to show the browser's calendar.
+// What is wrong with the date in the field (null = fine or empty). The keys of the limits come from
+// data-min-error / data-max-error ("The milestone cannot be later than the goal deadline.").
+function dateFieldError(input) {
+  const text = input.value.trim();
+  if (text === '') return null;
+  const iso = dateTextToIso(text);
+  if (!iso) return 'profile.error.dateInvalid';
+  if (input.dataset.min && iso < input.dataset.min) return input.dataset.minError || 'date.error.min';
+  if (input.dataset.max && iso > input.dataset.max) return input.dataset.maxError || 'date.error.max';
+  return null;
+}
+
+function onDateInput(input, event) {
+  const type = event.inputType ?? '';
+  if (type.startsWith('insertFrom') || type === 'insertReplacementText') {
+    // A pasted or dropped date: "15/01/2027", "2027-01-15", "15012027"
+    input.value = normalizeDateText(input.value) ?? formatDateDigits(digitsOf(input.value));
+  } else if (type === 'deleteContentBackward' && digitsOf(input.value) === input.dataset.prevDigits) {
+    // Backspace removed only a dot: remove the digit before it too ("15.|" -> "1").
+    const caret = input.selectionStart ?? input.value.length;
+    const digitsBefore = digitsOf(input.value.slice(0, caret)).length;
+    const digits = digitsOf(input.value);
+    input.value = formatDateDigits(digits.slice(0, digitsBefore - 1) + digits.slice(digitsBefore));
+    let position = 0;
+    for (let seen = 0; position < input.value.length && seen < digitsBefore - 1; position++) {
+      if (/\d/.test(input.value[position])) seen++;
+    }
+    input.setSelectionRange(position, position);
+  } else {
+    reformatKeepingCaret(input, (text) => formatDateDigits(digitsOf(text), type.startsWith('insert')), /\d/);
+  }
+  input.dataset.prevDigits = digitsOf(input.value);
+  syncNativeDate(input);
+}
+
+// Leaving a date field: a wrong or out-of-range date gets its error at once; the error goes away when it is fixed.
+function onDateLeave(input) {
+  const error = dateFieldError(input);
+  const shownError = document.getElementById(`${input.id}-error`)?.dataset.i18n;
+  if (error) {
+    input.dataset.maskError = error;
+    setFieldError(input, error);
+  } else if (input.dataset.maskError && shownError === input.dataset.maskError) {
+    setFieldError(input, null);
+    delete input.dataset.maskError;
+  }
+}
+
+/* ----- The calendar button: a real <input type="date"> lies over the icon (opacity 0), so a tap
+   on the icon is a tap on the browser's own date input — this opens the calendar in every browser,
+   also in Safari on iPhone. showPicker() is only an extra help where it exists. ----- */
+
+function nativeDateOf(input) {
+  return input.closest('.date-field')?.querySelector('.date-native') ?? null;
+}
+
+// A valid typed date goes into the calendar, so it opens on that date.
+function syncNativeDate(input) {
+  const native = nativeDateOf(input);
+  if (native) native.value = dateTextToIso(input.value) ?? '';
+}
+
 function enhanceDateField(input) {
   if (input.dataset.dateReady) return;
   input.dataset.dateReady = 'true';
+  input.inputMode = 'numeric';
+  input.maxLength = 10;
+  input.dataset.prevDigits = digitsOf(input.value);
   const group = createEl('div', { class: 'input-group date-field' });
   input.before(group);
   group.append(input);
 
-  const button = createEl('button', {
-    type: 'button', class: 'btn btn-tool', 'data-i18n-aria-label': 'date.pick', 'aria-label': t('date.pick')
+  const pick = createEl('span', { class: 'btn btn-tool date-pick' });
+  pick.append(createEl('i', { class: 'bi bi-calendar3', 'aria-hidden': 'true' }));
+  const native = createEl('input', {
+    type: 'date', class: 'date-native', 'data-i18n-aria-label': 'date.pick', 'aria-label': t('date.pick')
   });
-  button.append(createEl('i', { class: 'bi bi-calendar3', 'aria-hidden': 'true' }));
-  const native = createEl('input', { type: 'date', class: 'date-native', tabindex: '-1', 'aria-hidden': 'true' });
-  group.append(button, native);
+  pick.append(native);
+  group.append(pick);
+  setDateLimits(input, { min: input.dataset.min, max: input.dataset.max });
+  syncNativeDate(input);
 
-  // Separators are added only while typing; deleting works normally.
-  input.addEventListener('input', (event) => {
-    if (event.inputType?.startsWith('insert')) reformatKeepingCaret(input, formatDateTyping, /\d/);
-  });
-  button.addEventListener('click', () => {
-    const iso = getDateValue(input);
-    native.value = Dates.parse(iso) ? iso : '';
+  native.addEventListener('click', () => {
     try {
-      native.showPicker();
+      native.showPicker?.(); // Chrome on a computer opens the calendar only this way when the field is clicked
     } catch (error) {
-      input.focus(); // old browsers without showPicker(): the user types the date
+      // not allowed here: the browser opens its own calendar (phones) or the user types the date
     }
   });
   native.addEventListener('change', () => {
+    if (!native.value) return;
     setDateValue(input, native.value);
     // Tell the page the value changed (live validation listens to these events).
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.dispatchEvent(new Event('change', { bubbles: true }));
-    input.focus();
+    onDateLeave(input);
   });
 }
 
-// After a language change "05/11/2026" becomes "05.11.2026" (and back).
-function refreshDateFields() {
-  document.querySelectorAll('[data-date-field]').forEach((input) => {
-    const iso = dateTextToIso(input.value);
-    if (iso) setDateValue(input, iso);
+// Date fields of dialogs added later (goal wizard, quick result, task window, sport) get their button too.
+function prepareFields(root) {
+  if (root.matches?.('[data-date-field]')) enhanceDateField(root);
+  root.querySelectorAll?.('[data-date-field]').forEach(enhanceDateField);
+  root.querySelectorAll?.('[data-number]').forEach((input) => {
+    input.inputMode = input.dataset.number === 'integer' ? 'numeric' : 'decimal';
   });
 }
+
+const InputMasks = {
+  init() {
+    prepareFields(document);
+    new MutationObserver((changes) => changes.forEach((change) => {
+      change.addedNodes.forEach((node) => { if (node.nodeType === Node.ELEMENT_NODE) prepareFields(node); });
+    })).observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('input', (event) => {
+      const input = event.target;
+      if (input.matches?.('[data-number]')) onNumberInput(input, event);
+      // only real typing (the calendar sends its own plain 'input' event after setDateValue)
+      if (input.matches?.('[data-date-field]') && event.inputType !== undefined) onDateInput(input, event);
+    });
+    document.addEventListener('change', (event) => {
+      if (event.target.matches?.('[data-date-field]')) onDateLeave(event.target);
+    });
+    document.addEventListener('lifeos:languagechange', refreshNumberFields);
+  }
+};
 
 function numberError(value, { min = null, positive = false, max = null } = {}) {
   if (!Number.isFinite(value)) return 'wizard.error.number';
@@ -1253,6 +1490,7 @@ const FirstRun = {
     if (!AppStorage.set(STORAGE_KEYS.profile, profile)) return; // error toast already shown
 
     this.removePreferenceCopies();
+    updateMeta({ lastSeenVersion: APP_VERSION }); // a new user does not need "What's new"
     bootstrap.Modal.getInstance(this.modalEl).hide();
     showToast('firstRun.saved', 'success', { name: profile.name });
     // created: a brand-new profile (js/onboarding.js starts the tour once)
@@ -2070,11 +2308,9 @@ const appReady = new Promise((resolve) => {
       jQuery.fx.off = true;
     }
     getToastContainer();
-    document.querySelectorAll('[data-group-digits]').forEach(groupDigitsWhileTyping);
     await I18n.load();
     // After load(): the calendar button needs t('date.pick') for its aria-label.
-    document.querySelectorAll('[data-date-field]').forEach(enhanceDateField);
-    document.addEventListener('lifeos:languagechange', refreshDateFields);
+    InputMasks.init();
     I18n.apply();
     Layout.init();
     FirstRun.init();
@@ -2192,6 +2428,29 @@ function runDateSelfTest() {
   check('best streak', bestStreak(['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-05', '2026-11-06']), 3);
   check('best streak: duplicates count once', bestStreak(['2026-11-01', '2026-11-01', '2026-11-02']), 2);
   check('activity level 6 = 4', activityLevel(6), 4);
+  check('versions: 1.10.0 > 1.9.2, 1.1 = 1.1.0', `${compareVersions('1.10.0', '1.9.2')}/${compareVersions('1.1', '1.1.0')}/${compareVersions('1.0.9', '1.1.0')}`, '1/0/-1');
+
+  // Input masks: numbers
+  check('number: "1 000 000,5" (ru)', parseNumber('1\u00A0000\u00A0000,5', 'ru'), 1000000.5);
+  check('number: "1,000,000.5" (en)', parseNumber('1,000,000.5', 'en'), 1000000.5);
+  check('number: "82,5" in English = 82.5', parseNumber('82,5', 'en'), 82.5);
+  check('number: "1,000" en = 1000, ru = 1', `${parseNumber('1,000', 'en')}/${parseNumber('1,000', 'ru')}`, '1000/1');
+  check('number: empty and text -> NaN', `${parseNumber('', 'ru')}/${parseNumber('12a', 'ru')}`, 'NaN/NaN');
+  check('number typing: 1000000 (ru)', formatNumberTyping('1000000', { lang: 'ru' }), '1\u00A0000\u00A0000');
+  check('number typing: 1000000.5 (en)', formatNumberTyping('1000000.5', { lang: 'en' }), '1,000,000.5');
+  check('number typing: whole numbers drop the mark', formatNumberTyping('12,5', { lang: 'ru', decimals: 0 }), '125');
+  check('number typing: 2 digits after the mark', formatNumberTyping('3,14159', { lang: 'ru' }), '3,14');
+  check('number from data: 82.5 ru / en', `${formatNumberValue(82.5, { lang: 'ru' })}|${formatNumberValue(82.5, { lang: 'en' })}`, '82,5|82.5');
+  check('language switch: ru text -> en text', formatNumberValue(parseNumber('1\u00A0500,25', 'ru'), { lang: 'en' }), '1,500.25');
+  // Input masks: dates
+  check('date typing: 1501 -> 15.01', formatDateDigits('1501'), '15.01');
+  check('date typing: 15 -> "15." while typing', formatDateDigits('15', true), '15.');
+  check('date typing: 8 digits', formatDateDigits('15012027'), '15.01.2027');
+  check('date paste: 15012027 / 15/01/2027 / 2027-01-15',
+    [normalizeDateText('15012027'), normalizeDateText('15/01/2027'), normalizeDateText('2027-01-15')].join(' '), '15.01.2027 15.01.2027 15.01.2027');
+  check('date paste: 5-1-2027 gets zeros', normalizeDateText('5-1-2027'), '05.01.2027');
+  check('date: 31.02 is not a date', dateTextToIso('31.02.2027'), null);
+  check('date: text <-> ISO', `${dateTextToIso('29.02.2028')}|${isoToDateText('2027-01-15')}`, '2028-02-29|15.01.2027');
 
   console.group('[LifeOS] Self-test: dates and goal percent');
   console.table(results);
