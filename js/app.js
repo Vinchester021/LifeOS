@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.3.4';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -398,7 +398,9 @@ function detectBrowserLanguage() {
    ========================================================= */
 
 const THEMES = ['light', 'dark'];
-const ACCENTS = ['teal', 'blue', 'green', 'plum', 'clay']; // colors live in style.css
+// The order of the circles in Settings. The colors live in style.css ("Accent colors").
+// The first five are the old ones: an old backup keeps its accent; an unknown one becomes teal.
+const ACCENTS = ['teal', 'green', 'olive', 'ocean', 'blue', 'indigo', 'plum', 'pink', 'amber', 'clay', 'graphite'];
 const DEFAULT_ACCENT = 'teal';
 const darkSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -1520,7 +1522,8 @@ const GOAL_CATEGORIES = {
   personal: 'bi-person-heart',
   custom: 'bi-stars'
 };
-const GOAL_COLORS = ['teal', 'blue', 'green', 'plum', 'clay', 'rose']; // palette in style.css
+// Goal colors (not the accent colors of the site). The first six are the old ones: old goals keep their color.
+const GOAL_COLORS = ['teal', 'blue', 'green', 'plum', 'clay', 'rose', 'coral', 'mustard', 'indigo', 'pink', 'turquoise', 'olive', 'graphite']; // palette in style.css
 const PROGRESS_TYPES = ['number', 'money', 'percent', 'levels', 'checklist', 'streak', 'measurements'];
 const GOAL_STATUSES = ['active', 'completed', 'archived'];
 

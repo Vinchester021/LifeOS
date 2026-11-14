@@ -1,5 +1,51 @@
 [
   {
+    "version": "1.3.4",
+    "date": "2026-11-14",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "Goals: 10 new icons and 7 new colors.",
+          "ru": "Цели: 10 новых значков и 7 новых цветов.",
+          "kk": "Мақсаттар: 10 жаңа белгіше және 7 жаңа түс."
+        }
+      },
+      {
+        "type": "new",
+        "text": {
+          "en": "11 accent colors for the site instead of 5 — Settings → Appearance.",
+          "ru": "11 акцентных цветов сайта вместо 5 — Настройки → «Внешний вид».",
+          "kk": "Сайттың акцент түстері енді 11 (бұрын 5) — Баптаулар → «Сыртқы түрі»."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "The goal wizard is clearer: the field names depend on the goal type, the unit is shown next to the field.",
+          "ru": "Мастер целей понятнее: подписи полей зависят от типа цели, единица видна рядом с полем.",
+          "kk": "Мақсат құру терезесі түсініктірек болды: өріс атаулары мақсат түріне қарай өзгереді, өлшем бірлігі өрістің жанында көрсетіледі."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Under the goal values you see at once how much is left and by what date.",
+          "ru": "Под значениями цели сразу видно, сколько осталось и до какого срока.",
+          "kk": "Мәндердің астында қанша қалғаны және мерзімі бірден көрінеді."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Tips for the title, description and deadline are in the “?” buttons; a character counter is next to the field.",
+          "ru": "Подсказки к названию, описанию и сроку — в кнопках «?», рядом с полем — счётчик символов.",
+          "kk": "Атау, сипаттама және мерзім бойынша кеңестер «?» түймесінде; өріс жанында таңба санағышы бар."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.3.3",
     "date": "2026-11-14",
     "items": [

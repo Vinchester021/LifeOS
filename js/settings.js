@@ -318,15 +318,17 @@ function buildAccentChoices() {
   const container = byId('settings-accents');
   ACCENTS.forEach((accent) => {
     const id = `settings-accent-${accent}`;
-    const label = createEl('label', { class: 'choice-color', for: id });
-    // The check mark is shown by CSS only on the chosen color (the hidden text names the color).
-    const swatch = createEl('span', { class: 'swatch', 'data-color': accent, 'aria-hidden': 'true' });
+    const name = `color.${accent}`;
+    // The name: aria-label on the radio (screen readers), title on the circle (a tooltip on hover).
+    const input = createEl('input', {
+      class: 'btn-check', type: 'radio', name: 'settings-accent', id, value: accent, 'aria-label': t(name), 'data-i18n-aria-label': name
+    });
+    const label = createEl('label', { class: 'choice-color', for: id, title: t(name), 'data-i18n-title': name });
+    // The circle has the accent's own colors (data-accent); the check mark shows only on the chosen one (CSS).
+    const swatch = createEl('span', { class: 'swatch', 'data-accent': accent, 'aria-hidden': 'true' });
     swatch.append(createEl('i', { class: 'bi bi-check-lg' }));
-    label.append(
-      swatch,
-      createEl('span', { class: 'visually-hidden', 'data-i18n': `color.${accent}` }, t(`color.${accent}`))
-    );
-    container.append(createEl('input', { class: 'btn-check', type: 'radio', name: 'settings-accent', id, value: accent }), label);
+    label.append(swatch);
+    container.append(input, label); // the arrow keys move between the radios of one group
   });
 }
 
@@ -583,6 +585,8 @@ function runSettingsSelfTest() {
   check('strict date', `${isIsoDate('2026-11-12')}/${isIsoDate('12.11.2026')}/${isIsoDate('2026-02-30')}`, 'true/false/false');
   const withOnboarding = sanitizeBackup({ settings: { accent: 'teal', onboarding: { demoMode: true, tourDone: true, junk: '<b>' } } });
   check('import: onboarding keeps flags, never the demo mode', JSON.stringify(withOnboarding.data.settings.onboarding), '{"tourDone":true}');
+  const oldAccents = ['teal', 'blue', 'green', 'plum', 'clay'];
+  check('import: an old accent is still valid', oldAccents.every((accent) => ACCENTS.includes(sanitizeBackup({ settings: { accent } }).data.settings.accent)), true);
 
   console.group('[LifeOS] Settings self-test');
   console.table(results);

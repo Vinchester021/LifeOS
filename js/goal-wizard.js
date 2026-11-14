@@ -15,7 +15,9 @@ const GOAL_ICONS = [
   'bi-piggy-bank', 'bi-wallet2', 'bi-book', 'bi-heart-pulse',
   'bi-activity', 'bi-translate', 'bi-mortarboard', 'bi-laptop',
   'bi-kanban', 'bi-briefcase', 'bi-person-heart', 'bi-sunrise',
-  'bi-trophy', 'bi-bicycle', 'bi-music-note-beamed', 'bi-stars'
+  'bi-trophy', 'bi-bicycle', 'bi-music-note-beamed', 'bi-stars',
+  'bi-airplane', 'bi-house', 'bi-car-front', 'bi-code-slash', 'bi-palette',
+  'bi-camera', 'bi-moon-stars', 'bi-droplet', 'bi-tree', 'bi-people'
 ];
 
 // Choosing a category suggests a progress type (until the user picks one).
@@ -44,6 +46,17 @@ const GOAL_TEMPLATES = {
     itemKeys: ['template.project.item1', 'template.project.item2', 'template.project.item3', 'template.project.item4', 'template.project.item5']
   }
 };
+
+// Step 5: the labels of the two value fields by the progress type (a new goal; editing keeps "Start value").
+const VALUE_LABELS = {
+  number: ['wizard.values.doneSoFar', 'wizard.values.totalNeeded'],
+  money: ['wizard.values.savedSoFar', 'wizard.values.needToSave'],
+  percent: ['wizard.values.now', 'wizard.values.wantToReach'],
+  measurements: ['wizard.values.now', 'wizard.values.wantToReach'],
+  streak: ['wizard.values.start', 'wizard.values.daysInRow']
+};
+// Examples in the empty fields: [start, target]
+const VALUE_EXAMPLES = { number: [0, 13], money: [0, 500000], percent: [0, 100], measurements: [92, 80], streak: [0, 30] };
 
 const NUMERIC_TYPES = ['number', 'money', 'percent', 'streak', 'measurements'];
 
@@ -105,17 +118,28 @@ const GOAL_WIZARD_HTML = `
 
           <!-- Step 2: title and description -->
           <section class="wizard-step" data-step="2" hidden>
+            <!-- The limits are in the "?" tips; the counter "12/80" shows while the field has the focus. -->
             <div class="mb-3">
-              <label class="form-label" for="wiz-title" data-i18n="wizard.title.label">Goal title</label>
-              <input class="form-control" type="text" id="wiz-title" autocomplete="off" aria-describedby="wiz-title-hint">
-              <div class="form-text" id="wiz-title-hint" data-i18n="wizard.title.hint">From 2 to 80 characters.</div>
-              <p class="field-error" id="wiz-title-error"></p>
+              <div class="help-title field-label">
+                <label class="form-label" for="wiz-title" data-i18n="wizard.title.label">Goal title</label>
+                <button type="button" class="btn help-tip" data-help="goalTitle" data-i18n-aria-label="onboarding.help.goalTitle.label" aria-label="About the goal title"><i class="bi bi-question-circle" aria-hidden="true"></i></button>
+              </div>
+              <input class="form-control" type="text" id="wiz-title" autocomplete="off" data-char-limit="80" data-i18n-placeholder="wizard.title.placeholder">
+              <div class="field-meta">
+                <p class="field-error" id="wiz-title-error"></p>
+                <span class="char-count" id="wiz-title-count" aria-hidden="true" hidden></span>
+              </div>
             </div>
             <div>
-              <label class="form-label" for="wiz-description" data-i18n="wizard.description.label">Description</label>
-              <textarea class="form-control" id="wiz-description" rows="3" aria-describedby="wiz-description-hint"></textarea>
-              <div class="form-text" id="wiz-description-hint" data-i18n="wizard.description.hint">Optional, up to 300 characters.</div>
-              <p class="field-error" id="wiz-description-error"></p>
+              <div class="help-title field-label">
+                <label class="form-label" for="wiz-description" data-i18n="wizard.description.label">Description</label>
+                <button type="button" class="btn help-tip" data-help="goalDescription" data-i18n-aria-label="onboarding.help.goalDescription.label" aria-label="About the description"><i class="bi bi-question-circle" aria-hidden="true"></i></button>
+              </div>
+              <textarea class="form-control" id="wiz-description" rows="3" data-char-limit="300" data-i18n-placeholder="wizard.description.placeholder"></textarea>
+              <div class="field-meta">
+                <p class="field-error" id="wiz-description-error"></p>
+                <span class="char-count" id="wiz-description-count" aria-hidden="true" hidden></span>
+              </div>
             </div>
           </section>
 
@@ -147,8 +171,21 @@ const GOAL_WIZARD_HTML = `
 
           <!-- Step 5: values and deadline. JS shows only the fields of the chosen type (data-field). -->
           <section class="wizard-step" data-step="5" hidden>
-            <p class="wizard-intro" id="wiz-type-hint"></p>
             <div class="row g-3">
+              <!-- First: what is counted (books, km…). Not for money (the currency) and percent (%). -->
+              <div class="col-12 wiz-unit-field" data-field="unit">
+                <label class="form-label" for="wiz-unit" data-i18n="wizard.values.what">What do you count</label>
+                <input class="form-control" type="text" id="wiz-unit" maxlength="20" autocomplete="off" data-i18n-placeholder="wizard.values.whatPlaceholder">
+              </div>
+              <div class="col-12 wiz-unit-field" data-field="currency">
+                <label class="form-label" for="wiz-currency" data-i18n="wizard.values.currency">Currency</label>
+                <select class="form-select" id="wiz-currency">
+                  <option value="KZT" data-i18n="currency.KZT">Tenge (₸)</option>
+                  <option value="USD" data-i18n="currency.USD">US dollar ($)</option>
+                  <option value="EUR" data-i18n="currency.EUR">Euro (€)</option>
+                  <option value="RUB" data-i18n="currency.RUB">Russian ruble (₽)</option>
+                </select>
+              </div>
               <div class="col-sm-6" data-field="start">
                 <label class="form-label" for="wiz-start" data-i18n="wizard.values.start">Start value</label>
                 <div class="input-group">
@@ -172,20 +209,6 @@ const GOAL_WIZARD_HTML = `
                   <span class="input-group-text wiz-value-unit" hidden></span>
                 </div>
                 <p class="field-error" id="wiz-current-error"></p>
-              </div>
-              <div class="col-sm-6" data-field="unit">
-                <label class="form-label" for="wiz-unit" data-i18n="wizard.values.unit">Unit</label>
-                <input class="form-control" type="text" id="wiz-unit" maxlength="20" autocomplete="off" aria-describedby="wiz-unit-hint">
-                <div class="form-text" id="wiz-unit-hint" data-i18n="wizard.values.unitHint">Optional, e.g. books, kg, days.</div>
-              </div>
-              <div class="col-sm-6" data-field="currency">
-                <label class="form-label" for="wiz-currency" data-i18n="wizard.values.currency">Currency</label>
-                <select class="form-select" id="wiz-currency">
-                  <option value="KZT" data-i18n="currency.KZT">Tenge (₸)</option>
-                  <option value="USD" data-i18n="currency.USD">US dollar ($)</option>
-                  <option value="EUR" data-i18n="currency.EUR">Euro (€)</option>
-                  <option value="RUB" data-i18n="currency.RUB">Russian ruble (₽)</option>
-                </select>
               </div>
 
               <div class="col-12" data-field="levels">
@@ -222,10 +245,17 @@ const GOAL_WIZARD_HTML = `
               </div>
 
               <div class="col-sm-6">
-                <label class="form-label" for="wiz-deadline" data-i18n="wizard.values.deadline">Deadline</label>
-                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-min-error="wizard.error.deadlinePast" data-i18n-placeholder="date.placeholder" id="wiz-deadline" aria-describedby="wiz-deadline-hint">
-                <div class="form-text" id="wiz-deadline-hint" data-i18n="wizard.values.deadlineHint">Optional. Cannot be in the past.</div>
+                <div class="help-title field-label">
+                  <label class="form-label" for="wiz-deadline" data-i18n="wizard.values.deadlineOptional">Deadline (optional)</label>
+                  <button type="button" class="btn help-tip" data-help="deadline" data-i18n-aria-label="onboarding.help.deadline.label" aria-label="About the deadline"><i class="bi bi-question-circle" aria-hidden="true"></i></button>
+                </div>
+                <input class="form-control" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-min-error="wizard.error.deadlinePast" data-i18n-placeholder="date.placeholder" id="wiz-deadline">
                 <p class="field-error" id="wiz-deadline-error"></p>
+              </div>
+
+              <!-- "Goal: 13 books. Now 0 — 13 to go by 31.12.2027" (updated while typing) -->
+              <div class="col-12">
+                <p class="wiz-summary" id="wiz-summary" aria-live="polite" hidden></p>
               </div>
             </div>
           </section>
@@ -377,7 +407,10 @@ const GoalWizard = {
     items.forEach((item) => {
       const id = `${prefix}-${item.value}`;
       const input = createEl('input', { class: 'btn-check', type: 'radio', name, id, value: item.value });
-      const label = createEl('label', { class: labelClass, for: id });
+      // Icons and colors have no visible text: the name is the tooltip (and the hidden text for screen readers).
+      const label = createEl('label', item.hiddenText
+        ? { class: labelClass, for: id, title: t(item.key), 'data-i18n-title': item.key }
+        : { class: labelClass, for: id });
       if (item.icon) label.append(createEl('i', { class: `bi ${item.icon}`, 'aria-hidden': 'true' }));
       if (item.swatch) label.append(createEl('span', { class: 'swatch', 'data-color': item.swatch, 'aria-hidden': 'true' }));
       // Icon and color choices show no text, but screen readers still get the name.
@@ -402,7 +435,15 @@ const GoalWizard = {
     this.form.addEventListener('input', (event) => {
       if (event.target.id === 'wiz-levels') this.refreshLevelSelects();
       if (event.target.id === 'wiz-title') this.renderPreview();
+      if (event.target.dataset.charLimit) this.updateCharCount(event.target);
+      if (event.target.id === 'wiz-unit') this.updateValueUnits();
+      if (this.step === 5) this.renderSummary();
       if (this.attempted.has(this.step)) this.validateStep(this.step);
+    });
+
+    this.form.querySelectorAll('[data-char-limit]').forEach((input) => {
+      input.addEventListener('focus', () => this.updateCharCount(input, true));
+      input.addEventListener('blur', () => this.updateCharCount(input, false));
     });
 
     // Checklist editor (step 5)
@@ -455,6 +496,7 @@ const GoalWizard = {
     if (name === 'icon' || name === 'color') this.renderPreview();
     if (id === 'wiz-currency') this.updateValueUnits();
     if (id === 'wiz-deadline') this.updateDateLimits();
+    if (this.step === 5) this.renderSummary();
   },
 
   /* ----- Reading and setting radio groups ----- */
@@ -512,6 +554,7 @@ const GoalWizard = {
     this.refreshLevelSelects({});
     this.renderChecklist();
     this.renderMilestones();
+    this.form.querySelectorAll('[data-char-limit]').forEach((input) => this.updateCharCount(input, false));
   },
 
   fillFromGoal(goal) {
@@ -755,11 +798,60 @@ const GoalWizard = {
   /* ----- Step 5: fields that depend on the progress type ----- */
 
   // "₸" (money) or "%" (percent) as a label to the right of the number fields, not inside the text.
-  updateValueUnits() {
+  // "Already done" / "How many in total" for a number, "Already saved" / "Need to save" for money…
+  // (a new "Money" goal asks for the amount saved so far: the goal itself starts at 0).
+  updateValueLabels(type) {
+    const [startKey, targetKey] = VALUE_LABELS[type] ?? ['wizard.values.start', 'wizard.values.target'];
+    const setLabel = (id, key) => {
+      const label = this.form.querySelector(`label[for="${id}"]`);
+      label.dataset.i18n = key;
+      label.textContent = t(key);
+    };
+    setLabel('wiz-start', this.mode === 'edit' ? 'wizard.values.start' : startKey);
+    setLabel('wiz-target', targetKey);
+    const [startExample, targetExample] = VALUE_EXAMPLES[type] ?? ['', ''];
+    byId('wiz-start').placeholder = formatNumberValue(startExample);
+    byId('wiz-target').placeholder = formatNumberValue(targetExample);
+    byId('wiz-current').placeholder = formatNumberValue(startExample);
+  },
+
+  // What the numbers are: "₸" (money), "%" (percent) or the text of "What do you count" (books, km…).
+  valueUnit(type = this.selected('progressType')) {
+    if (type === 'money') return Format.currencySymbol(byId('wiz-currency').value || DEFAULT_CURRENCY);
+    if (type === 'percent') return '%';
+    return VALUE_FIELDS[type]?.includes('unit') ? byId('wiz-unit').value.trim() : '';
+  },
+
+  // "Goal: 13 books. Now 0 — 13 to go by 31.12.2027" under the fields (only for number-like types).
+  renderSummary() {
+    const summary = byId('wiz-summary');
     const type = this.selected('progressType');
-    let unit = '';
-    if (type === 'money') unit = Format.currencySymbol(byId('wiz-currency').value || DEFAULT_CURRENCY);
-    if (type === 'percent') unit = '%';
+    const target = readNumber(byId('wiz-target'));
+    let current = 0;
+    if (this.mode === 'edit') current = readNumber(byId('wiz-current'));
+    else if (VALUE_FIELDS[type]?.includes('start')) current = readNumber(byId('wiz-start'));
+    summary.hidden = !NUMERIC_TYPES.includes(type) || !Number.isFinite(target) || !Number.isFinite(current);
+    if (summary.hidden) return;
+    const goal = { progressType: type, unit: type === 'money' ? byId('wiz-currency').value : this.valueUnit(type) };
+    const values = { target: formatGoalValue(goal, target), current: formatGoalValue(goal, current), left: formatGoalValue(goal, Math.abs(target - current)) };
+    const deadline = dateTextToIso(byId('wiz-deadline').value);
+    let key = deadline ? 'wizard.summary.until' : 'wizard.summary.plain';
+    if (target === current) key = 'wizard.summary.reached';
+    summary.textContent = t(key, { ...values, date: deadline ? Format.date(deadline, { day: '2-digit', month: '2-digit', year: 'numeric' }) : '' });
+  },
+
+  // The character counter under the title and the description: "12/80" while the field has the focus.
+  updateCharCount(input, show = document.activeElement === input) {
+    const counter = byId(`${input.id}-count`);
+    if (!counter) return;
+    const limit = Number(input.dataset.charLimit);
+    counter.textContent = `${input.value.length}/${limit}`;
+    counter.classList.toggle('is-over', input.value.length > limit);
+    counter.hidden = !show && input.value.length <= limit;
+  },
+
+  updateValueUnits() {
+    const unit = this.valueUnit();
     this.form.querySelectorAll('.wiz-value-unit').forEach((label) => {
       label.textContent = unit;
       label.hidden = unit === '';
@@ -783,14 +875,9 @@ const GoalWizard = {
     this.form.querySelectorAll('[data-field]').forEach((block) => {
       block.hidden = !fields.includes(block.dataset.field);
     });
-    const hint = byId('wiz-type-hint');
-    hint.dataset.i18n = `progressType.${type}.hint`;
-    hint.textContent = t(hint.dataset.i18n);
-    // A new "Money" goal asks for the amount saved so far (the goal itself starts at 0).
-    const startLabel = this.form.querySelector('label[for="wiz-start"]');
-    startLabel.dataset.i18n = this.isNewMoneyGoal() ? 'wizard.values.currentAmount' : 'wizard.values.start';
-    startLabel.textContent = t(startLabel.dataset.i18n);
+    this.updateValueLabels(type);
     this.updateValueUnits();
+    this.renderSummary();
     // Errors of fields that are now hidden are no longer relevant.
     this.form.querySelectorAll('[data-field][hidden] .is-invalid').forEach((input) => setFieldError(input, null));
   },
@@ -952,6 +1039,7 @@ const GoalWizard = {
   // Texts made by JS must be redrawn when the language changes.
   refreshTexts() {
     this.refreshStepTexts();
+    if (this.step === 5) this.updateValueFields(); // the labels, the examples (number format) and the sentence
     this.renderChecklist();
     this.renderMilestones();
     if (this.step === 7) this.renderReview();

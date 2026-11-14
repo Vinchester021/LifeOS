@@ -15,8 +15,15 @@
   --palette-plum: #7a5089;
   --palette-clay: #95641f;
   --palette-rose: #9a4c5e;          /* goal color only, not an accent */
+  /* More goal colors (not accents). Checked: the icon on its soft tile >= 3:1, the % badge text >= 4.5:1. */
+  --palette-coral: #b4472f;
+  --palette-mustard: #8c7a00;
+  --palette-indigo: #4f46e5;
+  --palette-pink: #c2187a;
+  --palette-turquoise: #0e7490;
+  --palette-olive: #5c6b1f;
+  --palette-graphite: #374151;
 
-  --lifeos-primary: var(--palette-teal);
   --lifeos-bg: #f5f3ee;             /* warm light page background */
   --lifeos-surface: #ffffff;        /* cards */
   --lifeos-surface-2: #faf8f4;      /* side menu, table heads, quiet blocks */
@@ -54,8 +61,14 @@
   --palette-plum: #bf9fcd;
   --palette-clay: #d9aa6a;
   --palette-rose: #dd9cab;
+  --palette-coral: #e8907c;
+  --palette-mustard: #cfc04a;
+  --palette-indigo: #8f86f5;
+  --palette-pink: #e27cc0;
+  --palette-turquoise: #67a7b9;
+  --palette-olive: #9aa374;
+  --palette-graphite: #999ea6;
 
-  --lifeos-primary: var(--palette-teal);
   --lifeos-bg: #111816;             /* deep green-graphite */
   --lifeos-surface: #1a2220;        /* cards */
   --lifeos-surface-2: #151c1a;
@@ -88,19 +101,54 @@
   --bs-btn-color: var(--bs-danger-text-emphasis);
 }
 
-/* ---------- Accent colors ----------
-   app.js sets data-accent="teal|blue|green|plum|clay" on <html>.
-   The palette variables already have light and dark values,
-   so one line per accent works in both themes. */
-[data-accent="blue"]  { --lifeos-primary: var(--palette-blue); }
-[data-accent="green"] { --lifeos-primary: var(--palette-green); }
-[data-accent="plum"]  { --lifeos-primary: var(--palette-plum); }
-[data-accent="clay"]  { --lifeos-primary: var(--palette-clay); }
+/* ---------- Accent colors (11) ----------
+   app.js sets data-accent="…" on <html> (ACCENTS); the color circles in Settings carry it too.
+   Every accent is a set: --accent (buttons, links, bars, charts), --accent-hover, --accent-soft (badges, selections).
+   Contrast (checked for every accent): light theme — white text on the button and on hover >= 4.5:1;
+   dark theme — the dark text on the button and the accent on a card >= 4.5:1 (the lowest is 5.02:1, amber). */
+:root,
+[data-accent="teal"]      { --accent: #0f5f57; --accent-hover: #11534c; --accent-soft: #dde9e7; }
+[data-accent="green"]     { --accent: #3c7350; --accent-hover: #356346; --accent-soft: #e4ebe6; }
+[data-accent="olive"]     { --accent: #5c6b1f; --accent-hover: #4e5c1f; --accent-soft: #e8eae0; }
+[data-accent="ocean"]     { --accent: #0e7490; --accent-hover: #106379; --accent-soft: #ddecef; }
+[data-accent="blue"]      { --accent: #3d6aa0; --accent-hover: #355b86; --accent-soft: #e4eaf2; }
+[data-accent="indigo"]    { --accent: #4f46e5; --accent-hover: #443fbd; --accent-soft: #e6e5fb; }
+[data-accent="plum"]      { --accent: #7a5089; --accent-hover: #664774; --accent-soft: #ece6ee; }
+[data-accent="pink"]      { --accent: #be185d; --accent-hover: #9d1a51; --accent-soft: #f6dfe8; }
+[data-accent="amber"]     { --accent: #b45309; --accent-hover: #95490d; --accent-soft: #f4e7dd; }
+[data-accent="clay"]      { --accent: #95641f; --accent-hover: #7c571f; --accent-soft: #f0e9e0; }
+[data-accent="graphite"]  { --accent: #374151; --accent-hover: #313b47; --accent-soft: #e3e4e7; }
 
-/* Shades derived from the current accent, so every accent works in both themes. */
+/* Dark theme: lighter values of the same accents */
+[data-bs-theme="dark"],
+[data-bs-theme="dark"][data-accent="teal"],
+[data-bs-theme="dark"] [data-accent="teal"]      { --accent: #5fbaa9; --accent-hover: #7ac4b6; --accent-soft: #243733; }
+[data-bs-theme="dark"][data-accent="green"],
+[data-bs-theme="dark"] [data-accent="green"]     { --accent: #8cc29d; --accent-hover: #9ecaac; --accent-soft: #2a3832; }
+[data-bs-theme="dark"][data-accent="olive"],
+[data-bs-theme="dark"] [data-accent="olive"]     { --accent: #9aa374; --accent-hover: #a9b28b; --accent-soft: #2c342c; }
+[data-bs-theme="dark"][data-accent="ocean"],
+[data-bs-theme="dark"] [data-accent="ocean"]     { --accent: #67a7b9; --accent-hover: #80b5c3; --accent-soft: #253535; }
+[data-bs-theme="dark"][data-accent="blue"],
+[data-bs-theme="dark"] [data-accent="blue"]      { --accent: #8aa9d8; --accent-hover: #9cb6db; --accent-soft: #2a353a; }
+[data-bs-theme="dark"][data-accent="indigo"],
+[data-bs-theme="dark"] [data-accent="indigo"]    { --accent: #9994f0; --accent-hover: #a8a6ef; --accent-soft: #2c323d; }
+[data-bs-theme="dark"][data-accent="plum"],
+[data-bs-theme="dark"] [data-accent="plum"]      { --accent: #bf9fcd; --accent-hover: #c7aed3; --accent-soft: #313438; }
+[data-bs-theme="dark"][data-accent="pink"],
+[data-bs-theme="dark"] [data-accent="pink"]      { --accent: #dc82a8; --accent-hover: #de97b5; --accent-soft: #352f33; }
+[data-bs-theme="dark"][data-accent="amber"],
+[data-bs-theme="dark"] [data-accent="amber"]     { --accent: #cf9162; --accent-hover: #d4a37d; --accent-soft: #333229; }
+[data-bs-theme="dark"][data-accent="clay"],
+[data-bs-theme="dark"] [data-accent="clay"]      { --accent: #d9aa6a; --accent-hover: #dcb783; --accent-soft: #35352a; }
+[data-bs-theme="dark"][data-accent="graphite"],
+[data-bs-theme="dark"] [data-accent="graphite"]  { --accent: #999ea6; --accent-hover: #a8aeb3; --accent-soft: #2c3333; }
+
+/* The page colors come from the current accent set. */
 :root {
-  --lifeos-primary-hover: color-mix(in srgb, var(--lifeos-primary) 80%, var(--lifeos-text));
-  --lifeos-primary-soft: color-mix(in srgb, var(--lifeos-primary) 14%, var(--lifeos-surface));
+  --lifeos-primary: var(--accent);
+  --lifeos-primary-hover: var(--accent-hover);
+  --lifeos-primary-soft: var(--accent-soft);
   /* Accent for text on the soft background (active menu item): a bit closer to the text color for 4.5:1 */
   --lifeos-primary-text: color-mix(in srgb, var(--lifeos-primary) 75%, var(--lifeos-text));
   --lifeos-focus: var(--lifeos-primary);
@@ -1460,6 +1508,13 @@ a:hover {
 [data-color="plum"]  { --goal-color: var(--palette-plum); }
 [data-color="clay"]  { --goal-color: var(--palette-clay); }
 [data-color="rose"]  { --goal-color: var(--palette-rose); }
+[data-color="coral"]     { --goal-color: var(--palette-coral); }
+[data-color="mustard"]   { --goal-color: var(--palette-mustard); }
+[data-color="indigo"]    { --goal-color: var(--palette-indigo); }
+[data-color="pink"]      { --goal-color: var(--palette-pink); }
+[data-color="turquoise"] { --goal-color: var(--palette-turquoise); }
+[data-color="olive"]     { --goal-color: var(--palette-olive); }
+[data-color="graphite"]  { --goal-color: var(--palette-graphite); }
 
 .goal-card:hover {
   box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.08);
@@ -5646,21 +5701,33 @@ small,
 }
 
 /* Accent colors: circles, the chosen one has a white check mark */
+/* 11 circles: one row on a computer (they get a little smaller in a narrow card), 2 rows on a phone */
+.set-row-stack > legend.set-row-label {
+  float: none;
+  width: 100%;
+}
+
 .set-accents {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 2.75rem));
   gap: var(--space-2);
+  width: 100%;
 }
 
 .set-accents .choice-color {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
 }
 
+/* The circle takes its color from its own data-accent (light or dark value, see "Accent colors") */
 .set-accents .swatch {
   display: grid;
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  color: #fff;
+  width: 82%;
+  height: 82%;
+  background-color: var(--accent);
+  color: var(--lifeos-on-primary);
   font-size: 1.1rem;
 }
 
@@ -5888,6 +5955,10 @@ small,
 
 /* Phone: the rows stack, the buttons take the full width */
 @media (max-width: 575.98px) {
+  .set-accents {
+    grid-template-columns: repeat(6, minmax(0, 2.75rem));
+  }
+
   .set-row > legend.set-row-label {
     float: none;
     width: 100%;
@@ -7460,6 +7531,58 @@ button.fs-item-head:active {
   0% { transform: scale(0.4); opacity: 0; }
   60% { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(1); }
+}
+
+/* The goal wizard: a label with "?", the counter "12/80" under a field, the sentence under the values */
+.help-title.field-label {
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+
+.help-title.field-label .form-label {
+  margin-bottom: 0;
+}
+
+.help-title.field-label .help-tip {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.field-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.field-meta .field-error {
+  flex: 1 1 auto;
+}
+
+.char-count {
+  margin-left: auto;
+  padding-top: 0.25rem;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.char-count.is-over {
+  color: var(--bs-form-invalid-color);
+  font-weight: 700;
+}
+
+.wiz-unit-field .form-control,
+.wiz-unit-field .form-select {
+  max-width: 20rem;
+}
+
+.wiz-summary {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+  font-weight: 600;
 }
 
 /* "?" help tips next to a title */
