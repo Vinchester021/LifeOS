@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.4.4",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "A new look for the quote of the day: larger text and an \"Another quote\" button.",
+          "ru": "Новое оформление цитаты дня: крупный текст, кнопка «Другая цитата».",
+          "kk": "Күннің дәйексөзінің жаңа көрінісі: ірі мәтін және «Басқа дәйексөз» түймесі."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "The Personal year card: the year's dates, the ring and how many days have passed and are left.",
+          "ru": "Карточка «Личный год»: даты года, кольцо и сколько дней прошло и осталось.",
+          "kk": "«Жеке жыл» картасы: жыл күндері, сақина және қанша күн өтіп, қанша күн қалғаны."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Focus of the week: mark the days you managed to follow it and see the progress of the week's tasks.",
+          "ru": "Фокус недели: отмечайте дни, когда удалось ему следовать, и смотрите прогресс задач недели.",
+          "kk": "Апта бағыты: оны ұстана алған күндерді белгілеңіз және апта тапсырмаларының прогресін көріңіз."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.4.3",
     "date": "2026-11-15",
     "items": [

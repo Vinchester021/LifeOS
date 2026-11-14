@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.4.4';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -2324,6 +2324,81 @@ function updatePeriodPlan(key, changes) {
   return AppStorage.set(STORAGE_KEYS.planner, planner);
 }
 
+/* ----- Focus days: the days of a week when the user followed the focus (Dashboard and Planner, week level) -----
+   Stored with the focus: lifeos_planner["2026-W46"].focusDays = ["2026-11-09", …] (sorted, no repeats).
+   Changing the focus text keeps them (updatePeriodPlan merges); old weeks without the list simply have none. */
+
+function getFocusDays(weekKey) {
+  return [...new Set(asArray(getPeriodPlan(weekKey).focusDays).filter(isIsoDate))].sort();
+}
+
+// Pure: the list with the day added (or removed when it was there).
+function toggledFocusDays(days, iso) {
+  const set = new Set(days);
+  if (set.has(iso)) set.delete(iso);
+  else set.add(iso);
+  return [...set].sort();
+}
+
+const FocusDays = {
+  // The row of the 7 days of the week that starts on `weekStart` (Monday), the count and "Mark today".
+  // idPrefix keeps the ids unique on the page ("dash", "week").
+  html(weekStart, idPrefix) {
+    const key = Dates.weekKey(weekStart);
+    const marked = getFocusDays(key);
+    const today = Dates.toISO(Dates.today());
+    const days = Array.from({ length: 7 }, (_, index) => Dates.toISO(Dates.addDays(weekStart, index)));
+    const buttons = days.map((iso, index) => this.dayHtml({ iso, index, key, idPrefix, isMarked: marked.includes(iso), today })).join('');
+    const count = marked.filter((iso) => days.includes(iso)).length;
+    return `
+      <div class="focus-days">
+        <h3 class="focus-days-title" id="${idPrefix}-focus-days-title">${escapeHtml(t('focusDays.title'))}</h3>
+        <p class="focus-days-hint">${escapeHtml(t('focusDays.hint'))}</p>
+        <div class="focus-days-row" role="group" aria-labelledby="${idPrefix}-focus-days-title">${buttons}</div>
+        ${count === 7
+          ? `<p class="focus-days-count is-perfect"><i class="bi bi-stars" aria-hidden="true"></i>${escapeHtml(t('focusDays.perfect'))}</p>`
+          : `<p class="focus-days-count">${escapeHtml(tPlural('focusDays.count', 7, { done: Format.number(count) }))}</p>`}
+        ${days.includes(today) ? this.todayButtonHtml(key, today, idPrefix, marked.includes(today)) : ''}
+      </div>`;
+  },
+
+  // One day: a 44px button "✓ Mon". A future day cannot be marked yet (aria-disabled, not a real disabled:
+  // it stays in the Tab order and says why).
+  dayHtml({ iso, index, key, idPrefix, isMarked, today }) {
+    const isFuture = iso > today;
+    // "Monday, 9 November": the weekday from our texts (Intl leaves it out in Kazakh), the date from Intl
+    const date = upperFirst(`${t(`weekday.long.${index + 1}`)}, ${Format.date(iso, { day: 'numeric', month: 'long' })}`);
+    const stateKey = isFuture ? 'focusDays.future' : isMarked ? 'focusDays.marked' : 'focusDays.notMarked';
+    const classes = ['focus-day', isMarked ? 'is-marked' : '', iso === today ? 'is-today' : '', isFuture ? 'is-future' : ''].filter(Boolean).join(' ');
+    return `
+      <button type="button" class="${classes}" id="${idPrefix}-focus-day-${iso}" data-focus-day="${iso}" data-focus-week="${escapeHtml(key)}"
+              aria-pressed="${isMarked}" aria-label="${escapeHtml(t(stateKey, { date }))}"${isFuture ? ' aria-disabled="true"' : ''}>
+        <i class="bi bi-check-lg" aria-hidden="true"></i><span aria-hidden="true">${escapeHtml(t(`weekday.short.${index + 1}`))}</span>
+      </button>`;
+  },
+
+  // "✓ Mark today" (outline); when today is marked: "Today is marked ✓" — pressing it again unmarks it.
+  todayButtonHtml(key, today, idPrefix, isMarked) {
+    const label = isMarked
+      ? `${escapeHtml(t('focusDays.todayMarked'))}<i class="bi bi-check-lg ms-2" aria-hidden="true"></i>`
+      : `<i class="bi bi-check-lg me-2" aria-hidden="true"></i>${escapeHtml(t('focusDays.markToday'))}`;
+    return `
+      <button type="button" class="btn btn-tool focus-days-today${isMarked ? ' is-marked' : ''}" id="${idPrefix}-focus-today"
+              data-focus-day="${today}" data-focus-week="${escapeHtml(key)}" aria-pressed="${isMarked}">${label}</button>`;
+  },
+
+  // One click listener per container: marks / unmarks the day, then onChange({ focusId }) redraws the page.
+  bind(container, onChange) {
+    container.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-focus-day]');
+      if (!button || button.getAttribute('aria-disabled') === 'true') return;
+      const key = button.dataset.focusWeek;
+      if (!updatePeriodPlan(key, { focusDays: toggledFocusDays(getFocusDays(key), button.dataset.focusDay) })) return;
+      onChange({ focusId: button.id });
+    });
+  }
+};
+
 /* =========================================================
    16. App start
    ========================================================= */
@@ -2427,6 +2502,9 @@ function runDateSelfTest() {
   check('recalc: no float error 0.1 + 0.2', recalculateCurrentValue(goal({ progressType: 'number', currentValue: 0.1 }), [], 0.2), 0.3);
   check('recalc: weight = latest entry', recalculateCurrentValue(goal({ progressType: 'measurements', startValue: 92 }), [{ value: 86.5 }, { value: 88 }]), 86.5);
   check('recalc: weight, no entries = start', recalculateCurrentValue(goal({ progressType: 'measurements', startValue: 92 }), []), 92);
+  // Focus days
+  check('focus days: a day is added in date order', toggledFocusDays(['2026-11-11'], '2026-11-09').join(), '2026-11-09,2026-11-11');
+  check('focus days: a marked day is removed', toggledFocusDays(['2026-11-09', '2026-11-11'], '2026-11-09').join(), '2026-11-11');
   const sample = [
     { id: 'a', goalId: 'g', date: '2026-11-01' },
     { id: 'b', goalId: 'g', date: '2026-11-05' },

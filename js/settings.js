@@ -187,6 +187,7 @@ function sanitizeBackup(data) {
   if (Array.isArray(data.progress)) clean.progress = keep(data.progress, (entry) => isIsoDate(entry.date)).map(cleanEntry);
   if (Array.isArray(data.archive)) clean.archive = keep(data.archive, (year) => isIsoDate(year.yearStart) && isIsoDate(year.yearEnd)).map(cleanYear);
   if (isPlainObject(data.sport)) clean.sport = cleanSport(data.sport, keep);
+  if (isPlainObject(data.planner)) clean.planner = cleanPlanner(data.planner);
   // lifeos_settings.onboarding: only true / false flags; the demo mode is never imported
   // (only the button in the first-run dialog turns it on, js/onboarding.js).
   if (isPlainObject(data.settings) && 'onboarding' in data.settings) {
@@ -194,6 +195,14 @@ function sanitizeBackup(data) {
     clean.settings = { ...data.settings, onboarding };
   }
   return { data: clean, skipped };
+}
+
+// lifeos_planner: a week's focusDays keeps only real "YYYY-MM-DD" dates, sorted, without repeats.
+function cleanPlanner(planner) {
+  return Object.fromEntries(Object.entries(planner).map(([key, plan]) => {
+    if (!isPlainObject(plan) || !('focusDays' in plan)) return [key, plan];
+    return [key, { ...plan, focusDays: [...new Set(asArray(plan.focusDays).filter(isIsoDate))].sort() }];
+  }));
 }
 
 // lifeos_sport in a file: the plan is an object, workouts and measurements are lists with dates.
@@ -555,6 +564,8 @@ function runSettingsSelfTest() {
   check('goal without title', validateBackup({ ...good, data: { ...good.data, goals: [{ id: 'x' }] } }).error, 'settings.import.error.goals');
   check('profile with a bad date', validateBackup({ ...good, data: { ...good.data, profile: { name: 'A', personalYearStart: 'soon' } } }).error, 'settings.import.error.profile');
   check('missing parts are allowed', validateBackup({ app: 'LifeOS', version: 1, data: {} }).ok, true);
+  check('planner: focus days keep only dates', JSON.stringify(cleanPlanner({ '2026-W46': { focus: 'A', focusDays: ['2026-11-10', 'x', '2026-11-09', '2026-11-10', 5] } })['2026-W46'].focusDays), '["2026-11-09","2026-11-10"]');
+  check('planner: a week without focus days stays as it is', JSON.stringify(cleanPlanner({ '2026-W45': { focus: 'B' } })), '{"2026-W45":{"focus":"B"}}');
   check('csv: separator in quotes', csvCell('a;b', ';'), '"a;b"');
   check('csv: quotes doubled', csvCell('say "hi"', ','), '"say ""hi"""');
   check('csv: formula made safe', csvCell('=SUM(A1)', ','), "'=SUM(A1)");

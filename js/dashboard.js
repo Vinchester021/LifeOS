@@ -88,9 +88,13 @@ function renderYearCard(year) {
   const day = year.status === 'upcoming' ? 0 : Math.min(year.daysPassed + 1, year.totalDays);
   const left = Math.max(year.totalDays - day, 0);
   const note = { upcoming: 'planner.year.upcoming', finished: 'planner.year.finished' }[year.status];
+  const numeric = { day: '2-digit', month: '2-digit', year: 'numeric' };
+  const range = `${Format.date(Dates.toISO(year.start), numeric)} — ${Format.date(Dates.toISO(year.end), numeric)}`;
 
-  // The ring is decoration; the same numbers are written as text next to it.
+  // The dates of the year, the ring in the middle, two tiles under it: "62 days / passed of 365", "303 days / left".
+  // The ring is decoration; the same numbers are written as text.
   container.innerHTML = `
+    <p class="year-dates">${escapeHtml(range)}</p>
     <div class="year-card">
       <div class="ring">
         <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -98,10 +102,10 @@ function renderYearCard(year) {
           <circle class="ring-value" cx="60" cy="60" r="${RING_RADIUS}"
                   stroke-dasharray="${RING_LENGTH.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"></circle>
         </svg>
-        <span class="ring-label" aria-hidden="true"><strong>${escapeHtml(percentText)}</strong>${escapeHtml(t('dashboard.year.passedLabel'))}</span>
+        <span class="ring-label" aria-hidden="true"><strong>${escapeHtml(percentText)}</strong>${escapeHtml(t('dashboard.year.passedOfYear'))}</span>
       </div>
       <dl class="year-numbers">
-        <div><dt>${escapeHtml(tPlural('progress.days', day))}</dt><dd>${escapeHtml(t('dashboard.year.ofTotal', { total: Format.number(year.totalDays) }))}</dd></div>
+        <div><dt>${escapeHtml(tPlural('progress.days', day))}</dt><dd>${escapeHtml(t('dashboard.year.passedOf', { total: Format.number(year.totalDays) }))}</dd></div>
         <div><dt>${escapeHtml(tPlural('progress.days', left))}</dt><dd>${escapeHtml(t('dashboard.year.left'))}</dd></div>
       </dl>
       <p class="visually-hidden">${escapeHtml(t('planner.year.passed', { percent: percentText }))}</p>
@@ -134,46 +138,56 @@ function addDashboardTask(event) {
 
 /* ---------- Focus of the week (the same data as in the Planner) ---------- */
 
-function weekTaskStats() {
+// Every task of this week (a repeating task once per day it occurs), Monday first: [{ task, date, done }].
+function weekTaskOccurrences() {
   const tasks = getTasks();
   const monday = Dates.startOfWeek(Dates.today());
-  let total = 0;
-  let done = 0;
-  for (let index = 0; index < 7; index++) {
-    getTasksForDate(Dates.toISO(Dates.addDays(monday, index)), tasks).forEach((occurrence) => {
-      total++;
-      if (occurrence.done) done++;
-    });
-  }
-  return { total, done };
+  return Array.from({ length: 7 }, (_, index) => getTasksForDate(Dates.toISO(Dates.addDays(monday, index)), tasks)).flat();
 }
 
 function renderFocus() {
-  const focus = getPeriodPlan(Dates.weekKey(Dates.today())).focus ?? '';
+  const monday = Dates.startOfWeek(Dates.today());
+  const focus = getPeriodPlan(Dates.weekKey(monday)).focus ?? '';
   const text = byId('dash-focus-text');
   text.textContent = focus || t('dashboard.focus.empty');
   text.classList.toggle('is-empty', !focus);
-  // No focus yet: the form is open right away.
+  // No focus yet: the form is open right away, and there are no days to mark.
   if (!focus) setFocusFormOpen(true, false);
+  byId('dash-focus-days').innerHTML = focus ? FocusDays.html(monday, 'dash') : ''; // app.js
 
-  byId('dash-week-progress').innerHTML = weekProgressHtml(weekTaskStats());
+  byId('dash-week-progress').innerHTML = weekProgressHtml(weekTaskOccurrences());
 }
 
-// "2 of 5" + one segment per task of the week (a plain bar when there are many tasks).
-const WEEK_SEGMENTS_MAX = 10;
-
-function weekProgressHtml({ total, done }) {
-  if (!total) return `<p class="dash-week-empty">${escapeHtml(t('dashboard.focus.noTasks'))}</p>`;
+// "Week tasks" + "18 of 23 done" and the bar in one line (docs/design/focus-week-v2.png).
+// No tasks this week: "No tasks this week" + "Add task".
+function weekProgressHtml(occurrences) {
+  const total = occurrences.length;
+  const title = `<h3 class="dash-week-title">${escapeHtml(t('dashboard.focus.weekTasks'))}</h3>`;
+  if (!total) {
+    return `
+      ${title}
+      <p class="dash-week-empty">${escapeHtml(t('dashboard.focus.noTasks'))}</p>
+      <button type="button" class="btn btn-tool w-100 mt-2" id="dash-week-add">
+        <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>${escapeHtml(t('task.form.create'))}
+      </button>`;
+  }
+  const done = occurrences.filter((occurrence) => occurrence.done).length;
   const percent = Math.round((done / total) * 100);
-  const bar = total <= WEEK_SEGMENTS_MAX
-    ? `<span class="week-segments" aria-hidden="true">${Array.from({ length: total }, (_, index) =>
-        `<span${index < done ? ' class="is-done"' : ''}></span>`).join('')}</span>`
-    : `<span class="week-segments is-bar" aria-hidden="true"><span class="is-done" style="width: ${percent}%"></span></span>`;
   return `
-    <div class="dash-week" role="img" aria-label="${escapeHtml(t('dashboard.focus.progress', { done, total }))}">
-      <strong class="dash-week-count">${escapeHtml(t('dashboard.focus.count', { done, total }))}</strong>
-      ${bar}
+    ${title}
+    <div class="dash-week">
+      <span class="dash-week-count">${escapeHtml(t('dashboard.focus.doneOf', { done: Format.number(done), total: Format.number(total) }))}</span>
+      <div class="progress dash-week-bar" role="progressbar" aria-label="${escapeHtml(t('dashboard.focus.progress', { done, total }))}"
+           aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar" style="width: ${percent}%"></div>
+      </div>
     </div>`;
+}
+
+// "Add task" when the week is empty: the task dialog (tasks.js) with today's date.
+function openWeekTaskForm(event) {
+  if (!event.target.closest('#dash-week-add')) return;
+  TaskForm.open({ onSaved: onDashboardTasksChanged, returnFocusId: 'dash-week-add' });
 }
 
 function setFocusFormOpen(isOpen, moveFocus = true) {
@@ -379,6 +393,8 @@ function onDashboardTasksChanged({ focusId } = {}) {
 onAppReady(() => {
   byId('dash-task-form').addEventListener('submit', submitOnce(addDashboardTask));
   TaskList.bind(byId('dash-today-tasks'), onDashboardTasksChanged);
+  FocusDays.bind(byId('dash-focus-days'), onDashboardTasksChanged); // the days the focus was followed (app.js)
+  byId('dash-week-progress').addEventListener('click', openWeekTaskForm);
   byId('dash-focus-edit').addEventListener('click', () => setFocusFormOpen(byId('dash-focus-form').hidden));
   byId('dash-focus-form').addEventListener('submit', submitOnce(saveDashboardFocus));
   byId('dash-focus-form').addEventListener('keydown', closeFocusFormOnEscape);

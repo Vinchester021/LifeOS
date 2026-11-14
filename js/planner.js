@@ -325,6 +325,7 @@ function renderWeek(period) {
     setFieldError(byId('week-focus'), null);
     plannerState.focusKey = period.key;
   }
+  renderWeekFocusDays(period);
   const tasks = getTasks();
   const today = isoOf(Dates.today());
   const days = Array.from({ length: 7 }, (_, index) => Dates.addDays(period.start, index));
@@ -391,6 +392,12 @@ function scrollWeekToToday(weekKey) {
   strip.scrollLeft = todayColumn.offsetLeft;
 }
 
+// The row of days to mark (the same component as on the Dashboard), shown once a focus is saved.
+function renderWeekFocusDays(period = currentPeriod()) {
+  const hasFocus = Boolean(getPeriodPlan(period.key).focus);
+  byId('week-focus-days').innerHTML = hasFocus ? FocusDays.html(period.start, 'week') : '';
+}
+
 function saveWeekFocus(event) {
   event.preventDefault();
   const input = byId('week-focus');
@@ -403,6 +410,7 @@ function saveWeekFocus(event) {
   }
   input.value = focus;
   if (updatePeriodPlan(currentPeriod().key, { focus })) showToast('toast.focusSaved', 'success');
+  renderWeekFocusDays(); // the days appear with the first saved focus
 }
 
 /* ---------- Week: drag and drop (HTML5 Drag and Drop API) ----------
@@ -616,6 +624,10 @@ function bindPlannerEvents() {
     TaskForm.open({ defaults: { date: button.dataset.addTaskDay }, onSaved: onPlannerTasksChanged, returnFocusId: button.id });
   });
   byId('week-focus-form').addEventListener('submit', submitOnce(saveWeekFocus));
+  FocusDays.bind(byId('week-focus-days'), ({ focusId }) => {
+    renderWeekFocusDays();
+    byId(focusId)?.focus();
+  });
   byId('quick-task-form').addEventListener('submit', submitOnce(addQuickTask));
   byId('today-habits').addEventListener('click', (event) => {
     const button = event.target.closest('[data-habit]');

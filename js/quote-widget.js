@@ -84,16 +84,19 @@ const QUOTE_CARD_HTML = `
               aria-controls="quote-text" aria-expanded="false" hidden></button>
       <figcaption class="sidebar-quote-author" id="quote-author"></figcaption>
     </figure>
+    <!-- docs/design/quote-card.png: "↻ Another quote" on the left, "Copy" and "To favorites" on the right -->
     <div class="sidebar-quote-actions">
-      <button type="button" class="btn btn-icon" id="quote-new" data-i18n-aria-label="quote.new" data-i18n-title="quote.new">
-        <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+      <button type="button" class="btn sidebar-quote-new" id="quote-new">
+        <i class="bi bi-arrow-repeat" aria-hidden="true"></i><span data-i18n="quote.another"></span>
       </button>
-      <button type="button" class="btn btn-icon" id="quote-copy" data-i18n-aria-label="quote.copyLabel" data-i18n-title="quote.copyLabel">
-        <i class="bi bi-clipboard" aria-hidden="true"></i>
-      </button>
-      <button type="button" class="btn btn-icon" id="quote-favorite" aria-pressed="false" data-i18n-aria-label="quote.favorite">
-        <i class="bi bi-heart" aria-hidden="true"></i>
-      </button>
+      <div class="sidebar-quote-tools">
+        <button type="button" class="btn btn-icon" id="quote-copy" data-i18n-aria-label="quote.copyLabel" data-i18n-title="quote.copyLabel">
+          <i class="bi bi-clipboard" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="btn btn-icon" id="quote-favorite" aria-pressed="false" data-i18n-aria-label="quote.favorite">
+          <i class="bi bi-heart" aria-hidden="true"></i>
+        </button>
+      </div>
     </div>
     <!-- "Copied" / "Added to favorites" for screen readers (the buttons only flash a check mark) -->
     <p class="visually-hidden" id="quote-status" role="status"></p>
@@ -146,7 +149,7 @@ function renderQuote() {
   updateQuoteMore();
 }
 
-// A long quote is cut after 4 lines (CSS line-clamp); "More" shows it all.
+// A long quote is cut after 5 lines (CSS line-clamp); "More" shows it all.
 function updateQuoteMore() {
   const text = byId('quote-text');
   const more = byId('quote-more');
