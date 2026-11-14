@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.4.1">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.4.1">
-  <link rel="stylesheet" href="./css/style.css?v=1.4.1">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.4.2">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.4.2">
+  <link rel="stylesheet" href="./css/style.css?v=1.4.2">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.4.1">
+  <link rel="manifest" href="./manifest.json?v=1.4.2">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,21 +19,21 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.4.1" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.4.1" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.4.2" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.4.2" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.4.1"></script>
-  <script src="./data/quotes-fallback.js?v=1.4.1"></script>
-  <script src="./data/changelog-fallback.js?v=1.4.1"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.4.1"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.4.1" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.4.1" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.4.1" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.4.1" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./data/translations-fallback.js?v=1.4.2"></script>
+  <script src="./data/quotes-fallback.js?v=1.4.2"></script>
+  <script src="./data/changelog-fallback.js?v=1.4.2"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.4.2"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.4.2" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.4.2" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.4.2" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.4.2" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
   <!-- Chart.js only on this page; if it does not load, progress-charts.js shows tables -->
-  <script src="./vendor/chartjs/chart.umd.min.js?v=1.4.1" defer></script>
-  <script src="./js/progress-charts.js?v=1.4.1" defer></script>
-  <script src="./js/progress.js?v=1.4.1" defer></script>
+  <script src="./vendor/chartjs/chart.umd.min.js?v=1.4.2" defer></script>
+  <script src="./js/progress-charts.js?v=1.4.2" defer></script>
+  <script src="./js/progress.js?v=1.4.2" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -305,63 +305,80 @@
   </div>
 
   <!-- First run: shown by app.js only when there is no lifeos_profile.
-       Static backdrop + keyboard="false": it cannot be closed without creating a profile. -->
+       Static backdrop + keyboard="false": it cannot be closed without creating a profile.
+       Computer: two columns (about LifeOS | the profile form); tablet and phone: one column (style.css). -->
   <div class="modal fade" id="first-run-modal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="first-run-title" aria-describedby="first-run-intro">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down first-run-dialog">
       <form class="modal-content" id="first-run-form" novalidate>
-        <div class="modal-header">
-          <h2 class="modal-title fs-4" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
-        </div>
-        <div class="modal-body">
-          <p class="mb-2" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
-          <p id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
-          <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+        <div class="modal-body first-run">
+          <!-- Left (computer) / top: what LifeOS is and the path from the year to the day -->
+          <section class="first-run-hero" aria-labelledby="first-run-title">
+            <p class="first-run-brand"><i class="bi bi-compass" aria-hidden="true"></i><span data-i18n="app.name">LifeOS</span></p>
+            <h2 class="first-run-title" id="first-run-title" data-i18n="firstRun.title">Welcome to LifeOS</h2>
+            <p class="first-run-short" data-i18n="firstRun.short">Goals for the year, step by step to today.</p>
+            <p class="first-run-about" data-i18n="firstRun.about">LifeOS is a personal planner: set big goals for the year, split them into quarters, months, weeks and days, and track your progress.</p>
+            <p class="first-run-lead" id="first-run-intro" data-i18n="firstRun.intro">Create a local profile to start planning your year.</p>
+            <ol class="first-run-path" data-i18n-aria-label="firstRun.path.label" aria-label="From the year to the day">
+              <li><span class="first-run-path-icon" aria-hidden="true"><i class="bi bi-calendar3"></i></span><span class="first-run-path-name" data-i18n="firstRun.path.year">Year</span></li>
+              <li><span class="first-run-path-icon" aria-hidden="true"><i class="bi bi-grid-3x3-gap"></i></span><span class="first-run-path-name" data-i18n="firstRun.path.quarter">Quarter</span></li>
+              <li><span class="first-run-path-icon" aria-hidden="true"><i class="bi bi-calendar2-event"></i></span><span class="first-run-path-name" data-i18n="firstRun.path.month">Month</span></li>
+              <li><span class="first-run-path-icon" aria-hidden="true"><i class="bi bi-calendar-week"></i></span><span class="first-run-path-name" data-i18n="firstRun.path.week">Week</span></li>
+              <li><span class="first-run-path-icon" aria-hidden="true"><i class="bi bi-check2"></i></span><span class="first-run-path-name" data-i18n="firstRun.path.day">Day</span></li>
+            </ol>
+          </section>
 
-          <div class="mb-3">
-            <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
-            <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
-            <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
-            <p class="field-error" id="first-run-name-error"></p>
+          <!-- Right (computer) / middle: the profile -->
+          <div class="first-run-fields">
+            <p class="form-text mt-0" data-i18n="firstRun.requiredNote">Fields marked * are required.</p>
+
+            <div class="mb-3">
+              <label class="form-label required-label" for="first-run-name" data-i18n="firstRun.nameLabel">Your name</label>
+              <input class="form-control" id="first-run-name" name="name" type="text" autocomplete="given-name" required aria-describedby="first-run-name-hint">
+              <div class="form-text" id="first-run-name-hint" data-i18n="firstRun.nameHint">From 2 to 30 characters.</div>
+              <p class="field-error" id="first-run-name-error"></p>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
+              <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
+              <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
+              <p class="field-error" id="first-run-start-error"></p>
+            </div>
+
+            <fieldset class="mb-3">
+              <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
+              <div class="choice-group">
+                <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
+                <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
+                <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
+                <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
+                <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
+                <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
+              </div>
+            </fieldset>
+
+            <fieldset class="mb-0">
+              <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
+              <div class="choice-group">
+                <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
+                <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
+                <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
+                <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
+              </div>
+            </fieldset>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label required-label" for="first-run-start" data-i18n="firstRun.startLabel">Personal year starts on</label>
-            <input class="form-control" id="first-run-start" name="personalYearStart" type="text" inputmode="numeric" maxlength="10" autocomplete="off" data-date-field data-i18n-placeholder="date.placeholder" required aria-describedby="first-run-start-hint">
-            <div class="form-text" id="first-run-start-hint" data-i18n="firstRun.startHint">Quarters, months and weeks are counted from this date.</div>
-            <p class="field-error" id="first-run-start-error"></p>
-          </div>
-
-          <fieldset class="mb-3">
-            <legend class="form-label fs-6" data-i18n="firstRun.languageLabel">Language</legend>
-            <div class="choice-group">
-              <input class="btn-check" type="radio" name="language" id="first-run-lang-en" value="en">
-              <label class="btn btn-tool" for="first-run-lang-en" lang="en" data-i18n="language.en">English</label>
-              <input class="btn-check" type="radio" name="language" id="first-run-lang-ru" value="ru">
-              <label class="btn btn-tool" for="first-run-lang-ru" lang="ru" data-i18n="language.ru">Русский</label>
-              <input class="btn-check" type="radio" name="language" id="first-run-lang-kk" value="kk">
-              <label class="btn btn-tool" for="first-run-lang-kk" lang="kk" data-i18n="language.kk">Қазақша</label>
-            </div>
-          </fieldset>
-
-          <fieldset class="mb-3">
-            <legend class="form-label fs-6" data-i18n="firstRun.themeLabel">Theme</legend>
-            <div class="choice-group">
-              <input class="btn-check" type="radio" name="theme" id="first-run-theme-light" value="light">
-              <label class="btn btn-tool" for="first-run-theme-light"><i class="bi bi-sun me-2" aria-hidden="true"></i><span data-i18n="theme.light">Light</span></label>
-              <input class="btn-check" type="radio" name="theme" id="first-run-theme-dark" value="dark">
-              <label class="btn btn-tool" for="first-run-theme-dark"><i class="bi bi-moon-stars me-2" aria-hidden="true"></i><span data-i18n="theme.dark">Dark</span></label>
-            </div>
-          </fieldset>
-
-          <p class="storage-note mb-0">
-            <i class="bi bi-shield-lock" aria-hidden="true"></i>
-            <span data-i18n="firstRun.storageNote">LifeOS has no account or server. Your data is stored only in this browser on this device: clearing browser data deletes it.</span>
+          <!-- Computer: at the bottom of the left panel; tablet and phone: under the form, small -->
+          <p class="first-run-storage">
+            <i class="bi bi-shield-check" aria-hidden="true"></i>
+            <span><strong data-i18n="firstRun.storageLead">No account, no server.</strong> <span data-i18n="firstRun.storageText">Your data is stored only in this browser on this device: clearing browser data deletes it.</span></span>
           </p>
-        </div>
-        <div class="modal-footer">
-          <!-- Fills the example data and shows the banner "This is example data" (js/onboarding.js) -->
-          <button class="btn btn-tool" type="button" data-demo-start data-i18n="onboarding.demo.start">See an example first</button>
-          <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+
+          <div class="first-run-actions">
+            <!-- Fills the example data and shows the banner "This is example data" (js/onboarding.js) -->
+            <button class="btn btn-tool" type="button" data-demo-start data-i18n="onboarding.demo.start">See an example first</button>
+            <button class="btn btn-primary" type="submit" data-i18n="firstRun.submit">Create profile</button>
+          </div>
         </div>
       </form>
     </div>

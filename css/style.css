@@ -7044,18 +7044,342 @@ small,
   }
 }
 
-/* ---------- First-run dialog on a phone: "Create profile" on top, "See an example first" under it ---------- */
-@media (max-width: 575.98px) {
-  #first-run-modal .modal-footer {
-    flex-direction: column-reverse; /* in the HTML the example button comes first (on a computer it is on the left) */
-    align-items: stretch;
-    gap: var(--space-2);
+/* ---------- First-run dialog ("Welcome to LifeOS"): about LifeOS | the profile form ----------
+   One markup for every width (index.html and the other pages):
+   computer ≥ 992px — two columns: on the left (≈ 40 %, a soft accent panel) the title, the text, the path
+   Year → Day and under a line the storage note; on the right the form and the two buttons at the bottom;
+   tablet — one column, a compact panel on top; phone — the whole screen, scrolls, small path, buttons stacked. */
+.first-run {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.first-run-hero {
+  padding: var(--space-4);
+  background-color: var(--lifeos-primary-soft); /* the dark theme has its own darker accent tone */
+}
+
+.first-run-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.first-run-brand .bi {
+  color: var(--lifeos-primary-text);
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.first-run-title {
+  margin: 0 0 var(--space-2);
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.first-run-about,
+.first-run-lead,
+.first-run-short {
+  margin: 0 0 var(--space-3);
+}
+
+/* The short line is for the phone; the second paragraph only for the computer
+   (it stays for screen readers: it describes the dialog, aria-describedby). */
+.first-run-short {
+  display: none;
+}
+
+.first-run-lead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Year — Quarter — Month — Week — Day: icons in rounded squares on one line, the names under them */
+.first-run-path {
+  --path-icon: 2.75rem;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.first-run-path::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--path-icon) / 2 - 1px);
+  right: calc(var(--path-icon) / 2);
+  left: calc(var(--path-icon) / 2);
+  border-top: 1.5px solid var(--lifeos-primary);
+  opacity: 0.45;
+}
+
+.first-run-path li {
+  position: relative; /* above the line */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Opaque (the line must not show through): the card color with a little more accent than the panel */
+.first-run-path-icon {
+  display: grid;
+  place-items: center;
+  width: var(--path-icon);
+  height: var(--path-icon);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(color-mix(in srgb, var(--lifeos-primary) 18%, transparent), color-mix(in srgb, var(--lifeos-primary) 18%, transparent)),
+    var(--lifeos-surface);
+  color: var(--lifeos-primary-text);
+  font-size: 1.2rem;
+}
+
+.first-run-path-name {
+  max-width: 100%;
+  font-size: var(--fs-small);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.first-run-fields {
+  padding: var(--space-4);
+}
+
+.first-run-fields > p.form-text:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.first-run-fields .form-label {
+  font-weight: 700;
+}
+
+.first-run-fields .form-control {
+  min-height: 3rem;
+  font-size: 1.0625rem;
+}
+
+/* Language and theme: big rounded buttons, the chosen one is filled with the accent (.btn-check:checked + .btn-tool) */
+.first-run .choice-group .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.first-run-storage {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.first-run-storage .bi {
+  flex: none;
+  color: var(--lifeos-primary-text);
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.first-run-storage strong {
+  color: var(--lifeos-text);
+}
+
+/* "See an example first" (outline) on the left, "Create profile" (filled) on the right, the same height */
+.first-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--lifeos-border);
+}
+
+.first-run-actions .btn {
+  flex: 1 1 auto;
+  min-height: 3.25rem; /* 52px */
+  padding: 0 var(--space-4);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+/* Tablet: the dialog is narrower, the panel on top has one paragraph */
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .first-run-dialog {
+    max-width: 40rem;
+  }
+}
+
+/* Computer: two columns, ~1100px */
+@media (min-width: 992px) {
+  .first-run-dialog {
+    max-width: 68.75rem; /* 1100px */
   }
 
-  #first-run-modal .modal-footer > .btn {
+  .first-run-dialog .modal-content {
+    overflow: hidden; /* the panel follows the rounded left corners */
+    border-radius: var(--radius-lg);
+  }
+
+  .first-run {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: 1fr auto;
+  }
+
+  .first-run-hero {
+    grid-column: 1;
+    grid-row: 1;
+    padding: var(--space-5) var(--space-5) var(--space-4);
+  }
+
+  .first-run-title {
+    margin-bottom: var(--space-3);
+    font-size: 2.25rem; /* 36px */
+  }
+
+  .first-run-about,
+  .first-run-lead {
+    font-size: var(--fs-card);
+  }
+
+  .first-run-lead {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* The storage note closes the left panel: the same background, a thin line above */
+  .first-run-storage {
+    position: relative;
+    grid-column: 1;
+    grid-row: 2;
+    padding: var(--space-4) var(--space-5) var(--space-5);
+    background-color: var(--lifeos-primary-soft);
+    color: var(--lifeos-text);
+    font-size: var(--fs-body);
+  }
+
+  .first-run-storage::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: var(--space-5);
+    left: var(--space-5);
+    border-top: 1px solid var(--lifeos-border-strong);
+  }
+
+  .first-run-fields {
+    grid-column: 2;
+    grid-row: 1;
+    padding: var(--space-5) var(--space-5) var(--space-3);
+  }
+
+  .first-run-fields > .mb-3 {
+    margin-bottom: var(--space-4) !important; /* more air between the fields, as in the mockup (Bootstrap .mb-3 is !important) */
+  }
+
+  .first-run-actions {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    margin: 0 var(--space-5);
+    padding: var(--space-4) 0 var(--space-5);
+  }
+}
+
+/* Phone: the whole screen, a short header, small path, the buttons stacked ("Create profile" on top) */
+@media (max-width: 575.98px) {
+  .first-run-hero {
+    padding: var(--space-3);
+  }
+
+  .first-run-brand {
+    margin-bottom: var(--space-2);
+    font-size: 1.25rem;
+  }
+
+  .first-run-brand .bi {
+    font-size: 1.6rem;
+  }
+
+  .first-run-title {
+    font-size: 1.5rem; /* 24px */
+  }
+
+  .first-run-about {
+    display: none;
+  }
+
+  .first-run-short {
+    display: block;
+  }
+
+  .first-run-path {
+    --path-icon: 2.25rem;
+    margin-top: var(--space-3);
+  }
+
+  .first-run-path-icon {
+    font-size: 1rem;
+  }
+
+  .first-run-path-name {
+    font-size: 0.6875rem; /* 11px */
+  }
+
+  .first-run-fields {
+    padding: var(--space-3);
+  }
+
+  /* The three languages stay on one line */
+  .first-run .choice-group .btn {
+    padding: 0 var(--space-3);
+    font-size: 1rem;
+  }
+
+  .first-run-storage {
+    padding: 0 var(--space-3) var(--space-3);
+    font-size: 0.75rem;
+  }
+
+  .first-run-actions {
+    flex-direction: column-reverse; /* in the HTML the example button comes first (on a computer it is on the left) */
+    padding: var(--space-3);
+  }
+
+  .first-run-actions .btn {
     width: 100%;
     min-height: 3rem; /* 48px */
-    margin: 0;
   }
 }
 

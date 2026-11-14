@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.4.2",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "A redesigned welcome window for new users.",
+          "ru": "Новое оформление окна приветствия для новых пользователей.",
+          "kk": "Жаңа пайдаланушыларға арналған сәлемдесу терезесінің жаңа дизайны."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.4.1",
     "date": "2026-11-14",
     "items": [
