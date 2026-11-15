@@ -261,7 +261,7 @@ function weeklyTaskCounts(completionDates, todayValue, weeks = 12) {
 function goalSnapshot(goal) {
   return {
     id: goal.id, title: goal.title, category: goal.category, icon: goal.icon, color: goal.color,
-    progressType: goal.progressType, unit: goal.unit ?? '', levels: asArray(goal.levels),
+    progressType: goal.progressType, unit: goal.unit ?? '', levels: asArray(goal.levels), bookList: goal.bookList === true,
     startValue: goal.startValue, currentValue: goal.currentValue, targetValue: goal.targetValue,
     checklist: asArray(goal.checklist).map((item) => ({ done: Boolean(item?.done) })),
     status: goal.status, percent: getGoalPercent(goal)
@@ -653,17 +653,16 @@ function habitsTile(data, { current }) {
   });
 }
 
+// Books and pages of the period (the progress of each book goal is on the Dashboard and Goal Details).
+// A finished book = an entry with value 1 (a book list writes one when a book is finished).
 function booksTile(data, { current }) {
   const books = data.goals.filter((goal) => goal.category === 'books' && goal.progressType === 'number' && goal.status !== 'archived');
   if (books.length === 0) return tileHtml({ id: 'books', icon: 'bi-book', titleKey: 'category.books', href: 'goals.html', value: '—', note: t('progress.tile.empty') });
-  const done = sumOf(books, (goal) => goal.currentValue);
-  const target = sumOf(books, (goal) => goal.targetValue);
-  const added = bookStats(data.goals, data.entries, current.start, current.end).books;
+  const stats = bookStats(data.goals, data.entries, current.start, current.end);
   return tileHtml({
     id: 'books', icon: 'bi-book', titleKey: 'category.books', href: 'goals.html',
-    value: t('progress.tile.of', { done: Format.number(done), total: Format.number(target) }),
-    badge: target ? percentBadge(done / target) : '',
-    note: t('progress.tile.booksNote', { added: `+${Format.number(added)}`, period: periodWords() })
+    value: bookCountText(stats.books),
+    note: t('progress.tile.booksPages', { pages: Format.number(stats.pages), period: periodWords() })
   });
 }
 

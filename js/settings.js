@@ -113,13 +113,38 @@ function cleanGoal(goal) {
       ...item, id: cleanId(item.id) ?? createId('item'), text: String(item.text ?? ''), done: Boolean(item.done)
     }));
   }
+  if ('bookList' in goal) clean.bookList = goal.bookList === true;
+  if ('books' in goal) clean.books = asArray(goal.books).filter(isPlainObject).map(cleanBook);
+  // A book list counts the goal by itself: the number of finished books.
+  if (hasBookList(clean)) clean.currentValue = countDoneBooks(goalBooks(clean));
   return clean;
+}
+
+// A book from a file: texts are strings of at most 120 characters (shown with textContent / escapeHtml),
+// pages are whole numbers (read ≤ total), the status is one of three, dates are "YYYY-MM-DD" or null.
+function cleanBook(book) {
+  const text = (value) => String(value ?? '').trim().slice(0, BOOK_TEXT_MAX);
+  const total = cleanNumber(book.totalPages, null);
+  const totalPages = Number.isInteger(total) && total > 0 ? total : null;
+  const read = Math.max(Math.round(cleanNumber(book.pagesRead, 0)), 0);
+  return {
+    id: cleanId(book.id) ?? createId('book'),
+    title: text(book.title),
+    author: text(book.author),
+    totalPages,
+    pagesRead: totalPages !== null ? Math.min(read, totalPages) : read,
+    status: BOOK_STATUSES.includes(book.status) ? book.status : 'planned',
+    startedAt: isoOrNull(book.startedAt),
+    finishedAt: isoOrNull(book.finishedAt),
+    createdAt: typeof book.createdAt === 'string' && !Number.isNaN(Date.parse(book.createdAt)) ? book.createdAt : new Date().toISOString()
+  };
 }
 
 function cleanEntry(entry) {
   const clean = cleanNumbers(entry, ['value', 'pages']);
   clean.id = cleanId(entry.id) ?? createId('entry');
   if ('goalId' in entry) clean.goalId = cleanId(entry.goalId);
+  if ('bookId' in entry) clean.bookId = cleanId(entry.bookId);
   if ('note' in entry) clean.note = String(entry.note ?? '');
   return clean;
 }
@@ -564,8 +589,19 @@ function runSettingsSelfTest() {
   check('goal without title', validateBackup({ ...good, data: { ...good.data, goals: [{ id: 'x' }] } }).error, 'settings.import.error.goals');
   check('profile with a bad date', validateBackup({ ...good, data: { ...good.data, profile: { name: 'A', personalYearStart: 'soon' } } }).error, 'settings.import.error.profile');
   check('missing parts are allowed', validateBackup({ app: 'LifeOS', version: 1, data: {} }).ok, true);
+  const shelf = cleanGoal({ id: 'g', title: 'B', category: 'books', progressType: 'number', bookList: 'yes', currentValue: 9, books: [
+    { id: 'b', title: `<img src=x onerror=alert(1)>${'x'.repeat(200)}`, totalPages: '-5', pagesRead: 'abc', status: 'eaten', startedAt: 'soon' },
+    { title: 'Done', totalPages: 100, pagesRead: 250, status: 'done' }, 'not a book'] });
+  check('books: bookList is only true / false', shelf.bookList, false);
+  check('books: title is a string of at most 120 characters', shelf.books[0].title.length, 120);
+  check('books: bad numbers, status and date are cleaned', `${shelf.books[0].totalPages} ${shelf.books[0].pagesRead} ${shelf.books[0].status} ${shelf.books[0].startedAt}`, 'null 0 planned null');
+  check('books: read pages are not more than the book', shelf.books[1].pagesRead, 100);
+  check('books: a book without id gets one; a broken one is dropped', `${typeof shelf.books[1].id} ${shelf.books.length}`, 'string 2');
+  const listed = cleanGoal({ id: 'g', title: 'B', category: 'books', progressType: 'number', bookList: true, currentValue: 9, books: [{ id: 'b', title: 'A', status: 'done' }] });
+  check('books: the goal counter = finished books of the file', listed.currentValue, 1);
   check('planner: focus days keep only dates', JSON.stringify(cleanPlanner({ '2026-W46': { focus: 'A', focusDays: ['2026-11-10', 'x', '2026-11-09', '2026-11-10', 5] } })['2026-W46'].focusDays), '["2026-11-09","2026-11-10"]');
   check('planner: a week without focus days stays as it is', JSON.stringify(cleanPlanner({ '2026-W45': { focus: 'B' } })), '{"2026-W45":{"focus":"B"}}');
+  check('books: an entry keeps its book id', cleanEntry({ id: 'e', date: '2026-11-10', goalId: 'g', bookId: 'b', pages: '40' }).bookId, 'b');
   check('csv: separator in quotes', csvCell('a;b', ';'), '"a;b"');
   check('csv: quotes doubled', csvCell('say "hi"', ','), '"say ""hi"""');
   check('csv: formula made safe', csvCell('=SUM(A1)', ','), "'=SUM(A1)");

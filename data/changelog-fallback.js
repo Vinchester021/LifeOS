@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.5.0",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "Reading goals: a list of books with pages, statuses and the reading pace.",
+          "ru": "Цели по книгам: список книг со страницами, статусами и темпом чтения.",
+          "kk": "Кітап мақсаттары: беттері, күйлері және оқу қарқыны бар кітаптар тізімі."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.4.4",
     "date": "2026-11-15",
     "items": [

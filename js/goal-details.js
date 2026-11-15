@@ -75,11 +75,17 @@ function paceValue(goal, amount) {
   if (goal.progressType === 'money') return Format.money(Math.ceil(amount), goal.unit || DEFAULT_CURRENCY);
   if (goal.progressType === 'percent') return formatGoalValue(goal, Math.round(amount * 10) / 10);
   const text = Format.number(amount, { maximumFractionDigits: amount < 10 ? 2 : 0 });
+  if (hasBookList(goal)) return bookCountText(amount, text); // "0,07 книги"
   return goal.unit ? `${text} ${goal.unit}` : text;
 }
 
 // Pages per day for book goals, based on the user's own finished books (average length).
+// A goal with a book list: the same pace as above the list (app.js: bookShelfStats).
 function booksPagesLine(goal, remainingBooks, daysLeft) {
+  if (hasBookList(goal)) {
+    const { perDay } = bookShelfStats(goal);
+    return perDay ? t('details.pace.pages', { pages: Format.number(perDay) }) : null;
+  }
   const entries = getGoalEntries(goal.id);
   const finished = entries.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
   const pages = entries.reduce((sum, entry) => sum + (Number(entry.pages) || 0), 0);
@@ -180,7 +186,7 @@ function submitEntry(event) {
   event.preventDefault();
   const goal = loadGoal();
   if (!goal || !entryForm.save(goal)) return; // errors are shown next to the fields
-  showToast('toast.entryAdded', 'success');
+  entryForm.toastAfterSave('toast.entryAdded'); // or "Book finished: «…»"
   entryForm.reset();
   renderDetailsPage();
 }
@@ -214,7 +220,7 @@ function renderHistory(goal) {
           <span class="gd-history-date">${escapeHtml(date)}</span>
           ${label ? `<span class="gd-history-note">${escapeHtml(label)}</span>` : ''}
         </div>
-        <strong class="gd-history-change ${entryTone(goal, entry)}">${escapeHtml(entryChangeText(goal, entry))}</strong>
+        <strong class="gd-history-change ${entryTone(goal, entry)} ${entry.bookId ? 'is-book' : ''}">${escapeHtml(entryChangeText(goal, entry))}</strong>
         <button type="button" class="btn btn-icon" data-delete-entry="${escapeHtml(entry.id)}"
                 aria-label="${escapeHtml(t('details.history.delete', { date }))}" title="${escapeHtml(t('details.history.delete', { date }))}">
           <i class="bi bi-trash" aria-hidden="true"></i>
@@ -228,6 +234,14 @@ function deleteEntry(entryId) {
   const entries = getProgressEntries();
   const entry = entries.find((item) => item.id === entryId);
   if (!goal || !entry) return;
+  if (hasBookList(goal)) {
+    // The book gets its pages back, the goal counts its finished books again (app.js).
+    if (!deleteBookEntry(goal.id, entryId)) return;
+    showToast('toast.entryDeleted', 'success');
+    renderDetailsPage();
+    byId('history-title').focus();
+    return;
+  }
   const remaining = entries.filter((item) => item.id !== entryId);
   // money/number: take the deleted change back; other types: recount from the remaining entries.
   const change = DELTA_TYPES.includes(goal.progressType) ? -(Number(entry.value) || 0) : 0;
@@ -486,6 +500,7 @@ function renderDetailsPage() {
   byId('details-missing').hidden = true;
   byId('details-content').hidden = false;
   renderOverview(goal);
+  BookShelf.render(goal); // "My books" (js/books.js): only for a goal with a book list
   renderEntryForm(goal);
   renderHistory(goal);
   renderMilestones(goal);

@@ -172,6 +172,14 @@ const GOAL_WIZARD_HTML = `
           <!-- Step 5: values and deadline. JS shows only the fields of the chosen type (data-field). -->
           <section class="wizard-step" data-step="5" hidden>
             <div class="row g-3">
+              <!-- "Books" + "Number": keep a list of books (Goal Details → My books); then "What do you count" = books -->
+              <div class="col-12" data-field="bookList">
+                <div class="form-check form-switch wiz-book-switch">
+                  <input class="form-check-input" type="checkbox" role="switch" id="wiz-book-list" checked aria-describedby="wiz-book-list-hint">
+                  <label class="form-check-label" for="wiz-book-list" data-i18n="wizard.books.toggle">Keep a list of books</label>
+                </div>
+                <div class="form-text" id="wiz-book-list-hint" data-i18n="wizard.books.hint">Add books on the goal page and record pages: the goal counts finished books by itself.</div>
+              </div>
               <!-- First: what is counted (books, km…). Not for money (the currency) and percent (%). -->
               <div class="col-12 wiz-unit-field" data-field="unit">
                 <label class="form-label" for="wiz-unit" data-i18n="wizard.values.what">What do you count</label>
@@ -495,6 +503,7 @@ const GoalWizard = {
     }
     if (name === 'icon' || name === 'color') this.renderPreview();
     if (id === 'wiz-currency') this.updateValueUnits();
+    if (id === 'wiz-book-list') this.updateValueFields();
     if (id === 'wiz-deadline') this.updateDateLimits();
     if (this.step === 5) this.renderSummary();
   },
@@ -572,6 +581,7 @@ const GoalWizard = {
     setNumberValue(byId('wiz-start'), goal.startValue);
     setNumberValue(byId('wiz-target'), goal.targetValue);
     setNumberValue(byId('wiz-current'), goal.currentValue);
+    byId('wiz-book-list').checked = goal.bookList !== false; // on by default (also for an old book goal)
     if (type === 'money') byId('wiz-currency').value = goal.unit || DEFAULT_CURRENCY;
     else byId('wiz-unit').value = goal.unit ?? '';
 
@@ -732,7 +742,26 @@ const GoalWizard = {
     // The current value is entered on the goal page later; here only when editing.
     if (this.mode === 'edit' && NUMERIC_TYPES.includes(type)) fields.push('current');
     if (this.mode === 'edit' && type === 'levels') fields.push('levelCurrent');
-    return fields;
+    if (!this.isBookGoalChoice()) return fields;
+    // A book list counts the goal by itself: editing shows no "start" and no "current" value.
+    const hidden = this.bookListOn() && this.mode === 'edit' ? ['start', 'current'] : [];
+    return ['bookList', ...fields.filter((field) => !hidden.includes(field))];
+  },
+
+  // "Books" + "Number": the goal may keep a book list (app.js, section 11a).
+  isBookGoalChoice() {
+    return this.selected('category') === 'books' && this.selected('progressType') === 'number';
+  },
+
+  bookListOn() {
+    return this.isBookGoalChoice() && byId('wiz-book-list').checked;
+  },
+
+  // With a book list "What do you count" is "books" and cannot be changed.
+  updateBookUnit() {
+    const unit = byId('wiz-unit');
+    unit.readOnly = this.bookListOn();
+    if (unit.readOnly) unit.value = t('demo.books.unit');
   },
 
   validateValues() {
@@ -833,6 +862,7 @@ const GoalWizard = {
     summary.hidden = !NUMERIC_TYPES.includes(type) || !Number.isFinite(target) || !Number.isFinite(current);
     if (summary.hidden) return;
     const goal = { progressType: type, unit: type === 'money' ? byId('wiz-currency').value : this.valueUnit(type) };
+    if (this.bookListOn()) Object.assign(goal, { category: 'books', bookList: true }); // "Goal: 13 books. Now 1 book" with plurals
     const values = { target: formatGoalValue(goal, target), current: formatGoalValue(goal, current), left: formatGoalValue(goal, Math.abs(target - current)) };
     const deadline = dateTextToIso(byId('wiz-deadline').value);
     let key = deadline ? 'wizard.summary.until' : 'wizard.summary.plain';
@@ -872,6 +902,7 @@ const GoalWizard = {
   updateValueFields() {
     const type = this.selected('progressType') || 'number';
     const fields = this.visibleValueFields();
+    this.updateBookUnit();
     this.form.querySelectorAll('[data-field]').forEach((block) => {
       block.hidden = !fields.includes(block.dataset.field);
     });
@@ -1103,13 +1134,25 @@ const GoalWizard = {
       // The field is "Current amount": saving starts at 0, so 1.5 M of 7 M is already 21%.
       return { ...empty, unit, startValue: 0, targetValue: readNumber(byId('wiz-target')), currentValue: start };
     }
-    return {
+    const values = {
       ...empty,
       unit,
       startValue: start,
       targetValue: readNumber(byId('wiz-target')),
       currentValue: isEdit ? readNumber(byId('wiz-current')) : start
     };
+    return this.isBookGoalChoice() ? this.withBookList(values) : values;
+  },
+
+  // The book list of a "Books" goal. On: "Already done: N" of a new goal (or the old counter of a goal
+  // that had no list) becomes N finished books without a title; the counter = the finished books.
+  // Off: the books stay saved (hidden), the counter is a plain number again.
+  withBookList(values) {
+    if (!byId('wiz-book-list').checked) return { ...values, bookList: false };
+    const base = this.mode === 'edit' ? this.original : {};
+    let books = goalBooks(base);
+    if (books.length === 0 && base.bookList !== true) books = untitledDoneBooks(this.mode === 'edit' ? base.currentValue : values.currentValue);
+    return { ...values, bookList: true, books, startValue: 0, currentValue: countDoneBooks(books) };
   },
 
   // Locks the "Create"/"Save" button so a double click or double Enter saves only once.

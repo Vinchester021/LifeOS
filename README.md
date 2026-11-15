@@ -23,6 +23,7 @@
 
 - **Главная панель** — личный год (даты, кольцо, сколько дней прошло и осталось), задачи на сегодня, фокус недели (отметки дней, когда удалось ему следовать, и прогресс задач недели), большие цели, активность и категории.
 - **Цели** — 7 типов прогресса: число, деньги (₸), процент, уровни (A1 → C1), чек-лист, серия дней, измерения. Мастер создания с понятными подписями и примерами, 26 значков и 13 цветов, этапы, шаблоны, архив, поиск и фильтры.
+  - **Книжная полка** для целей по книгам: список книг со страницами, статусами («Хочу прочитать», «Читаю», «Прочитана») и темпом чтения.
 - **Детали цели** — «Добавить запись» и «История записей», темп («≈ 48 780 ₸ в месяц»), этапы, заметки, связанные задачи; пункты чек-листа можно добавлять и менять прямо на странице.
 - **Планировщик** — пять уровней: личный год → квартал → месяц (календарь) → неделя (перетаскивание задач) → сегодня.
 - **Прогресс** — показатели с изменением к прошлому периоду, графики, активность по дням года, **итоги личного года** с архивом.
@@ -81,6 +82,7 @@ Final project for the **Web Technologies 1 (Front End)** course. Author: **Vilge
 
 - **Dashboard** — the personal year (dates, a ring, days passed and left), today's tasks, the focus of the week (mark the days you followed it, and the progress of the week's tasks), big goals, activity and categories.
 - **Goals** — 7 progress types: number, money (₸), percent, levels (A1 → C1), checklist, streak, measurements. A creation wizard with clear labels and examples, 26 icons and 13 colors, milestones, templates, archive, search and filters.
+  - **Book shelf** for reading goals: a list of books with pages, statuses (Want to read, Reading, Finished) and the reading pace.
 - **Goal Details** — "Add an entry" and "History of entries", pace ("≈ ₸48,780 a month"), milestones, notes, related tasks; checklist items can be added and edited right on the page.
 - **Planner** — five levels: personal year → quarter → month (calendar) → week (drag and drop) → today.
 - **Progress** — numbers compared with the previous period, charts, activity by day of the year, and the **Summary of the personal year** with an archive.

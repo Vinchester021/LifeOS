@@ -4493,6 +4493,7 @@ small,
 /* Rows of cards */
 .gd-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a long book title in a select must not widen the phone page */
   gap: var(--space-3);
   margin-bottom: var(--space-3);
 }
@@ -4645,6 +4646,14 @@ small,
   font-size: 1.05rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* A book entry ("Book finished: «…» · +170 pages") is long: it may wrap (a sum never does) */
+.gd-history-change.is-book {
+  min-width: 0;
+  white-space: normal;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .gd-history-change.is-plus { color: var(--tone-success-fg); }
@@ -7790,6 +7799,179 @@ small,
   .feedback-modal .modal-footer .btn-primary {
     order: -1; /* "Open the feedback form" on top */
   }
+}
+
+/* ---------- Book shelf (js/books.js): "My books" on Goal Details ---------- */
+.gd-books {
+  margin-bottom: var(--space-3);
+}
+
+/* "Read 4 of 13" · "Pages in all: 1 280" · "Pace: ~25 pages a day" */
+.books-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  font-weight: 600;
+}
+
+.books-stats li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.books-stats .bi {
+  color: var(--lifeos-primary-text);
+  font-size: 1.1rem;
+}
+
+.books-filter {
+  margin-bottom: var(--space-3);
+}
+
+.books-filter .segmented-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.books-filter .segmented-btn[aria-pressed="true"] .tab-count {
+  background-color: rgb(255 255 255 / 0.2);
+  color: inherit;
+}
+
+/* Cards: one column on a phone, then as many ~18rem columns as fit */
+.books-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: var(--lifeos-surface);
+}
+
+/* [icon] [title, author] [⋯]; the status badge under the title (a long title keeps the whole width) */
+.book-card-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-1) var(--space-2);
+}
+
+.book-card-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+}
+
+.book-card-title {
+  margin: 0;
+  font-size: var(--fs-card);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.book-card-author {
+  margin: 0.1rem 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.book-card .badge-status {
+  grid-row: 2;
+  grid-column: 2;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+.book-card-menu .btn-icon {
+  margin: -0.25rem -0.4rem 0 0;
+}
+
+.book-card-progress {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.book-card-progress .progress {
+  height: 0.5rem;
+  background-color: var(--lifeos-border);
+}
+
+.book-card-progress .progress-bar {
+  background-color: var(--lifeos-primary);
+}
+
+.book-card-pages {
+  margin: 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Dashboard goal card: "Reading now: «…» — 120/320" */
+.dash-goal-reading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0.15rem 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.dash-goal-reading .bi {
+  flex: none;
+  color: var(--lifeos-primary-text);
+}
+
+/* Entry form of a book list goal: "No book to read yet. Add a book" */
+.entry-book-empty {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px dashed var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--lifeos-text-muted);
+}
+
+/* Wizard, step 5: "Keep a list of books" */
+.wiz-book-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  margin: 0;
+  padding-left: 0;
+  font-weight: 600;
+}
+
+.wiz-book-switch .form-check-input {
+  float: none;
+  width: 2.5rem;
+  height: 1.35rem;
+  margin: 0;
+}
+
+/* "What do you count" = "books" while the book list is on: visibly not editable */
+.wiz-unit-field .form-control[readonly] {
+  background-color: var(--lifeos-bg);
+  color: var(--lifeos-text-muted);
 }
 
 /* ---------- Recording a result (js/entry-form.js): Goal Details form and the Quick result dialog ---------- */

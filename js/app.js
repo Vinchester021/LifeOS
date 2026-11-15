@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.4.4';
+const APP_VERSION = '1.5.0';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -1625,7 +1625,19 @@ function formatGoalValue(goal, value) {
   if (goal.progressType === 'percent') return Format.number(number / 100, { style: 'percent', maximumFractionDigits: 1 });
   if (goal.progressType === 'levels') return String(asArray(goal.levels)[number] ?? '—');
   const text = Format.number(number, { maximumFractionDigits: 2 });
+  if (hasBookList(goal)) return bookCountText(number, text);
   return goal.unit ? `${text} ${goal.unit}` : text;
+}
+
+// A goal with a book list counts books: "1 книга", "2 книги", "5 книг" (Intl.PluralRules in tPlural);
+// other goals keep the unit the user typed. text = the number already formatted (fractions in a pace).
+function bookCountText(number, text = Format.number(number)) {
+  return tPlural('books.count', number, { count: text });
+}
+
+// After "of" ("2 books of 21 books"): Russian needs the genitive — «из 21 книги», «из 2 книг», «из 5 книг».
+function bookCountOfText(number) {
+  return tPlural('books.countOf', number, { count: Format.number(number) });
 }
 
 // "current / target" for cards: "5 / 13 books", "B1 / C1", "1 / 3".
@@ -1642,6 +1654,7 @@ function formatGoalProgress(goal) {
     return `${formatGoalValue(goal, goal.currentValue)} / ${formatGoalValue(goal, goal.targetValue)}`;
   }
   const format = (value) => Format.number(Number(value) || 0, { maximumFractionDigits: 2 });
+  if (hasBookList(goal)) return `${format(goal.currentValue)} / ${bookCountText(Number(goal.targetValue) || 0)}`; // "3 / 13 книг"
   const unit = goal.unit ? ` ${goal.unit}` : '';
   return `${format(goal.currentValue)} / ${format(goal.targetValue)}${unit}`;
 }
@@ -1754,6 +1767,241 @@ function withLiveStreak(goal, entries) {
   const goalEntries = getGoalEntries(goal.id, entries);
   if (goalEntries.length === 0) return goal; // keep a value typed in the wizard
   return { ...goal, currentValue: calculateStreak(goalEntries.map((entry) => entry.date)) };
+}
+
+/* =========================================================
+   11a. Book shelf — a "books" goal of the type "number" with bookList: true (goal-details.html: js/books.js)
+   goal.books: [{ id, title, author, totalPages, pagesRead, status, startedAt, finishedAt, createdAt }]
+   - status: "planned" (want to read) -> "reading" (the first entry of pages) -> "done";
+   - totalPages may be null: then the book is finished from its menu ("Mark as read");
+   - goal.currentValue = the number of "done" books (counted again after every change).
+   A reading entry in lifeos_progress: { id, date, goalId, bookId, pages, value, note } —
+   pages = pages this entry added; value = 1 if this entry finished the book (for the history and undo).
+   ========================================================= */
+
+const BOOK_STATUSES = ['planned', 'reading', 'done'];
+const BOOK_TEXT_MAX = 120; // title and author
+const BOOK_DEFAULT_PAGES = 300; // the pace when no finished book has a page count yet
+const BOOK_MIGRATION_LIMIT = 500; // an old goal "1 000 000 books" must not freeze the page
+
+// A goal that can keep a book list: "Books" category + "Number" progress type.
+function isBookGoal(goal) {
+  return goal?.category === 'books' && goal.progressType === 'number';
+}
+
+function hasBookList(goal) {
+  return isBookGoal(goal) && goal.bookList === true;
+}
+
+function goalBooks(goal) {
+  return asArray(goal?.books).filter(isPlainObject);
+}
+
+function countDoneBooks(books) {
+  return books.filter((book) => book.status === 'done').length;
+}
+
+function bookPagesTotal(book) {
+  const total = Number(book.totalPages);
+  return Number.isInteger(total) && total > 0 ? total : null;
+}
+
+// A new book. Added as "done" right away: all its pages are read (the date is unknown, so no finishedAt).
+function createBook({ title = '', author = '', totalPages = null, status = 'planned' } = {}, now = new Date()) {
+  const done = status === 'done';
+  return {
+    id: createId('book'),
+    title,
+    author,
+    totalPages,
+    pagesRead: done && totalPages ? totalPages : 0,
+    status: BOOK_STATUSES.includes(status) ? status : 'planned',
+    startedAt: null,
+    finishedAt: null,
+    createdAt: now.toISOString()
+  };
+}
+
+// Old goals and "Already read: N" in the wizard: N finished books without a title.
+function untitledDoneBooks(count) {
+  const safe = Math.min(Math.max(Math.floor(Number(count) || 0), 0), BOOK_MIGRATION_LIMIT);
+  // "-1", "-2"…: hundreds of books are made in the same millisecond, the number keeps every id unique.
+  return Array.from({ length: safe }, (_, index) => ({ ...createBook({ status: 'done' }), id: `${createId('book')}-${index + 1}` }));
+}
+
+// Pure: pages read -> the new book. reading = { pages } ("+ pages") or { toPage } ("read up to page N").
+// Pages never go past totalPages. Returns { book, added, finished }.
+function readBookPages(book, { pages = 0, toPage = null }, date) {
+  const before = Number(book.pagesRead) || 0;
+  const total = bookPagesTotal(book);
+  let after = toPage !== null ? toPage : before + pages;
+  if (total !== null) after = Math.min(after, total);
+  const added = Math.max(after - before, 0);
+  const updated = { ...book, pagesRead: before + added, startedAt: book.startedAt ?? date };
+  if (updated.status === 'planned') updated.status = 'reading';
+  const finished = updated.status !== 'done' && total !== null && updated.pagesRead >= total;
+  if (finished) Object.assign(updated, { status: 'done', finishedAt: date });
+  return { book: updated, added, finished };
+}
+
+// Pure: "Mark as read" — the rest of the pages (when the page count is known) and the status "done".
+function finishBook(book, date) {
+  const total = bookPagesTotal(book);
+  const before = Number(book.pagesRead) || 0;
+  const added = total !== null ? Math.max(total - before, 0) : 0;
+  return {
+    book: { ...book, pagesRead: before + added, status: 'done', startedAt: book.startedAt ?? date, finishedAt: date },
+    added,
+    finished: true
+  };
+}
+
+// Pure: the book after one of its entries was deleted. `left` = the book's entries that stay.
+// The entry that finished the book (value 1) or fewer pages than the book has -> "reading" again;
+// no entries left and no pages -> back to "want to read".
+function undoBookEntry(book, entry, left) {
+  const pagesRead = Math.max((Number(book.pagesRead) || 0) - (Number(entry.pages) || 0), 0);
+  const updated = { ...book, pagesRead };
+  const total = bookPagesTotal(book);
+  const unfinished = Number(entry.value) > 0 || (total !== null && pagesRead < total);
+  if (updated.status === 'done' && unfinished) Object.assign(updated, { status: 'reading', finishedAt: null });
+  if (left.length === 0 && pagesRead === 0 && updated.status === 'reading') Object.assign(updated, { status: 'planned', startedAt: null });
+  return updated;
+}
+
+// Pure: the numbers above the book list. perDay = null when there is no pace (no deadline, overdue, done).
+// Pace = books left × the average length of the finished books with a page count (or 300) / days left.
+// looseEntries: the goal's old entries without a book (before the list): their pages count too.
+function bookShelfStats(goal, today = Dates.today(), looseEntries = []) {
+  const books = goalBooks(goal);
+  const done = countDoneBooks(books);
+  const target = Number(goal.targetValue) || 0;
+  const loosePages = looseEntries.filter((entry) => !entry.bookId).reduce((sum, entry) => sum + (Number(entry.pages) || 0), 0);
+  const pages = loosePages + books.reduce((sum, book) => sum + (Number(book.pagesRead) || 0), 0);
+  const lengths = books.filter((book) => book.status === 'done').map(bookPagesTotal).filter((total) => total !== null);
+  const average = lengths.length ? lengths.reduce((sum, total) => sum + total, 0) / lengths.length : BOOK_DEFAULT_PAGES;
+  const deadline = Dates.parse(goal.deadline);
+  const daysLeft = deadline ? Dates.daysBetween(today, deadline) + 1 : 0; // today counts too
+  const booksLeft = Math.max(target - done, 0);
+  const perDay = booksLeft > 0 && daysLeft > 0 ? Math.ceil((booksLeft * average) / daysLeft) : null;
+  return { done, target, pages, perDay };
+}
+
+// Pure: an old book goal (no bookList yet) gets a list: N finished books without a title,
+// N = its current value. Nothing else changes; a goal that already has bookList is returned as it is.
+function migrateBookGoal(goal) {
+  if (!isBookGoal(goal) || 'bookList' in goal) return goal;
+  const books = goalBooks(goal).length ? goalBooks(goal) : untitledDoneBooks(goal.currentValue);
+  return { ...goal, bookList: true, books, currentValue: countDoneBooks(books) };
+}
+
+// Runs on every page start (like migrateSportData). An old backup is moved the same way after an import.
+function migrateBookGoals() {
+  const goals = getGoals();
+  if (!goals.some((goal) => isBookGoal(goal) && !('bookList' in goal))) return;
+  saveGoals(goals.map(migrateBookGoal));
+}
+
+// The goal and the book by ids (from a fresh read of the storage), or null.
+function findBook(goals, goalId, bookId) {
+  const goal = goals.find((item) => item.id === goalId);
+  const book = goalBooks(goal).find((item) => item.id === bookId);
+  return goal && book ? { goal, book } : null;
+}
+
+function replaceBook(goal, book) {
+  goal.books = goalBooks(goal).map((item) => (item.id === book.id ? book : item));
+  goal.currentValue = countDoneBooks(goal.books);
+  goal.updatedAt = new Date().toISOString();
+}
+
+// Saves pages of a book as an entry. reading = { pages } | { toPage } | { finish: true }, plus { date, note }.
+// Returns { goal, book, entry } (book.status "done" + entry.value 1 = this entry finished it) or null.
+function recordBookReading(goalId, bookId, reading) {
+  const goals = getGoals();
+  const found = findBook(goals, goalId, bookId);
+  if (!found) return null;
+  const result = reading.finish ? finishBook(found.book, reading.date) : readBookPages(found.book, reading, reading.date);
+  const entry = { id: createId('entry'), date: reading.date, goalId, bookId, value: result.finished ? 1 : 0, note: reading.note ?? '' };
+  if (result.added > 0) entry.pages = result.added;
+  replaceBook(found.goal, result.book);
+  const entries = getProgressEntries();
+  entries.push(entry);
+  if (!saveProgressEntries(entries) || !saveGoals(goals)) return null;
+  return { goal: found.goal, book: result.book, entry };
+}
+
+// Deletes one entry of a book goal: the book gets its pages back (see undoBookEntry).
+// An old entry without a book is simply removed. Returns the goal or null.
+function deleteBookEntry(goalId, entryId) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  const entries = getProgressEntries();
+  const entry = entries.find((item) => item.id === entryId);
+  if (!goal || !entry) return null;
+  const remaining = entries.filter((item) => item.id !== entryId);
+  const found = entry.bookId ? findBook(goals, goalId, entry.bookId) : null;
+  if (found) {
+    const left = remaining.filter((item) => item.bookId === found.book.id);
+    replaceBook(goal, undoBookEntry(found.book, entry, left));
+  }
+  if (!saveProgressEntries(remaining) || !saveGoals(goals)) return null;
+  return goal;
+}
+
+// What deleting a book also deletes: { count, pages } of its entries.
+function bookEntriesSummary(bookId, entries = getProgressEntries()) {
+  const list = entries.filter((entry) => entry.bookId === bookId);
+  return { count: list.length, pages: list.reduce((sum, entry) => sum + (Number(entry.pages) || 0), 0) };
+}
+
+// Deletes a book and its reading entries; the goal counter is counted again.
+function deleteBook(goalId, bookId) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  if (!goal) return null;
+  goal.books = goalBooks(goal).filter((book) => book.id !== bookId);
+  goal.currentValue = countDoneBooks(goal.books);
+  goal.updatedAt = new Date().toISOString();
+  const entries = getProgressEntries().filter((entry) => entry.bookId !== bookId);
+  if (!saveProgressEntries(entries) || !saveGoals(goals)) return null;
+  return goal;
+}
+
+// Does the book have the entry that finished it? Then "done" is undone only by deleting that entry.
+function bookHasFinishEntry(bookId, entries = getProgressEntries()) {
+  return entries.some((entry) => entry.bookId === bookId && Number(entry.value) > 0);
+}
+
+// Adds (bookId = null) or edits a book. fields: { title, author, totalPages, status }.
+// Editing: the pages read never go past the new page count; reaching it finishes the book.
+function saveBook(goalId, fields, bookId = null) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  if (!goal) return null;
+  let book;
+  if (bookId === null) {
+    book = createBook(fields);
+    goal.books = [...goalBooks(goal), book];
+  } else {
+    const old = goalBooks(goal).find((item) => item.id === bookId);
+    if (!old) return null;
+    book = { ...old, title: fields.title, author: fields.author, totalPages: fields.totalPages, status: fields.status };
+    const total = bookPagesTotal(book);
+    if (old.status === 'done' && book.status !== 'done') book.finishedAt = null;
+    if (old.status !== 'done' && book.status === 'done') book.pagesRead = total ?? book.pagesRead;
+    if (total !== null && book.pagesRead >= total) {
+      book.pagesRead = total;
+      if (book.status !== 'done') Object.assign(book, { status: 'done', finishedAt: Dates.toISO(Dates.today()) });
+    }
+  }
+  replaceBook(goal, book);
+  return saveGoals(goals) ? { goal, book } : null;
+}
+
+// The title of a book on the page: "" (an old book) -> "Untitled".
+function bookTitle(book) {
+  return String(book?.title ?? '').trim() || t('books.untitled');
 }
 
 /* =========================================================
@@ -2406,6 +2654,7 @@ const FocusDays = {
 // Runs immediately, before <body> is drawn.
 Theme.init();
 migrateSportData(); // old workouts / measurements from lifeos_progress -> lifeos_sport (once)
+migrateBookGoals(); // old "books" goals get a book list: N finished books without a title (once)
 I18n.lang = savedLanguage();
 document.documentElement.lang = I18n.lang;
 
@@ -2502,6 +2751,32 @@ function runDateSelfTest() {
   check('recalc: no float error 0.1 + 0.2', recalculateCurrentValue(goal({ progressType: 'number', currentValue: 0.1 }), [], 0.2), 0.3);
   check('recalc: weight = latest entry', recalculateCurrentValue(goal({ progressType: 'measurements', startValue: 92 }), [{ value: 86.5 }, { value: 88 }]), 86.5);
   check('recalc: weight, no entries = start', recalculateCurrentValue(goal({ progressType: 'measurements', startValue: 92 }), []), 92);
+  // Book shelf
+  const book = (fields) => ({ id: 'b1', title: 'A', author: '', totalPages: 300, pagesRead: 0, status: 'planned', startedAt: null, finishedAt: null, ...fields });
+  const read1 = readBookPages(book(), { pages: 120 }, '2026-11-10');
+  check('books: first pages -> reading', `${read1.book.status} ${read1.book.pagesRead} ${read1.book.startedAt}`, 'reading 120 2026-11-10');
+  const read2 = readBookPages(book({ status: 'reading', pagesRead: 250 }), { pages: 100 }, '2026-11-12');
+  check('books: pages stop at the page count, the book is done', `${read2.book.status} ${read2.book.pagesRead} +${read2.added} ${read2.finished}`, 'done 300 +50 true');
+  check('books: "up to page 200"', readBookPages(book({ status: 'reading', pagesRead: 120 }), { toPage: 200 }, '2026-11-12').added, 80);
+  check('books: no page count -> never done by pages', readBookPages(book({ totalPages: null }), { pages: 999 }, '2026-11-12').book.status, 'reading');
+  check('books: "mark as read" adds the rest', finishBook(book({ status: 'reading', pagesRead: 100 }), '2026-11-12').added, 200);
+  const undone = undoBookEntry(book({ status: 'done', pagesRead: 300 }), { pages: 50, value: 1 }, [{}]);
+  check('books: deleting the finishing entry -> reading', `${undone.status} ${undone.pagesRead}`, 'reading 250');
+  check('books: deleting the only entry -> want to read', undoBookEntry(book({ status: 'reading', pagesRead: 40 }), { pages: 40, value: 0 }, []).status, 'planned');
+  const old = migrateBookGoal(goal({ category: 'books', progressType: 'number', currentValue: 3, targetValue: 13 }));
+  check('books: an old goal of 3 books -> 3 finished untitled books', `${old.bookList} ${old.books.length} ${countDoneBooks(old.books)} ${old.currentValue} "${old.books[0].title}"`, 'true 3 3 3 ""');
+  check('books: migration ids are unique', new Set(untitledDoneBooks(400).map((item) => item.id)).size, 400);
+  check('books: a goal with bookList is not migrated again', migrateBookGoal({ ...old, books: [] }).books.length, 0);
+  const shelf = { targetValue: 13, deadline: '2026-11-30', books: [book({ status: 'done', pagesRead: 300 }), book({ id: 'b2', status: 'done', totalPages: 500, pagesRead: 500 }), book({ id: 'b3', status: 'reading', totalPages: null, pagesRead: 120 })] };
+  const stats = bookShelfStats(shelf, new Date(2026, 10, 21));
+  check('books: shelf 2 of 13, 920 pages, 11 × 400 pages / 10 days', `${stats.done}/${stats.target} ${stats.pages} ${stats.perDay}`, '2/13 920 440');
+  check('books: no deadline -> no pace', bookShelfStats({ ...shelf, deadline: null }).perDay, null);
+  const listGoal = goal({ category: 'books', progressType: 'number', bookList: true, unit: 'книг', currentValue: 1, targetValue: 13 });
+  check('books: a list goal counts books with plurals', formatGoalValue(listGoal, 2), tPlural('books.count', 2));
+  check('books: "1 / 13 books" with the plural of 13', formatGoalProgress(listGoal), `${Format.number(1)} / ${tPlural('books.count', 13)}`);
+  check('books: the number after "of" has its own forms', bookCountOfText(21), tPlural('books.countOf', 21, { count: Format.number(21) }));
+  check('books: other goals keep their own unit', formatGoalValue(goal({ progressType: 'number', unit: 'km' }), 5), `${Format.number(5)} km`);
+  check('books: old entries without a book add their pages', bookShelfStats(shelf, new Date(2026, 10, 21), [{ pages: 80 }, { pages: 40, bookId: 'b1' }]).pages, 1000);
   // Focus days
   check('focus days: a day is added in date order', toggledFocusDays(['2026-11-11'], '2026-11-09').join(), '2026-11-09,2026-11-11');
   check('focus days: a marked day is removed', toggledFocusDays(['2026-11-09', '2026-11-11'], '2026-11-09').join(), '2026-11-11');

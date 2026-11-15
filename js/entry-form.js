@@ -13,6 +13,7 @@ const ENTRY_FIELDS = {
   money: ['sign', 'amount'],
   number: ['amount'],
   books: ['pages'],
+  booklist: ['book', 'pagesmode', 'bookpages'], // a goal with a book list (js/books.js)
   percent: ['value'],
   measurements: ['value'],
   levels: ['level'],
@@ -22,8 +23,10 @@ const ENTRY_FIELDS = {
 
 /* ---------- Small helpers (also used by goal-details.js) ---------- */
 
-// Book goals ("number" in the "books" category) get a special form: pages / finished book.
+// Book goals ("number" in the "books" category) get a special form: pages / finished book;
+// with a book list — the book and its pages ("+ pages" or "up to page N").
 function entryMode(goal) {
+  if (hasBookList(goal)) return 'booklist';
   if (goal.progressType === 'number' && goal.category === 'books') return 'books';
   return goal.progressType;
 }
@@ -59,7 +62,8 @@ function entryChangeText(goal, entry) {
   const mode = entryMode(goal);
   const value = Number(entry.value) || 0;
   if (mode === 'streak') return t('details.history.dayMarked');
-  if (mode === 'books') {
+  if (mode === 'booklist' && entry.bookId) return bookEntryText(goal, entry);
+  if (mode === 'books' || mode === 'booklist') {
     const parts = [];
     if (value > 0) parts.push(t('details.history.bookFinished'));
     if (entry.pages) parts.push(`+${tPlural('details.history.pages', Number(entry.pages))}`);
@@ -69,6 +73,55 @@ function entryChangeText(goal, entry) {
     return `${value < 0 ? '−' : '+'}${formatGoalValue(goal, Math.abs(value))}`;
   }
   return `→ ${formatGoalValue(goal, value)}`;
+}
+
+// "+45 pages · «Title»" / "Book finished: «Title» · +20 pages"
+function bookEntryText(goal, entry) {
+  const book = goalBooks(goal).find((item) => item.id === entry.bookId);
+  const title = book ? bookTitle(book) : '';
+  const pages = entry.pages ? `+${tPlural('details.history.pages', Number(entry.pages))}` : '';
+  if (Number(entry.value) > 0) return [t('books.history.finished', { title }), pages].filter(Boolean).join(' · ');
+  return [pages, title ? `«${title}»` : ''].filter(Boolean).join(' · ');
+}
+
+// Books that can get pages: "reading" first (started last first), then "want to read".
+function readableBooks(goal) {
+  const order = { reading: 0, planned: 1 };
+  return goalBooks(goal)
+    .filter((book) => book.status in order)
+    .sort((a, b) => order[a.status] - order[b.status] || String(b.startedAt ?? '').localeCompare(String(a.startedAt ?? '')));
+}
+
+// The fields of a book list goal: the same markup for Goal Details ("entry-…") and the Dashboard dialog ("quick-entry-…").
+function bookFieldsHtml(prefix) {
+  return `
+    <div class="col-12" data-entry-field="book">
+      <label class="form-label" for="${prefix}-book" data-i18n="books.entry.book"></label>
+      <select class="form-select" id="${prefix}-book"></select>
+      <p class="field-error" id="${prefix}-book-error"></p>
+      <p class="entry-book-empty" id="${prefix}-book-empty" hidden>
+        <span data-i18n="books.entry.noBooks"></span>
+        <a id="${prefix}-book-empty-link" href="#books-panel" data-i18n="books.entry.addBook"></a>
+      </p>
+    </div>
+    <fieldset class="col-12" data-entry-field="pagesmode">
+      <legend class="form-label fs-6" data-i18n="books.entry.how"></legend>
+      <div class="gd-switch">
+        <input class="btn-check" type="radio" name="${prefix}-pagesmode" id="${prefix}-pagesmode-add" value="add" checked>
+        <label class="btn" for="${prefix}-pagesmode-add"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="books.entry.modeAdd"></span></label>
+        <input class="btn-check" type="radio" name="${prefix}-pagesmode" id="${prefix}-pagesmode-to" value="to">
+        <label class="btn" for="${prefix}-pagesmode-to"><i class="bi bi-bookmark me-2" aria-hidden="true"></i><span data-i18n="books.entry.modeTo"></span></label>
+      </div>
+    </fieldset>
+    <div class="col-sm-6" data-entry-field="bookpages">
+      <label class="form-label" for="${prefix}-bookpages" id="${prefix}-bookpages-label" data-i18n="books.entry.pagesAdd"></label>
+      <div class="input-group">
+        <input class="form-control" type="text" id="${prefix}-bookpages" inputmode="numeric" autocomplete="off" data-number="integer">
+        <span class="input-group-text" data-i18n="details.entry.pagesUnit"></span>
+      </div>
+      <div class="form-text" id="${prefix}-bookpages-hint"></div>
+      <p class="field-error" id="${prefix}-bookpages-error"></p>
+    </div>`;
 }
 
 // Ticks (or unticks) a checklist item. For a checklist goal the current value is the number of done items.
@@ -100,9 +153,18 @@ function entryDateError(value, mode, goalEntries) {
 function createEntryForm(prefix) {
   const el = (name) => byId(`${prefix}-${name}`);
   const form = el('form');
+  // The book fields go before the "amount" block (one markup for both forms, see bookFieldsHtml).
+  const amountBlock = form.querySelector('[data-entry-field="amount"]');
+  amountBlock.insertAdjacentHTML('beforebegin', bookFieldsHtml(prefix));
+  I18n.apply(amountBlock.parentElement);
+  const state = { finishedTitle: null }; // the title of the book the last save finished (for the toast)
+  form.addEventListener('change', (event) => {
+    if (event.target === el('book') || event.target.name === `${prefix}-pagesmode`) renderBookHint();
+  });
 
   // Shows the fields for this goal type. Values the user typed are not touched.
   function render(goal) {
+    form.dataset.goalId = goal.id;
     const mode = entryMode(goal);
     const fields = ENTRY_FIELDS[mode];
     form.querySelectorAll('[data-entry-field]').forEach((block) => {
@@ -122,7 +184,50 @@ function createEntryForm(prefix) {
     });
     if (mode === 'levels') renderLevelOptions(goal);
     if (mode === 'checklist') renderChecklistOptions(goal);
+    renderBookOptions(goal, mode === 'booklist');
     el('submit-label').textContent = t(mode === 'streak' ? 'details.entry.markDay' : 'details.entry.submit');
+  }
+
+  // Book titles are user data: set with textContent. One book "reading" -> chosen; several -> "Choose a book".
+  // No book to read: a link to "Add a book" instead of the fields (and no saving).
+  function renderBookOptions(goal, isBookList) {
+    const books = isBookList ? readableBooks(goal) : [];
+    const empty = isBookList && books.length === 0;
+    el('book-empty').hidden = !empty;
+    el('book').hidden = empty;
+    form.querySelector(`label[for="${prefix}-book"]`).hidden = empty;
+    form.querySelectorAll('[data-entry-field="pagesmode"], [data-entry-field="bookpages"], [data-entry-common]').forEach((block) => {
+      if (empty) block.hidden = true;
+    });
+    form.querySelectorAll('[type="submit"]').forEach((button) => { button.disabled = empty; });
+    if (prefix === 'quick-entry') byId('quick-entry-submit').disabled = empty;
+    if (!isBookList) return;
+    el('book-empty-link').href = prefix === 'entry' ? '#books-panel' : `goal-details.html?id=${encodeURIComponent(goal.id)}#books-panel`;
+    const select = el('book');
+    const previous = select.value;
+    const reading = books.filter((book) => book.status === 'reading');
+    const options = books.map((book) => createEl('option', { value: book.id }, `${bookTitle(book)} — ${t(`books.status.${book.status}`)}`));
+    select.replaceChildren(createEl('option', { value: '' }, t('books.entry.choose')), ...options);
+    if (books.some((book) => book.id === previous)) select.value = previous;
+    else select.value = reading.length === 1 ? reading[0].id : '';
+    renderBookHint();
+  }
+
+  // "Pages read" or "Up to page" and the line under the field: "Read: 120 of 320 pages".
+  function renderBookHint() {
+    const goal = getGoalById(form.dataset.goalId);
+    const book = goalBooks(goal).find((item) => item.id === el('book').value);
+    const label = el('bookpages-label');
+    label.dataset.i18n = el('pagesmode-to').checked ? 'books.entry.pagesTo' : 'books.entry.pagesAdd';
+    label.textContent = t(label.dataset.i18n);
+    const hint = el('bookpages-hint');
+    if (!book) {
+      hint.textContent = '';
+      return;
+    }
+    const read = Format.number(Number(book.pagesRead) || 0);
+    const total = bookPagesTotal(book);
+    hint.textContent = total !== null ? t('books.entry.readOf', { read, total: Format.number(total) }) : t('books.entry.read', { read });
   }
 
   // Level names are user data: set with textContent. The next level is preselected.
@@ -145,8 +250,9 @@ function createEntryForm(prefix) {
   }
 
   function reset() {
-    ['amount', 'pages', 'value', 'note'].forEach((name) => { el(name).value = ''; });
+    ['amount', 'pages', 'value', 'note', 'bookpages'].forEach((name) => { el(name).value = ''; });
     el('finished').checked = false;
+    el('pagesmode-add').checked = true;
     el('sign-plus').checked = true;
     setDateValue(el('date'), Dates.toISO(Dates.today()));
     form.querySelectorAll('.is-invalid').forEach((input) => setFieldError(input, null));
@@ -188,6 +294,11 @@ function createEntryForm(prefix) {
       value = finished ? 1 : 0;
       if (pages > 0) extra.pages = Math.round(pages);
     }
+    if (mode === 'booklist') {
+      const reading = readBookFields(goal, errors);
+      const isValid = [...errors.values()].every((key) => key === null);
+      return { errors, entry: isValid ? { date, note, ...reading } : null };
+    }
     if (mode === 'percent' || mode === 'measurements') {
       value = readNumber(el('value'));
       const limits = mode === 'percent' ? { min: 0, max: 100 } : { positive: true };
@@ -200,8 +311,27 @@ function createEntryForm(prefix) {
     return { errors, entry: isValid ? { date, value, note, ...extra } : null };
   }
 
+  // The book and its pages: { bookId, pages } or { bookId, toPage }. "Up to page" must be past the pages
+  // already read and not past the end of the book; "+ pages" may go past the end (it stops there).
+  function readBookFields(goal, errors) {
+    const bookId = el('book').value;
+    const book = goalBooks(goal).find((item) => item.id === bookId);
+    errors.set(el('book'), book ? null : 'books.error.chooseBook');
+    const input = el('bookpages');
+    const number = readNumber(input);
+    const toPage = el('pagesmode-to').checked;
+    const total = book ? bookPagesTotal(book) : null;
+    let error = numberError(number, { positive: true });
+    if (!error && !Number.isInteger(number)) error = 'books.error.wholePages';
+    if (!error && book && toPage && number <= (Number(book.pagesRead) || 0)) error = 'books.error.toPageLow';
+    if (!error && toPage && total !== null && number > total) error = 'books.error.toPageHigh';
+    errors.set(input, error);
+    return toPage ? { bookId, toPage: number } : { bookId, pages: number };
+  }
+
   // Reads, checks and saves. Returns the change text ("+20 pages") or null (errors are shown).
   function save(goal) {
+    state.finishedTitle = null;
     const { errors, entry } = read(goal, getGoalEntries(goal.id));
     errors.forEach((errorKey, input) => setFieldError(input, errorKey));
     if (!entry) {
@@ -212,11 +342,26 @@ function createEntryForm(prefix) {
       const text = asArray(goal.checklist)[entry.checklistIndex]?.text ?? '';
       return setChecklistItemDone(goal.id, entry.checklistIndex, true) ? `✓ ${text}` : null;
     }
+    if ('bookId' in entry) return saveBookReading(goal, entry);
     // adds the entry and recalculates goal.currentValue (app.js)
     return recordProgress(goal.id, entry) ? entryChangeText(goal, entry) : null;
   }
 
-  return { form, render, reset, save };
+  // Pages of a book (app.js: recordBookReading). A finished book is remembered for the toast.
+  function saveBookReading(goal, { bookId, date, note, pages = 0, toPage = null }) {
+    const result = recordBookReading(goal.id, bookId, { date, note, pages, toPage });
+    if (!result) return null;
+    if (result.entry.value > 0) state.finishedTitle = bookTitle(result.book);
+    return entryChangeText(result.goal, result.entry);
+  }
+
+  // The toast after a save: "Book finished: «…»" when the entry finished a book.
+  function toastAfterSave(fallbackKey, params = {}) {
+    if (state.finishedTitle !== null) showToast('books.toast.finished', 'success', { title: state.finishedTitle });
+    else showToast(fallbackKey, 'success', params);
+  }
+
+  return { form, render, reset, save, toastAfterSave };
 }
 
 /* ---------- The "Quick result" dialog (Dashboard: header button and First steps) ---------- */
@@ -390,7 +535,9 @@ const QuickEntry = {
     this.entryForm.render(goal);
     // money: "300,000 of 1,000,000 ₸" (the currency only once)
     const current = goal.progressType === 'money' ? Format.number(Number(goal.currentValue) || 0) : currentText(goal);
-    byId('quick-entry-now').textContent = t('quickEntry.now', { current, target: targetText(goal) });
+    // A book list: «Сейчас: 2 книги из 21 книги» (the genitive after "из", app.js bookCountOfText)
+    const target = hasBookList(goal) ? bookCountOfText(Number(goal.targetValue) || 0) : targetText(goal);
+    byId('quick-entry-now').textContent = t('quickEntry.now', { current, target });
   },
 
   submit(event) {
@@ -400,7 +547,7 @@ const QuickEntry = {
     const change = this.entryForm.save(goal);
     if (!change) return;
     bootstrap.Modal.getInstance(this.modalEl).hide();
-    showToast('quickEntry.saved', 'success', { change });
+    this.entryForm.toastAfterSave('quickEntry.saved', { change });
     // The Dashboard redraws its cards and First steps (dashboard.js)
     document.dispatchEvent(new CustomEvent('lifeos:progresschange', { detail: { goalId: goal.id } }));
   }

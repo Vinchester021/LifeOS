@@ -43,6 +43,24 @@ function isDemoMode() {
    Titles are taken in the current language once and then saved as normal user data.
    ========================================================= */
 
+// The demo book shelf: 2 finished, 1 being read, 1 to read. Titles and authors are data: not translated.
+function createDemoBooks() {
+  const date = (daysAgo) => (daysAgo === null ? null : Dates.toISO(Dates.addDays(Dates.today(), -daysAgo)));
+  return [
+    ['Атомные привычки', 'Джеймс Клир', 320, 'done', 320, 52, 41],
+    ['Абай жолы', 'Мұхтар Әуезов', 480, 'done', 480, 30, 19],
+    ['Мастер и Маргарита', 'М. Булгаков', 480, 'reading', 165, 8, null],
+    ['1984', 'Дж. Оруэлл', 328, 'planned', 0, null, null]
+  ].map(([title, author, totalPages, status, pagesRead, started, finished], index) => ({
+    ...createBook({ title, author, totalPages }),
+    id: `${createId('book')}-${index + 1}`,
+    status,
+    pagesRead,
+    startedAt: date(started),
+    finishedAt: date(finished)
+  }));
+}
+
 function createDemoGoals() {
   const today = Dates.today();
   const inDays = (count) => Dates.toISO(Dates.addDays(today, count));
@@ -68,7 +86,7 @@ function createDemoGoals() {
       progressType: 'money', targetValue: 10000000, currentValue: 3200000, unit: 'KZT',
       deadline: inDays(290), createdAt: daysAgo(70) }),
     goal({ title: t('demo.books.title'), category: 'books', icon: 'bi-book', color: 'clay',
-      progressType: 'number', targetValue: 13, currentValue: 5, unit: t('demo.books.unit'),
+      progressType: 'number', targetValue: 13, currentValue: 2, unit: t('demo.books.unit'), bookList: true, books: createDemoBooks(),
       deadline: inDays(200), createdAt: daysAgo(60) }),
     goal({ title: t('demo.languages.title'), category: 'languages', icon: 'bi-translate', color: 'blue',
       progressType: 'levels', levels: ['A2', 'B1', 'B2', 'C1'], startValue: 0, targetValue: 3, currentValue: 1,
@@ -93,7 +111,7 @@ function createDemoGoals() {
 }
 
 // History for the demo goals. The numbers add up to the demo currentValue
-// (3 200 000 ₸, 5 books, B1, 86.5 kg, 12 days in a row).
+// (3 200 000 ₸, 2 finished books and the pages of every book, B1, 86.5 kg, 12 days in a row).
 function createDemoEntries(goals) {
   const today = Dates.today();
   const find = (category) => goals.find((goal) => goal.category === category);
@@ -111,8 +129,12 @@ function createDemoEntries(goals) {
   const habit = find('personal');
   return [
     entry(finance, 60, 1500000), entry(finance, 30, 1000000), entry(finance, 5, 700000),
-    ...[52, 41, 30, 19, 8].map((daysAgo) => entry(books, daysAgo, 1, { pages: 320 })),
-    entry(books, 2, 0, { pages: 45 }),
+    // Pages of the books of the shelf; value 1 = the entry finished the book
+    ...(() => {
+      const [atomic, abai, master] = goalBooks(books);
+      return [[atomic, 52, 150, 0], [atomic, 41, 170, 1], [abai, 30, 240, 0], [abai, 19, 240, 1], [master, 8, 120, 0], [master, 2, 45, 0]]
+        .map(([book, daysAgo, pages, value]) => entry(books, daysAgo, value, { pages, bookId: book.id }));
+    })(),
     entry(find('languages'), 25, 1),
     entry(health, 25, 90), entry(health, 12, 88), entry(health, 2, 86.5),
     ...Array.from({ length: 12 }, (_, index) => entry(habit, index + 1, 1)),

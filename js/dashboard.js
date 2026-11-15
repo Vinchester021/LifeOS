@@ -239,6 +239,21 @@ function dashboardGoals() {
     .sort((a, b) => (deadline(a) === deadline(b) ? 0 : deadline(a) - deadline(b)));
 }
 
+// A goal with a book list: "Reading now: «Title» — 120/320" (several: the last started one + "and 2 more").
+function readingLineText(goal) {
+  if (!hasBookList(goal)) return '';
+  const reading = goalBooks(goal)
+    .filter((book) => book.status === 'reading')
+    .sort((a, b) => String(b.startedAt ?? '').localeCompare(String(a.startedAt ?? '')));
+  if (reading.length === 0) return '';
+  const [book] = reading;
+  const read = Format.number(Number(book.pagesRead) || 0);
+  const total = bookPagesTotal(book);
+  const pages = total !== null ? `${read}/${Format.number(total)}` : t('books.pagesShort', { read });
+  const more = reading.length > 1 ? ` ${t('books.dash.more', { count: Format.number(reading.length - 1) })}` : '';
+  return `${t('books.dash.reading', { title: bookTitle(book), pages })}${more}`;
+}
+
 function dashGoalCardHtml(goal, index) {
   const percent = getGoalPercent(goal);
   const titleId = `dash-goal-${index}`;
@@ -250,6 +265,7 @@ function dashGoalCardHtml(goal, index) {
           <a class="stretched-link" href="goal-details.html?id=${escapeHtml(encodeURIComponent(goal.id))}">${escapeHtml(goal.title)}</a>
         </h3>
         <p class="goal-values">${escapeHtml(formatGoalProgress(goal))}</p>
+        ${readingLineText(goal) ? `<p class="dash-goal-reading"><i class="bi bi-book" aria-hidden="true"></i>${escapeHtml(readingLineText(goal))}</p>` : ''}
       </div>
       <span class="dash-goal-percent">${escapeHtml(Format.number(percent / 100, { style: 'percent' }))}</span>
       <div class="progress" role="progressbar" aria-labelledby="${titleId}" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">
