@@ -139,6 +139,17 @@ function setChecklistItemDone(goalId, index, done) {
   return saveGoals(goals) ? goal : null;
 }
 
+// Why an entry of the history cannot be edited (a translation key), or null.
+// A finished book (or any entry of a finished book) is not edited: delete it and add it again.
+function entryEditBlock(goal, entry) {
+  const mode = entryMode(goal);
+  if (mode === 'books' && Number(entry.value) > 0) return 'details.history.editBook';
+  if (mode !== 'booklist') return null;
+  const book = goalBooks(goal).find((item) => item.id === entry.bookId);
+  const finished = Number(entry.value) > 0 || !book || book.status === 'done';
+  return finished ? 'details.history.editBook' : null;
+}
+
 function entryDateError(value, mode, goalEntries) {
   const date = Dates.parse(value);
   if (!date) return 'profile.error.dateInvalid';
@@ -157,7 +168,9 @@ function createEntryForm(prefix) {
   const amountBlock = form.querySelector('[data-entry-field="amount"]');
   amountBlock.insertAdjacentHTML('beforebegin', bookFieldsHtml(prefix));
   I18n.apply(amountBlock.parentElement);
-  const state = { finishedTitle: null }; // the title of the book the last save finished (for the toast)
+  // finishedTitle: the title of the book the last save finished (for the toast);
+  // edit: the history entry shown in the form ("Edit the entry"), null = a new entry.
+  const state = { finishedTitle: null, edit: null };
   form.addEventListener('change', (event) => {
     if (event.target === el('book') || event.target.name === `${prefix}-pagesmode`) renderBookHint();
     if (event.target === el('sign-minus')) hideMinusNote(el('amount')); // the user did what the note asked
@@ -189,6 +202,85 @@ function createEntryForm(prefix) {
     if (mode === 'checklist') renderChecklistOptions(goal);
     renderBookOptions(goal, mode === 'booklist');
     el('submit-label').textContent = t(mode === 'streak' ? 'details.entry.markDay' : 'details.entry.submit');
+    if (el('cancel')) renderEditState(goal); // only the Goal Details form can edit entries
+  }
+
+  /* ----- Edit mode (Goal Details only): the same fields, "Save" and "Cancel" ----- */
+
+  function isEditing() {
+    return state.edit !== null;
+  }
+
+  function editedId() {
+    return state.edit?.id ?? null;
+  }
+
+  // Opens an entry of the history in the form. The caller checks entryEditBlock() first.
+  function startEdit(goal, entry) {
+    reset();
+    state.edit = { id: entry.id, bookId: entry.bookId ?? null };
+    render(goal);
+    fillFromEntry(goal, entry);
+  }
+
+  function stopEdit() {
+    state.edit = null;
+    el('book').disabled = false;
+    reset();
+  }
+
+  // The title, the buttons and the line "Entry of 12/11/2026: +20 000 ₸".
+  function renderEditState(goal) {
+    const editing = isEditing();
+    const title = el('title');
+    title.dataset.i18n = editing ? 'details.entry.editTitle' : 'details.entry.title';
+    title.textContent = t(title.dataset.i18n);
+    el('cancel').hidden = !editing;
+    form.querySelector('.gd-submit i').className = `bi ${editing ? 'bi-check-lg' : 'bi-plus-lg'} me-2`;
+    if (editing) el('submit-label').textContent = t('details.entry.saveEdit');
+    const entry = editing ? getGoalEntries(goal.id).find((item) => item.id === state.edit.id) : null;
+    el('edit-note').hidden = !entry;
+    if (entry) el('edit-note').textContent = t('details.entry.editingOf', { date: Format.shortDate(entry.date), change: entryChangeText(goal, entry) });
+    // A book entry stays with its book and adds pages ("up to page" is only for new entries).
+    if (editing && state.edit.bookId) {
+      const book = goalBooks(goal).find((item) => item.id === state.edit.bookId);
+      el('book').replaceChildren(createEl('option', { value: state.edit.bookId }, book ? bookTitle(book) : ''));
+      el('book').disabled = true;
+      el('pagesmode-add').checked = true;
+      form.querySelector('[data-entry-field="pagesmode"]').hidden = true;
+      renderBookHint();
+    }
+  }
+
+  function fillFromEntry(goal, entry) {
+    const mode = entryMode(goal);
+    const value = Number(entry.value) || 0;
+    if (mode === 'money' || mode === 'number') setNumberValue(el('amount'), Math.abs(value));
+    if (mode === 'money') el(value < 0 ? 'sign-minus' : 'sign-plus').checked = true;
+    if (mode === 'books') {
+      if (entry.pages) setNumberValue(el('pages'), Number(entry.pages));
+      el('finished').checked = value > 0;
+    }
+    if (mode === 'booklist' && entry.pages) setNumberValue(el('bookpages'), Number(entry.pages));
+    if (mode === 'percent' || mode === 'measurements') setNumberValue(el('value'), value);
+    if (mode === 'levels') el('level').value = String(value);
+    setDateValue(el('date'), entry.date);
+    el('note').value = entry.note ?? '';
+  }
+
+  // Edit = delete + add as one operation (app.js: updateProgressEntry). The checks see the goal
+  // without this entry: a withdrawal may use the money of the old entry, a marked day may stay.
+  function saveEdit(goal) {
+    const without = withoutEntry(goal, getProgressEntries(), state.edit.id);
+    if (!without) return null;
+    const { errors, entry } = read(without.goal, getGoalEntries(goal.id, without.entries));
+    errors.forEach((errorKey, input) => setFieldError(input, errorKey));
+    if (!entry) {
+      form.querySelector('.is-invalid')?.focus();
+      return null;
+    }
+    const result = updateProgressEntry(goal.id, state.edit.id, entry);
+    return result ? entryChangeText(result.goal, result.entry) : null;
   }
 
   // Book titles are user data: set with textContent. One book "reading" -> chosen; several -> "Choose a book".
@@ -336,6 +428,7 @@ function createEntryForm(prefix) {
   // Reads, checks and saves. Returns the change text ("+20 pages") or null (errors are shown).
   function save(goal) {
     state.finishedTitle = null;
+    if (isEditing()) return saveEdit(goal);
     const { errors, entry } = read(goal, getGoalEntries(goal.id));
     errors.forEach((errorKey, input) => setFieldError(input, errorKey));
     if (!entry) {
@@ -365,7 +458,7 @@ function createEntryForm(prefix) {
     else showToast(fallbackKey, 'success', params);
   }
 
-  return { form, render, reset, save, toastAfterSave };
+  return { form, render, reset, save, toastAfterSave, startEdit, stopEdit, isEditing, editedId };
 }
 
 /* ---------- The "Quick result" dialog (Dashboard: header button and First steps) ---------- */

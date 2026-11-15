@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.5.2",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "Entries in the history can be edited, and a delete can be undone.",
+          "ru": "Записи в истории можно исправлять, а удаление — отменить.",
+          "kk": "Тарихтағы жазбаларды өзгертуге, ал жоюды қайтаруға болады."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.1",
     "date": "2026-11-15",
     "items": [

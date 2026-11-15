@@ -4659,6 +4659,72 @@ small,
 .gd-history-change.is-plus { color: var(--tone-success-fg); }
 .gd-history-change.is-minus { color: var(--tone-danger-fg); }
 
+/* ✎ and 🗑 of a row: 44px each with a gap, so the bin is not hit by mistake */
+.gd-history-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.gd-history-actions .btn-icon {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* A click on the row opens it in the form; the row being edited is marked */
+.gd-history li[data-entry-row] {
+  cursor: pointer;
+}
+
+.gd-history li.is-editing {
+  margin: 0 calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--lifeos-primary-soft);
+}
+
+/* "Edit" scrolls to the form: its title stays below the sticky top bar of phones and tablets */
+#entry-panel {
+  scroll-margin-top: var(--space-3);
+}
+
+@media (max-width: 991.98px) {
+  #entry-panel {
+    scroll-margin-top: 5rem;
+  }
+}
+
+/* Edit mode of "Add an entry": "Entry of 12/11/2026: +20 000 ₸", then "Save" and "Cancel" */
+.entry-edit-note {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.gd-entry-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (min-width: 576px) {
+  .gd-entry-actions:has(#entry-cancel:not([hidden])) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* "Undo" in a toast (app.js: addToastAction): text in the toast's own color */
+.toast-action {
+  --bs-btn-color: currentColor;
+  --bs-btn-hover-color: currentColor;
+  --bs-btn-border-color: currentColor;
+  --bs-btn-hover-border-color: currentColor;
+  --bs-btn-hover-bg: rgb(255 255 255 / 0.15);
+  align-self: center;
+  margin-left: auto;
+  min-height: 36px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 /* Milestones: [ ] title + date | "reached 15.01.2026" / "12 days left" */
 .gd-milestones {
   margin: 0;
@@ -7186,7 +7252,7 @@ small,
     align-self: center;
   }
 
-  .gd-history li > .btn-icon {
+  .gd-history li > .gd-history-actions {
     grid-area: bin;
     align-self: center;
   }

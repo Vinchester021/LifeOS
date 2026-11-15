@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.2';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -756,7 +756,9 @@ const TOAST_DELAY = 4000;
 const MAX_TOASTS = 2; // more would cover the page content
 
 // showToast('toast.saved') or showToast('toast.storageFull', 'danger')
-function showToast(messageKey, type = 'success', params = {}) {
+// options.action = { labelKey, onClick }: a button in the toast ("Entry deleted · Undo");
+// options.delay: how long it stays (ms). The button works once, then the toast closes.
+function showToast(messageKey, type = 'success', params = {}, options = {}) {
   if (!document.body || !window.bootstrap || !window.jQuery) {
     console.warn(`[LifeOS] Toast is not ready yet: "${messageKey}".`);
     return;
@@ -770,13 +772,25 @@ function showToast(messageKey, type = 'success', params = {}) {
   // Bootstrap handles show/hide and the close button; jQuery does the fade.
   const toast = new bootstrap.Toast(toastEl, { animation: false, autohide: false });
   toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+  if (options.action) addToastAction(toastEl, toast, options.action);
   $(toastEl).hide();
   toast.show();
   $(toastEl).fadeIn(200);
   setTimeout(() => {
     // The toast may already be removed by removeOldToasts().
     if (toastEl.isConnected) $(toastEl).fadeOut(400, () => toastEl.isConnected && toast.hide());
-  }, TOAST_DELAY);
+  }, options.delay ?? TOAST_DELAY);
+}
+
+// "Undo" before the close button. One click: the action runs and the toast closes.
+function addToastAction(toastEl, toast, { labelKey, onClick }) {
+  const button = createEl('button', { type: 'button', class: 'btn btn-sm toast-action' }, t(labelKey));
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    toast.hide();
+    onClick();
+  }, { once: true });
+  toastEl.querySelector('.btn-close').before(button);
 }
 
 // Keeps only the newest MAX_TOASTS messages on the screen.
@@ -1964,22 +1978,16 @@ function recordBookReading(goalId, bookId, reading) {
   return { goal: found.goal, book: result.book, entry };
 }
 
-// Deletes one entry of a book goal: the book gets its pages back (see undoBookEntry).
-// An old entry without a book is simply removed. Returns the goal or null.
-function deleteBookEntry(goalId, entryId) {
-  const goals = getGoals();
-  const goal = goals.find((item) => item.id === goalId);
-  const entries = getProgressEntries();
-  const entry = entries.find((item) => item.id === entryId);
-  if (!goal || !entry) return null;
-  const remaining = entries.filter((item) => item.id !== entryId);
-  const found = entry.bookId ? findBook(goals, goalId, entry.bookId) : null;
-  if (found) {
-    const left = remaining.filter((item) => item.bookId === found.book.id);
-    replaceBook(goal, undoBookEntry(found.book, entry, left));
-  }
-  if (!saveProgressEntries(remaining) || !saveGoals(goals)) return null;
-  return goal;
+// Pure: the opposite of undoBookEntry (the "Undo" after a delete). The pages come back;
+// the status and its dates are what they were before the delete (`before` = the book then).
+function redoBookEntry(book, entry, before) {
+  return {
+    ...book,
+    pagesRead: (Number(book.pagesRead) || 0) + (Number(entry.pages) || 0),
+    status: before.status,
+    startedAt: before.startedAt ?? null,
+    finishedAt: before.finishedAt ?? null
+  };
 }
 
 // What deleting a book also deletes: { count, pages } of its entries.
@@ -2264,6 +2272,116 @@ function recordWorkoutInGoals(dateValue) {
       const dayMarked = getGoalEntries(goal.id).some((entry) => entry.date === dateValue);
       if (goal.progressType === 'streak' && !dayMarked) recordProgress(goal.id, { date: dateValue, value: 1 });
     });
+}
+
+/* =========================================================
+   11c. Changing the history of a goal (Goal Details): delete with "Undo", edit an entry
+   The pure functions take (goal, entries) and return new copies; nothing is saved there.
+   - delete: money/number take the change back, other types count again from the entries left,
+     a book entry gives the pages back to its book (undoBookEntry);
+   - undo: the entry goes back to the same place in the list, the goal is counted again;
+   - edit = delete + add as one operation: the entry keeps its id and its place.
+   ========================================================= */
+
+// A book list goal counts finished books: its entries change a book, never the counter directly.
+function entryChangesBook(goal, entry) {
+  return hasBookList(goal) && Boolean(entry.bookId);
+}
+
+// Puts `entry` at `index` of a copy of the list (or at the end if the list got shorter).
+function insertedAt(entries, index, entry) {
+  const list = [...entries];
+  list.splice(Math.min(index, list.length), 0, entry);
+  return list;
+}
+
+// The goal's current value counted from `list` after one entry changed by `change` (money/number).
+function countedGoal(goal, list, change) {
+  if (hasBookList(goal)) return { ...goal }; // the counter = finished books (replaceBook)
+  const delta = DELTA_TYPES.includes(goal.progressType) ? change : 0;
+  return { ...goal, currentValue: recalculateCurrentValue(goal, getGoalEntries(goal.id, list), delta) };
+}
+
+// Pure: delete. Returns { goal, entries, removed: { entry, index, book } } or null.
+function withoutEntry(goal, entries, entryId) {
+  const index = entries.findIndex((item) => item.id === entryId);
+  if (index === -1) return null;
+  const entry = entries[index];
+  const rest = entries.filter((item) => item.id !== entryId);
+  const updated = countedGoal(goal, rest, -(Number(entry.value) || 0));
+  let book = null;
+  if (entryChangesBook(goal, entry)) {
+    book = goalBooks(goal).find((item) => item.id === entry.bookId) ?? null;
+    const left = rest.filter((item) => item.bookId === entry.bookId);
+    if (book) replaceBook(updated, undoBookEntry(book, entry, left));
+  }
+  return { goal: updated, entries: rest, removed: { entry, index, book } };
+}
+
+// Pure: "Undo" of a delete. Returns { goal, entries } or null (the book was deleted meanwhile).
+function withEntryRestored(goal, entries, removed) {
+  const { entry, index, book } = removed;
+  const list = insertedAt(entries, index, entry);
+  const updated = countedGoal(goal, list, Number(entry.value) || 0);
+  if (book) {
+    const now = goalBooks(goal).find((item) => item.id === book.id);
+    if (!now) return null;
+    replaceBook(updated, redoBookEntry(now, entry, book));
+  }
+  return { goal: updated, entries: list };
+}
+
+// pages: a number > 0 is kept, 0 / none removes the field (as in a new entry).
+function withPages(entry, pages) {
+  const { pages: oldPages, ...rest } = entry;
+  return pages > 0 ? { ...rest, pages: Math.round(pages) } : rest;
+}
+
+// Pure: edit. fields = { date, note, value?, pages? }. A book list entry gets its pages again
+// with readBookPages (it may finish the book now). Returns { goal, entries, entry } or null.
+function withEntryChanged(goal, entries, entryId, fields) {
+  const without = withoutEntry(goal, entries, entryId);
+  if (!without) return null;
+  const { entry: old, index } = without.removed;
+  let changed = { ...old, date: fields.date, note: fields.note ?? '' };
+  let updated;
+  if (entryChangesBook(goal, old)) {
+    const book = goalBooks(without.goal).find((item) => item.id === old.bookId);
+    if (!book) return null;
+    const result = readBookPages(book, { pages: Number(fields.pages) || 0 }, fields.date);
+    changed = withPages({ ...changed, value: result.finished ? 1 : 0 }, result.added);
+    updated = { ...without.goal };
+    replaceBook(updated, result.book);
+  } else {
+    changed = withPages({ ...changed, value: fields.value ?? old.value }, Number(fields.pages) || 0);
+    updated = countedGoal(without.goal, insertedAt(without.entries, index, changed), Number(changed.value) || 0);
+  }
+  return { goal: updated, entries: insertedAt(without.entries, index, changed), entry: changed };
+}
+
+// Saves the goal and the list from a pure change above. Returns the result or null.
+function saveHistoryChange(result) {
+  if (!result) return null;
+  const goals = getGoals();
+  const index = goals.findIndex((item) => item.id === result.goal.id);
+  if (index === -1) return null;
+  goals[index] = { ...result.goal, updatedAt: new Date().toISOString() };
+  return saveProgressEntries(result.entries) && saveGoals(goals) ? result : null;
+}
+
+function deleteProgressEntry(goalId, entryId) {
+  const goal = getGoalById(goalId);
+  return goal ? saveHistoryChange(withoutEntry(goal, getProgressEntries(), entryId)) : null;
+}
+
+function restoreProgressEntry(goalId, removed) {
+  const goal = getGoalById(goalId);
+  return goal ? saveHistoryChange(withEntryRestored(goal, getProgressEntries(), removed)) : null;
+}
+
+function updateProgressEntry(goalId, entryId, fields) {
+  const goal = getGoalById(goalId);
+  return goal ? saveHistoryChange(withEntryChanged(goal, getProgressEntries(), entryId, fields)) : null;
 }
 
 /* =========================================================
@@ -2717,6 +2835,51 @@ function onAppReady(callback) {
    17. Self-test (dates, goal percent, progress, tasks, periods) — open any page with ?debug=1
    ========================================================= */
 
+// History of a goal (section 11c): edit and "Undo" after a delete, for every kind of goal.
+function runHistorySelfTest(check, book) {
+  const day = (offset) => Dates.toISO(Dates.addDays(Dates.today(), offset));
+  const entry = (id, date, value, extra = {}) => ({ id, goalId: 'g', date, value, note: '', ...extra });
+  const ids = (list) => list.map((item) => item.id).join();
+
+  // Money: +50 000, +20 000 = 70 000
+  const money = { id: 'g', progressType: 'money', startValue: 0, currentValue: 70000 };
+  const moneyEntries = [entry('a', day(-5), 50000), entry('b', day(-2), 20000)];
+  check('edit: money +20 000 -> +30 000 = 80 000', withEntryChanged(money, moneyEntries, 'b', { date: day(-2), value: 30000 }).goal.currentValue, 80000);
+  const moneyDeleted = withoutEntry(money, moneyEntries, 'a');
+  check('delete: money −50 000', moneyDeleted.goal.currentValue, 20000);
+  const moneyBack = withEntryRestored(moneyDeleted.goal, moneyDeleted.entries, moneyDeleted.removed);
+  check('undo: money back to 70 000, same place', `${moneyBack.goal.currentValue} ${ids(moneyBack.entries)}`, '70000 a,b');
+
+  // Percent: the latest entry wins; a date moved back changes which one is the latest
+  const percent = { id: 'g', progressType: 'percent', startValue: 0, currentValue: 60 };
+  const percentEntries = [entry('a', day(-5), 40), entry('b', day(-1), 60)];
+  check('edit: date moved back -> the other entry is the latest (40 %)', withEntryChanged(percent, percentEntries, 'b', { date: day(-9), value: 60 }).goal.currentValue, 40);
+  const percentDeleted = withoutEntry(percent, percentEntries, 'b');
+  check('undo: percent 40 -> 60', `${percentDeleted.goal.currentValue}->${withEntryRestored(percentDeleted.goal, percentDeleted.entries, percentDeleted.removed).goal.currentValue}`, '40->60');
+
+  // Weight (measurements): 90 kg, then 88 kg
+  const weight = { id: 'g', progressType: 'measurements', startValue: 92, currentValue: 88 };
+  const weightDeleted = withoutEntry(weight, [entry('a', day(-10), 90), entry('b', day(-1), 88)], 'b');
+  check('undo: weight 90 -> 88', `${weightDeleted.goal.currentValue}->${withEntryRestored(weightDeleted.goal, weightDeleted.entries, weightDeleted.removed).goal.currentValue}`, '90->88');
+
+  // Streak: today, yesterday, the day before = 3; deleting yesterday breaks it
+  const streak = { id: 'g', progressType: 'streak', startValue: 0, currentValue: 3 };
+  const streakDeleted = withoutEntry(streak, [entry('a', day(-2), 1), entry('b', day(-1), 1), entry('c', day(0), 1)], 'b');
+  check('undo: streak 1 -> 3', `${streakDeleted.goal.currentValue}->${withEntryRestored(streakDeleted.goal, streakDeleted.entries, streakDeleted.removed).goal.currentValue}`, '1->3');
+
+  // Book list: 60 + 40 pages finished a 100-page book
+  const finished = book({ totalPages: 100, pagesRead: 100, status: 'done', startedAt: day(-6), finishedAt: day(-1) });
+  const books = { id: 'g', category: 'books', progressType: 'number', bookList: true, books: [finished], currentValue: 1 };
+  const bookEntries = [entry('a', day(-6), 0, { bookId: 'b1', pages: 60 }), entry('b', day(-1), 1, { bookId: 'b1', pages: 40 })];
+  const bookDeleted = withoutEntry(books, bookEntries, 'b');
+  check('delete: the finishing entry -> reading, 60 pages, 0 books', `${bookDeleted.goal.books[0].status} ${bookDeleted.goal.books[0].pagesRead} ${bookDeleted.goal.currentValue}`, 'reading 60 0');
+  const bookBack = withEntryRestored(bookDeleted.goal, bookDeleted.entries, bookDeleted.removed).goal;
+  check('undo: book done again, 100 pages, same date, 1 book', `${bookBack.books[0].status} ${bookBack.books[0].pagesRead} ${bookBack.books[0].finishedAt === day(-1)} ${bookBack.currentValue}`, 'done 100 true 1');
+  const reading = { ...books, books: [book({ status: 'reading', pagesRead: 50, startedAt: day(-3) })], currentValue: 0 };
+  const pagesEdit = withEntryChanged(reading, [entry('a', day(-3), 0, { bookId: 'b1', pages: 50 })], 'a', { date: day(-3), pages: 80 });
+  check('edit: book pages 50 -> 80', `${pagesEdit.goal.books[0].pagesRead} ${pagesEdit.entry.pages}`, '80 80');
+}
+
 function runDateSelfTest() {
   const results = [];
   const check = (test, actual, expected) =>
@@ -2796,6 +2959,7 @@ function runDateSelfTest() {
   const undone = undoBookEntry(book({ status: 'done', pagesRead: 300 }), { pages: 50, value: 1 }, [{}]);
   check('books: deleting the finishing entry -> reading', `${undone.status} ${undone.pagesRead}`, 'reading 250');
   check('books: deleting the only entry -> want to read', undoBookEntry(book({ status: 'reading', pagesRead: 40 }), { pages: 40, value: 0 }, []).status, 'planned');
+  runHistorySelfTest(check, book);
   const old = migrateBookGoal(goal({ category: 'books', progressType: 'number', currentValue: 3, targetValue: 13 }));
   check('books: an old goal of 3 books -> 3 finished untitled books', `${old.bookList} ${old.books.length} ${countDoneBooks(old.books)} ${old.currentValue} "${old.books[0].title}"`, 'true 3 3 3 ""');
   check('books: migration ids are unique', new Set(untitledDoneBooks(400).map((item) => item.id)).size, 400);

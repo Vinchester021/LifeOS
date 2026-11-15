@@ -182,13 +182,53 @@ function renderEntryForm(goal) {
   if (withEntries) entryForm.render(goal);
 }
 
+// Adds a new entry, or saves the entry being edited ("Edit the entry" → "Save").
 function submitEntry(event) {
   event.preventDefault();
   const goal = loadGoal();
+  const editedId = entryForm.editedId();
   if (!goal || !entryForm.save(goal)) return; // errors are shown next to the fields
+  if (editedId) {
+    showToast('toast.entryUpdated', 'success');
+    entryForm.stopEdit();
+    renderDetailsPage();
+    focusHistoryEntry(editedId);
+    return;
+  }
   entryForm.toastAfterSave('toast.entryAdded'); // or "Book finished: «…»"
   entryForm.reset();
   renderDetailsPage();
+}
+
+/* ----- Editing an entry of the history in the same form ----- */
+
+// The ✎ of a row (or a click on the row). An entry of a finished book only gets the reason.
+function editEntry(entryId) {
+  const goal = loadGoal();
+  const entry = goal ? getGoalEntries(goal.id).find((item) => item.id === entryId) : null;
+  if (!entry) return;
+  const block = entryEditBlock(goal, entry);
+  if (block) {
+    showToast(block, 'info');
+    return;
+  }
+  entryForm.startEdit(goal, entry);
+  renderHistory(goal); // marks the row being edited
+  byId('entry-panel').scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  byId('entry-title').focus({ preventScroll: true });
+}
+
+function cancelEdit() {
+  const editedId = entryForm.editedId();
+  entryForm.stopEdit();
+  renderDetailsPage();
+  focusHistoryEntry(editedId);
+}
+
+// Back to the row's ✎ after saving or cancelling (or to the title if the row is gone).
+function focusHistoryEntry(entryId) {
+  const button = byId('history-list').querySelector(`[data-edit-entry="${CSS.escape(entryId ?? '')}"]`);
+  (button ?? byId('history-title')).focus();
 }
 
 /* ---------- History ---------- */
@@ -211,46 +251,61 @@ function renderHistory(goal) {
   const entries = getGoalEntries(goal.id);
   byId('history-panel').hidden = !usesEntries(goal) && entries.length === 0;
   byId('history-empty').hidden = entries.length > 0;
+  const editedId = entryForm.editedId();
   byId('history-list').innerHTML = entries.map((entry) => {
     const date = Format.shortDate(entry.date);
     const label = entryLabel(goal, entry);
+    const id = escapeHtml(entry.id);
+    // An entry of a finished book cannot be edited: the ✎ then says why (entryEditBlock).
+    const editText = t(entryEditBlock(goal, entry) ?? 'details.history.edit', { date });
     return `
-      <li>
+      <li class="${entry.id === editedId ? 'is-editing' : ''}" data-entry-row="${id}">
         <div class="gd-history-main">
           <span class="gd-history-date">${escapeHtml(date)}</span>
           ${label ? `<span class="gd-history-note">${escapeHtml(label)}</span>` : ''}
         </div>
         <strong class="gd-history-change ${entryTone(goal, entry)} ${entry.bookId ? 'is-book' : ''}">${escapeHtml(entryChangeText(goal, entry))}</strong>
-        <button type="button" class="btn btn-icon" data-delete-entry="${escapeHtml(entry.id)}"
-                aria-label="${escapeHtml(t('details.history.delete', { date }))}" title="${escapeHtml(t('details.history.delete', { date }))}">
-          <i class="bi bi-trash" aria-hidden="true"></i>
-        </button>
+        <div class="gd-history-actions">
+          <button type="button" class="btn btn-icon" data-edit-entry="${id}"
+                  aria-label="${escapeHtml(editText)}" title="${escapeHtml(editText)}">
+            <i class="bi bi-pencil" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn btn-icon" data-delete-entry="${id}"
+                  aria-label="${escapeHtml(t('details.history.delete', { date }))}" title="${escapeHtml(t('details.history.delete', { date }))}">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+          </button>
+        </div>
       </li>`;
   }).join('');
 }
 
+// Deletes at once (app.js: deleteProgressEntry) and offers "Undo" for 7 seconds.
+// Leaving the page makes the delete final: nothing is kept anywhere else.
+const UNDO_DELAY = 7000;
+
 function deleteEntry(entryId) {
   const goal = loadGoal();
-  const entries = getProgressEntries();
-  const entry = entries.find((item) => item.id === entryId);
-  if (!goal || !entry) return;
-  if (hasBookList(goal)) {
-    // The book gets its pages back, the goal counts its finished books again (app.js).
-    if (!deleteBookEntry(goal.id, entryId)) return;
-    showToast('toast.entryDeleted', 'success');
-    renderDetailsPage();
-    byId('history-title').focus();
-    return;
-  }
-  const remaining = entries.filter((item) => item.id !== entryId);
-  // money/number: take the deleted change back; other types: recount from the remaining entries.
-  const change = DELTA_TYPES.includes(goal.progressType) ? -(Number(entry.value) || 0) : 0;
-  const newValue = recalculateCurrentValue(goal, getGoalEntries(goal.id, remaining), change);
-  if (!saveProgressEntries(remaining)) return;
-  updateGoal((saved) => { saved.currentValue = newValue; });
-  showToast('toast.entryDeleted', 'success');
+  if (!goal) return;
+  const result = deleteProgressEntry(goal.id, entryId);
+  if (!result) return;
+  if (entryForm.editedId() === entryId) entryForm.stopEdit(); // the entry in the form is gone
+  showToast('toast.entryDeleted', 'success', {}, {
+    delay: UNDO_DELAY,
+    action: { labelKey: 'toast.undo', onClick: () => undoDelete(goal.id, result.removed) }
+  });
   renderDetailsPage();
   byId('history-title').focus(); // the deleted button is gone; keep focus in the same area
+}
+
+// The entry goes back to its place, the goal (and the book) are counted again.
+function undoDelete(goalId, removed) {
+  if (!restoreProgressEntry(goalId, removed)) {
+    showToast('toast.undoFailed', 'warning');
+    return;
+  }
+  showToast('toast.entryRestored', 'success');
+  renderDetailsPage();
+  focusHistoryEntry(removed.entry.id);
 }
 
 /* ---------- Milestones and checklist ---------- */
@@ -508,12 +563,21 @@ function renderDetailsPage() {
   renderGoalTasks(goal);
 }
 
+// 🗑 deletes, ✎ edits; a click anywhere else on the row edits too (the ✎ is the keyboard way).
+function onHistoryClick(event) {
+  const remove = event.target.closest('[data-delete-entry]');
+  if (remove) {
+    deleteEntry(remove.dataset.deleteEntry);
+    return;
+  }
+  const row = event.target.closest('[data-entry-row]');
+  if (row) editEntry(row.dataset.entryRow);
+}
+
 function bindDetailsEvents() {
   byId('entry-form').addEventListener('submit', submitOnce(submitEntry));
-  byId('history-list').addEventListener('click', (event) => {
-    const button = event.target.closest('[data-delete-entry]');
-    if (button) deleteEntry(button.dataset.deleteEntry);
-  });
+  byId('history-list').addEventListener('click', onHistoryClick);
+  byId('entry-cancel').addEventListener('click', cancelEdit);
   byId('milestone-list').addEventListener('change', (event) => {
     const box = event.target.closest('[data-milestone-index]');
     if (box) toggleMilestone(Number(box.dataset.milestoneIndex), box.checked);

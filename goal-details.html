@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.5.1">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.5.1">
-  <link rel="stylesheet" href="./css/style.css?v=1.5.1">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.5.2">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.5.2">
+  <link rel="stylesheet" href="./css/style.css?v=1.5.2">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.5.1">
+  <link rel="manifest" href="./manifest.json?v=1.5.2">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,21 +19,21 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.5.1" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.5.1" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.5.2" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.5.2" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.5.1"></script>
-  <script src="./data/quotes-fallback.js?v=1.5.1"></script>
-  <script src="./data/changelog-fallback.js?v=1.5.1"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.5.1"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.5.1" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.5.1" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.5.1" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.5.1" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
-  <script src="./js/tasks.js?v=1.5.1" defer></script>
-  <script src="./js/entry-form.js?v=1.5.1" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
-  <script src="./js/books.js?v=1.5.1" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
-  <script src="./js/goal-details.js?v=1.5.1" defer></script>
+  <script src="./data/translations-fallback.js?v=1.5.2"></script>
+  <script src="./data/quotes-fallback.js?v=1.5.2"></script>
+  <script src="./data/changelog-fallback.js?v=1.5.2"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.5.2"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.5.2" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.5.2" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.5.2" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.5.2" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./js/tasks.js?v=1.5.2" defer></script>
+  <script src="./js/entry-form.js?v=1.5.2" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
+  <script src="./js/books.js?v=1.5.2" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
+  <script src="./js/goal-details.js?v=1.5.2" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -231,7 +231,9 @@
 
           <!-- Add an entry: the fields depend on the progress type (data-entry-field) -->
           <section class="panel" id="entry-panel" aria-labelledby="entry-title">
-            <h2 class="panel-title" id="entry-title" data-i18n="details.entry.title">Add an entry</h2>
+            <h2 class="panel-title" id="entry-title" tabindex="-1" data-i18n="details.entry.title">Add an entry</h2>
+            <!-- Edit mode: "Entry of 12/11/2026: +20 000 ₸" (js/entry-form.js) -->
+            <p class="entry-edit-note" id="entry-edit-note" hidden></p>
             <form id="entry-form" novalidate>
               <div class="row g-3">
                 <!-- What to type for this goal type: "Example: +20 pages since the last entry" -->
@@ -301,10 +303,11 @@
                   <p class="field-error" id="entry-note-error"></p>
                 </div>
 
-                <div class="col-12">
+                <div class="col-12 gd-entry-actions">
                   <button class="btn btn-primary w-100 gd-submit" type="submit">
                     <i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span id="entry-submit-label">Add entry</span>
                   </button>
+                  <button class="btn btn-tool w-100" type="button" id="entry-cancel" hidden data-i18n="delete.cancel">Cancel</button>
                 </div>
               </div>
             </form>
