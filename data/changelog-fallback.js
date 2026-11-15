@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.5.1",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "type": "fixed",
+        "text": {
+          "en": "Goal wizard: “Next” works on the first click, “Already done” starts at 0, clear hints for wrong values.",
+          "ru": "Мастер целей: кнопка «Далее» срабатывает с первого раза, «Уже сделано» сразу 0, понятные подсказки при неверных значениях.",
+          "kk": "Мақсат құру терезесі: «Келесі» батырмасы бірінші басқаннан-ақ жұмыс істейді, «Орындалғаны» бірден 0, қате мәндерге түсінікті кеңестер."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.0",
     "date": "2026-11-15",
     "items": [
@@ -10,7 +24,7 @@ window.LIFEOS_CHANGELOG = [
         "text": {
           "en": "Reading goals: a list of books with pages, statuses and the reading pace.",
           "ru": "Цели по книгам: список книг со страницами, статусами и темпом чтения.",
-          "kk": "Кітап мақсаттары: беттері, күйлері және оқу қарқыны бар кітаптар тізімі."
+          "kk": "Кітап мақсаттары: беттері, мәртебелері және оқу қарқыны бар кітаптар тізімі."
         }
       }
     ]

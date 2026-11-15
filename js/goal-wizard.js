@@ -55,10 +55,17 @@ const VALUE_LABELS = {
   measurements: ['wizard.values.now', 'wizard.values.wantToReach'],
   streak: ['wizard.values.start', 'wizard.values.daysInRow']
 };
-// Examples in the empty fields: [start, target]
-const VALUE_EXAMPLES = { number: [0, 13], money: [0, 500000], percent: [0, 100], measurements: [92, 80], streak: [0, 30] };
+// Examples in the empty fields, in words ("e.g. 12"), so they do not look like typed values: [start, target]
+const VALUE_EXAMPLES = { number: [0, 12], money: [0, 500000], percent: [0, 100], measurements: [92, 80], streak: [0, 30] };
 
 const NUMERIC_TYPES = ['number', 'money', 'percent', 'streak', 'measurements'];
+
+// "Already done / Already saved / Now" of a new goal is a real 0: most goals start from zero.
+// Measurements start empty (a weight is never 0).
+const START_ZERO_TYPES = ['number', 'money', 'percent'];
+
+// "Number" with a target at or below "Already done": the error offers the "Measurements" type.
+const NUMBER_TARGET_ERROR = 'wizard.error.numberTargetAboveStart';
 
 // Which blocks of step 5 are shown for each type (see data-field in goals.html).
 const VALUE_FIELDS = {
@@ -80,6 +87,34 @@ function parseLevels(text) {
 
 function byDueDate(a, b) {
   return String(a.dueDate).localeCompare(String(b.dueDate));
+}
+
+// The start value of a new goal: 0 or null (the field stays empty).
+function defaultStartValue(type) {
+  return START_ZERO_TYPES.includes(type) ? 0 : null;
+}
+
+// "e.g. 12" (an empty string when there is no example)
+function valueExampleText(number) {
+  return Number.isFinite(number) ? t('wizard.values.example', { value: formatNumberValue(number) }) : '';
+}
+
+// The error of "How many in total" (null = fine).
+function targetValueError(type, start, target, { isNewMoney = false } = {}) {
+  const error = numberError(target, { positive: true, max: type === 'percent' ? 100 : null });
+  if (error || !Number.isFinite(start)) return error;
+  // A "Number" only grows (entries are +1, +5…): a target at or below the start would stay at 0 % forever.
+  if (type === 'number' && target <= start) return NUMBER_TARGET_ERROR;
+  // A new "Money" goal starts at 0; the field holds the current amount, which may equal the target.
+  if (!isNewMoney && start === target) return 'wizard.error.sameAsStart';
+  return null;
+}
+
+// Editing a goal that already had these start and target values (and this type): an old "Number"
+// with target <= start is only warned about, so its title or deadline can still be saved.
+function keepsOldValues(original, type, start, target) {
+  return Boolean(original) && original.progressType === type
+    && Number(original.startValue) === start && Number(original.targetValue) === target;
 }
 
 /* ---------- The wizard ---------- */
@@ -118,7 +153,8 @@ const GOAL_WIZARD_HTML = `
 
           <!-- Step 2: title and description -->
           <section class="wizard-step" data-step="2" hidden>
-            <!-- The limits are in the "?" tips; the counter "12/80" shows while the field has the focus. -->
+            <!-- The limits are in the "?" tips; the counter "12/80" shows while the field has the focus.
+                 Its line keeps its height when it hides (.field-meta), so "Next" does not jump under the mouse. -->
             <div class="mb-3">
               <div class="help-title field-label">
                 <label class="form-label" for="wiz-title" data-i18n="wizard.title.label">Goal title</label>
@@ -197,7 +233,7 @@ const GOAL_WIZARD_HTML = `
               <div class="col-sm-6" data-field="start">
                 <label class="form-label" for="wiz-start" data-i18n="wizard.values.start">Start value</label>
                 <div class="input-group">
-                  <input class="form-control" type="text" id="wiz-start" inputmode="decimal" autocomplete="off" data-number="decimal">
+                  <input class="form-control" type="text" id="wiz-start" inputmode="decimal" autocomplete="off" data-number="decimal" data-minus-hint="number.minus.positiveOnly">
                   <span class="input-group-text wiz-value-unit" hidden></span>
                 </div>
                 <p class="field-error" id="wiz-start-error"></p>
@@ -205,15 +241,19 @@ const GOAL_WIZARD_HTML = `
               <div class="col-sm-6" data-field="target">
                 <label class="form-label" for="wiz-target" data-i18n="wizard.values.target">Target value</label>
                 <div class="input-group">
-                  <input class="form-control" type="text" id="wiz-target" inputmode="decimal" autocomplete="off" data-number="decimal">
+                  <input class="form-control" type="text" id="wiz-target" inputmode="decimal" autocomplete="off" data-number="decimal" data-minus-hint="number.minus.positiveOnly">
                   <span class="input-group-text wiz-value-unit" hidden></span>
                 </div>
                 <p class="field-error" id="wiz-target-error"></p>
+                <!-- Editing an old "Number" with target <= start: a warning, the goal can still be saved -->
+                <p class="form-text field-warning" id="wiz-target-warning" role="status" hidden></p>
+                <!-- Shown with the "Number" error / warning: switches the type and opens step 4 -->
+                <button type="button" class="btn btn-link field-error-action" id="wiz-to-measurements" hidden data-i18n="wizard.error.chooseMeasurements">Choose “Measurements”</button>
               </div>
               <div class="col-sm-6" data-field="current">
                 <label class="form-label" for="wiz-current" data-i18n="wizard.values.current">Current value</label>
                 <div class="input-group">
-                  <input class="form-control" type="text" id="wiz-current" inputmode="decimal" autocomplete="off" data-number="decimal">
+                  <input class="form-control" type="text" id="wiz-current" inputmode="decimal" autocomplete="off" data-number="decimal" data-minus-hint="number.minus.positiveOnly">
                   <span class="input-group-text wiz-value-unit" hidden></span>
                 </div>
                 <p class="field-error" id="wiz-current-error"></p>
@@ -445,8 +485,10 @@ const GoalWizard = {
       if (event.target.id === 'wiz-title') this.renderPreview();
       if (event.target.dataset.charLimit) this.updateCharCount(event.target);
       if (event.target.id === 'wiz-unit') this.updateValueUnits();
+      if (event.target.id === 'wiz-start') delete event.target.dataset.autoValue; // typed by the user now
       if (this.step === 5) this.renderSummary();
       if (this.attempted.has(this.step)) this.validateStep(this.step);
+      else if (this.step === 5) this.refreshNumberWarning();
     });
 
     this.form.querySelectorAll('[data-char-limit]').forEach((input) => {
@@ -475,10 +517,30 @@ const GoalWizard = {
       if (button) this.removeMilestone(Number(button.dataset.removeIndex));
     });
 
+    byId('wiz-to-measurements').addEventListener('click', () => this.switchToMeasurements());
+
     this.modalEl.addEventListener('shown.bs.modal', () => this.focusStepLabel());
+    this.modalEl.addEventListener('keydown', (event) => this.keepFocusInside(event));
     document.addEventListener('lifeos:languagechange', () => {
       if (this.modalEl.classList.contains('show')) this.refreshTexts();
     });
+  },
+
+  // Tab and Shift+Tab go round inside the dialog: from "Next" to the close button and back,
+  // so the focus never reaches "Skip to content" behind the dialog.
+  keepFocusInside(event) {
+    if (event.key !== 'Tab') return;
+    const first = this.modalEl.querySelector('.btn-close');
+    const last = byId('wiz-next');
+    const active = document.activeElement;
+    const atStart = active === first || active === byId('wizard-step-label') || active === this.modalEl;
+    if (event.shiftKey && atStart) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   },
 
   // In "add item" fields Enter adds the item instead of going to the next step.
@@ -553,6 +615,9 @@ const GoalWizard = {
       if (element.matches('fieldset, ul')) setGroupError(element, null);
       else setFieldError(element, null);
     });
+    delete byId('wiz-start').dataset.autoValue;
+    byId('wiz-to-measurements').hidden = true;
+    this.showNumberWarning(false);
     this.checklist = [];
     this.milestones = [];
     this.touched = { icon: false, progressType: false };
@@ -625,16 +690,40 @@ const GoalWizard = {
     const fillIfEmpty = (id, value) => {
       if (byId(id).value.trim() === '') byId(id).value = value;
     };
-    if (type === 'percent') {
-      fillIfEmpty('wiz-start', '0');
-      fillIfEmpty('wiz-target', '100');
-    }
+    if (this.mode !== 'edit') this.applyStartDefault(type);
+    if (type === 'percent') fillIfEmpty('wiz-target', '100');
     if (type === 'levels' && byId('wiz-levels').value.trim() === '') {
       byId('wiz-levels').value = DEFAULT_LEVELS.join(', ');
       this.refreshLevelSelects();
     }
     if (type === 'streak') fillIfEmpty('wiz-unit', t('wizard.defaultUnit.days'));
     this.updateValueFields();
+  },
+
+  // A new goal: an empty "Already done" gets a real 0. A 0 put here by this function (not typed)
+  // is taken away again when the type becomes "Measurements".
+  applyStartDefault(type) {
+    const start = byId('wiz-start');
+    const startValue = defaultStartValue(type);
+    if (startValue !== null && start.value.trim() === '') {
+      setNumberValue(start, startValue);
+      start.dataset.autoValue = 'true';
+    } else if (startValue === null && start.dataset.autoValue === 'true') {
+      start.value = '';
+      delete start.dataset.autoValue;
+    }
+  },
+
+  // The link under the "Number" error: the type becomes "Measurements", the user sees it on step 4.
+  switchToMeasurements() {
+    this.check('progressType', 'measurements');
+    this.touched.progressType = true;
+    this.applyTypeDefaults();
+    this.attempted.delete(5);
+    ['wiz-start', 'wiz-target'].forEach((id) => setFieldError(byId(id), null));
+    byId('wiz-to-measurements').hidden = true;
+    this.showNumberWarning(false);
+    this.goToStep(4, true);
   },
 
   /* ----- Steps ----- */
@@ -768,14 +857,16 @@ const GoalWizard = {
     const type = this.selected('progressType');
     const fields = this.visibleValueFields();
     const errors = new Map(); // input -> error key or null
+    let targetError = null;
+    let warnOnly = false;
 
     if (NUMERIC_TYPES.includes(type)) {
       const max = type === 'percent' ? 100 : null;
       const start = fields.includes('start') ? readNumber(byId('wiz-start')) : 0;
       const target = readNumber(byId('wiz-target'));
-      let targetError = numberError(target, { positive: true, max });
-      // A new "Money" goal starts at 0; the field holds the current amount, which may equal the target.
-      if (!targetError && !this.isNewMoneyGoal() && start === target) targetError = 'wizard.error.sameAsStart';
+      targetError = targetValueError(type, start, target, { isNewMoney: this.isNewMoneyGoal() });
+      warnOnly = targetError === NUMBER_TARGET_ERROR && this.isOldNumberProblem();
+      if (warnOnly) targetError = null;
       if (fields.includes('start')) errors.set(byId('wiz-start'), numberError(start, { min: 0, max }));
       errors.set(byId('wiz-target'), targetError);
       if (fields.includes('current')) errors.set(byId('wiz-current'), numberError(readNumber(byId('wiz-current')), { min: 0, max }));
@@ -791,7 +882,32 @@ const GoalWizard = {
     errors.set(byId('wiz-deadline'), this.deadlineError());
 
     errors.forEach((errorKey, input) => setFieldError(input, errorKey));
+    this.showNumberWarning(warnOnly);
+    byId('wiz-to-measurements').hidden = targetError !== NUMBER_TARGET_ERROR && !warnOnly;
     return [...errors.values()].every((errorKey) => errorKey === null);
+  },
+
+  // Editing an old "Number" whose target is already <= start, and the user has not changed these values.
+  isOldNumberProblem() {
+    if (this.mode !== 'edit' || this.selected('progressType') !== 'number' || !this.visibleValueFields().includes('start')) return false;
+    const start = readNumber(byId('wiz-start'));
+    const target = readNumber(byId('wiz-target'));
+    return targetValueError('number', start, target) === NUMBER_TARGET_ERROR && keepsOldValues(this.original, 'number', start, target);
+  },
+
+  // The warning is shown as soon as step 5 opens (and updated while typing), not only after "Next".
+  refreshNumberWarning() {
+    const isShown = this.isOldNumberProblem();
+    this.showNumberWarning(isShown);
+    const hasError = byId('wiz-target-error').dataset.i18n === NUMBER_TARGET_ERROR;
+    byId('wiz-to-measurements').hidden = !isShown && !hasError;
+  },
+
+  showNumberWarning(isShown) {
+    const warning = byId('wiz-target-warning');
+    warning.hidden = !isShown;
+    warning.dataset.i18n = 'wizard.warning.numberTargetAboveStart';
+    warning.textContent = isShown ? t(warning.dataset.i18n) : '';
   },
 
   levelsError() {
@@ -838,10 +954,10 @@ const GoalWizard = {
     };
     setLabel('wiz-start', this.mode === 'edit' ? 'wizard.values.start' : startKey);
     setLabel('wiz-target', targetKey);
-    const [startExample, targetExample] = VALUE_EXAMPLES[type] ?? ['', ''];
-    byId('wiz-start').placeholder = formatNumberValue(startExample);
-    byId('wiz-target').placeholder = formatNumberValue(targetExample);
-    byId('wiz-current').placeholder = formatNumberValue(startExample);
+    const [startExample, targetExample] = VALUE_EXAMPLES[type] ?? [null, null];
+    byId('wiz-start').placeholder = valueExampleText(startExample);
+    byId('wiz-target').placeholder = valueExampleText(targetExample);
+    byId('wiz-current').placeholder = valueExampleText(startExample);
   },
 
   // What the numbers are: "₸" (money), "%" (percent) or the text of "What do you count" (books, km…).
@@ -859,7 +975,10 @@ const GoalWizard = {
     let current = 0;
     if (this.mode === 'edit') current = readNumber(byId('wiz-current'));
     else if (VALUE_FIELDS[type]?.includes('start')) current = readNumber(byId('wiz-start'));
-    summary.hidden = !NUMERIC_TYPES.includes(type) || !Number.isFinite(target) || !Number.isFinite(current);
+    // A "Number" that cannot grow to its target has its own error: no "40 to go" sentence then.
+    const start = this.visibleValueFields().includes('start') ? readNumber(byId('wiz-start')) : 0;
+    const cannotGrow = type === 'number' && target <= start;
+    summary.hidden = !NUMERIC_TYPES.includes(type) || !Number.isFinite(target) || !Number.isFinite(current) || cannotGrow;
     if (summary.hidden) return;
     const goal = { progressType: type, unit: type === 'money' ? byId('wiz-currency').value : this.valueUnit(type) };
     if (this.bookListOn()) Object.assign(goal, { category: 'books', bookList: true }); // "Goal: 13 books. Now 1 book" with plurals
@@ -909,6 +1028,7 @@ const GoalWizard = {
     this.updateValueLabels(type);
     this.updateValueUnits();
     this.renderSummary();
+    this.refreshNumberWarning();
     // Errors of fields that are now hidden are no longer relevant.
     this.form.querySelectorAll('[data-field][hidden] .is-invalid').forEach((input) => setFieldError(input, null));
   },
@@ -1201,3 +1321,36 @@ const GoalWizard = {
     document.dispatchEvent(new CustomEvent('lifeos:goalschange', { detail: { goalId: goal.id } }));
   }
 };
+
+/* ---------- Self-test (goals.html?debug=1): start values and the target check ---------- */
+
+function runWizardSelfTest() {
+  const results = [];
+  const check = (test, actual, expected) => results.push({ test, expected, actual, ok: Object.is(actual, expected) ? '✓' : '✗' });
+  check('start: number, money, percent = 0', [defaultStartValue('number'), defaultStartValue('money'), defaultStartValue('percent')].join(), '0,0,0');
+  check('start: measurements stay empty', defaultStartValue('measurements'), null);
+  check('example in words, not a value', valueExampleText(12) !== formatNumberValue(12) && valueExampleText(12).includes(formatNumberValue(12)), true);
+  check('number: empty target = "Enter a number"', targetValueError('number', 0, NaN), 'wizard.error.number');
+  check('number: 50 -> 10 is blocked', targetValueError('number', 50, 10), NUMBER_TARGET_ERROR);
+  check('number: 50 -> 50 is blocked', targetValueError('number', 50, 50), NUMBER_TARGET_ERROR);
+  check('number: 0 -> 12 is fine', targetValueError('number', 0, 12), null);
+  check('measurements: 92 -> 80 is fine', targetValueError('measurements', 92, 80), null);
+  check('measurements: 80 -> 80 differs from the start', targetValueError('measurements', 80, 80), 'wizard.error.sameAsStart');
+  check('new money: saved 500 000 of 500 000 is fine', targetValueError('money', 500000, 500000, { isNewMoney: true }), null);
+  const oldGoal = { progressType: 'number', startValue: 50, targetValue: 10 };
+  check('edit: the same old values are only warned about', keepsOldValues(oldGoal, 'number', 50, 10), true);
+  check('edit: a new target is checked again', keepsOldValues(oldGoal, 'number', 50, 20), false);
+  check('edit: another type before is checked again', keepsOldValues({ ...oldGoal, progressType: 'measurements' }, 'number', 50, 10), false);
+  check('create: no old goal', keepsOldValues(null, 'number', 50, 10), false);
+  check('percent: target over 100', targetValueError('percent', 0, 120), 'wizard.error.percentMax');
+  console.group('[LifeOS] Goal wizard self-test');
+  console.table(results);
+  const failed = results.filter((row) => row.ok === '✗').length;
+  if (failed) console.error(`${failed} of ${results.length} wizard tests failed`);
+  else console.info(`All ${results.length} wizard tests passed`);
+  console.groupEnd();
+}
+
+onAppReady(() => {
+  if (byId('goal-search') && new URLSearchParams(window.location.search).get('debug') === '1') runWizardSelfTest();
+});

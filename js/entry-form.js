@@ -160,6 +160,7 @@ function createEntryForm(prefix) {
   const state = { finishedTitle: null }; // the title of the book the last save finished (for the toast)
   form.addEventListener('change', (event) => {
     if (event.target === el('book') || event.target.name === `${prefix}-pagesmode`) renderBookHint();
+    if (event.target === el('sign-minus')) hideMinusNote(el('amount')); // the user did what the note asked
   });
 
   // Shows the fields for this goal type. Values the user typed are not touched.
@@ -177,6 +178,8 @@ function createEntryForm(prefix) {
     const amountLabel = el('amount-label');
     amountLabel.dataset.i18n = goal.progressType === 'money' ? 'details.entry.amount' : 'details.entry.count';
     amountLabel.textContent = t(amountLabel.dataset.i18n);
+    // A typed "−" is removed by the mask; the note under the field says what to do instead (app.js).
+    el('amount').dataset.minusHint = mode === 'money' ? 'number.minus.useWithdraw' : 'number.minus.positiveOnly';
     const unit = unitLabel(goal);
     form.querySelectorAll('.entry-unit').forEach((span) => {
       span.textContent = unit;
@@ -251,6 +254,7 @@ function createEntryForm(prefix) {
 
   function reset() {
     ['amount', 'pages', 'value', 'note', 'bookpages'].forEach((name) => { el(name).value = ''; });
+    hideMinusNote(el('amount'));
     el('finished').checked = false;
     el('pagesmode-add').checked = true;
     el('sign-plus').checked = true;

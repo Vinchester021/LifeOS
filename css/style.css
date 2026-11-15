@@ -8419,10 +8419,45 @@ button.fs-item-head:active {
   height: 1.75rem;
 }
 
+/* The line under the title / description keeps the counter's height when it hides (on blur),
+   otherwise "Next" moves up from under the mouse and the first click misses it. */
 .field-meta {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+  min-height: calc(0.25rem + var(--fs-small) * 1.5);
+}
+
+/* "Choose “Measurements”" under the error of the goal wizard */
+.field-error-action {
+  padding: 0;
+  margin-top: var(--space-1);
+  color: var(--lifeos-primary-text);
+  font-size: 0.875em;
+  font-weight: 700;
+  text-align: left;
+}
+
+.field-error-action:hover {
+  color: var(--lifeos-primary-text);
+}
+
+/* Editing an old "Number" with target <= start: saving is allowed, so this is not a red error */
+.field-warning {
+  margin: 0.35rem 0 0;
+  color: var(--lifeos-text);
+}
+
+.field-warning::before {
+  content: "\F33B"; /* bi-exclamation-triangle */
+  margin-right: 0.35rem;
+  font-family: "bootstrap-icons";
+  color: var(--tone-warning-fg);
+}
+
+/* "Only positive numbers": a typed minus was removed (app.js, showMinusNote) */
+.minus-note {
+  margin: 0.35rem 0 0;
 }
 
 .field-meta .field-error {

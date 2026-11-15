@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.1';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -1096,6 +1096,7 @@ function readNumber(input) {
 function setNumberValue(input, number) {
   input.dataset.numberLang = I18n.lang;
   input.value = formatNumberValue(number, numberOptions(input));
+  hideMinusNote(input);
 }
 
 // Rewrites the field with `format(text)` and keeps the caret after the same counted characters,
@@ -1132,7 +1133,36 @@ function onNumberInput(input, event) {
     input.value = `${input.value.slice(0, caret - 1)}${decimal}${input.value.slice(caret)}`;
     input.setSelectionRange(caret, caret);
   }
+  const typedMinus = hasMinus(input.value);
   reformatKeepingCaret(input, (text) => formatNumberTyping(text, options), decimal === '.' ? /[\d.]/ : /[\d,]/);
+  if (typedMinus) showMinusNote(input);
+  else if (type.startsWith('delete') && input.value === '') hideMinusNote(input);
+}
+
+// "-" or "−" anywhere in the text (the mask removes it while typing).
+function hasMinus(text) {
+  return /[-−]/.test(String(text ?? ''));
+}
+
+/* A typed minus does not disappear silently: a field with data-minus-hint="<key>" gets a note under it
+   ("Only positive numbers" / "To take money out, choose “Withdrawal (−)”"). The note stays until the
+   field is cleared, filled by code (setNumberValue) or its form is reset. */
+function showMinusNote(input) {
+  const key = input.dataset.minusHint;
+  if (!key) return;
+  let note = document.getElementById(`${input.id}-minus`);
+  if (!note) {
+    note = createEl('p', { class: 'form-text minus-note', id: `${input.id}-minus`, role: 'status' });
+    (input.closest('.input-group') ?? input).after(note);
+  }
+  note.dataset.i18n = key;
+  note.textContent = t(key);
+  note.hidden = false;
+}
+
+function hideMinusNote(input) {
+  const note = document.getElementById(`${input.id}-minus`);
+  if (note) note.hidden = true;
 }
 
 // After a language change "1 000,5" becomes "1,000.5" (and back).
@@ -1331,6 +1361,9 @@ const InputMasks = {
     });
     document.addEventListener('change', (event) => {
       if (event.target.matches?.('[data-date-field]')) onDateLeave(event.target);
+    });
+    document.addEventListener('reset', (event) => {
+      event.target.querySelectorAll?.('[data-minus-hint]').forEach(hideMinusNote);
     });
     document.addEventListener('lifeos:languagechange', refreshNumberFields);
   }
@@ -2829,6 +2862,8 @@ function runDateSelfTest() {
   check('number typing: 2 digits after the mark', formatNumberTyping('3,14159', { lang: 'ru' }), '3,14');
   check('number from data: 82.5 ru / en', `${formatNumberValue(82.5, { lang: 'ru' })}|${formatNumberValue(82.5, { lang: 'en' })}`, '82,5|82.5');
   check('language switch: ru text -> en text', formatNumberValue(parseNumber('1\u00A0500,25', 'ru'), { lang: 'en' }), '1,500.25');
+  check('number typing: a minus is found ("-" and "\u2212") before the mask drops it', `${hasMinus('-500')}/${hasMinus('\u22125')}/${hasMinus('500')}`, 'true/true/false');
+  check('number typing: the mask drops the minus', formatNumberTyping('\u2212500', { lang: 'ru' }), '500');
   // Input masks: dates
   check('date typing: 1501 -> 15.01', formatDateDigits('1501'), '15.01');
   check('date typing: 15 -> "15." while typing', formatDateDigits('15', true), '15.');
