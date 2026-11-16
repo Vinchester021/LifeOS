@@ -4494,6 +4494,303 @@ small,
   }
 }
 
+/* ---------- The head of a goal with a book list (docs/design/book-goal-hero.png) ----------
+   "Progress [=====] 0 %", then 4 tiles with icons: Now, Target, Deadline, Pace. Other goals keep their head. */
+.gd-progress-label {
+  display: none;
+}
+
+.is-reading .gd-progress-label {
+  display: block;
+  order: 0;
+  color: var(--lifeos-text-muted);
+  font-weight: 600;
+}
+
+.is-reading .gd-progress .progress {
+  order: 1;
+}
+
+.is-reading .gd-progress .details-percent {
+  order: 2;
+  min-width: 3rem;
+  text-align: right;
+}
+
+.is-reading .gd-stats {
+  gap: var(--space-3);
+}
+
+.is-reading .gd-stats > div,
+.is-reading .gd-stats > div:nth-child(odd),
+.is-reading .gd-stats > div:nth-child(even),
+.is-reading .gd-stats > div:nth-child(odd):not(:first-child) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  column-gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--lifeos-border);
+  border-radius: var(--radius);
+  background-color: color-mix(in srgb, var(--lifeos-bg) 55%, var(--lifeos-surface));
+}
+
+/* The icons come from the icon font (a <dl> may hold only dt / dd) */
+.is-reading .gd-stats > div::before {
+  grid-row: 1 / span 3;
+  font-family: "bootstrap-icons";
+  font-size: 1.75rem;
+  line-height: 1.2;
+  color: var(--lifeos-primary-text);
+}
+
+.is-reading .gd-stats > div:nth-child(1)::before { content: "\f194"; } /* bi-book */
+.is-reading .gd-stats > div:nth-child(2)::before { content: "\f1de"; } /* bi-bullseye */
+.is-reading .gd-stats > div:nth-child(3)::before { content: "\f1f6"; } /* bi-calendar */
+.is-reading .gd-stats > div:nth-child(4)::before { content: "\f580"; } /* bi-speedometer2 */
+
+.is-reading .gd-stats dt,
+.is-reading .gd-stats dd {
+  grid-column: 2;
+}
+
+.is-reading .gd-stats dd {
+  font-size: 1.35rem;
+  overflow-wrap: break-word; /* "31.03.2027" stays whole */
+}
+
+.is-reading .gd-stats dd.gd-stat-note {
+  font-size: var(--fs-small);
+  font-weight: 400;
+}
+
+/* Phone: the tiles 2 × 2, "Edit" and "Mark as completed" under the title, half and half */
+@media (max-width: 575.98px) {
+  .is-reading .gd-stats > div,
+  .is-reading .gd-stats > div:nth-child(odd),
+  .is-reading .gd-stats > div:nth-child(even) {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-3);
+  }
+
+  .is-reading .gd-stats > div::before {
+    grid-row: auto;
+    font-size: 1.4rem;
+  }
+
+  .is-reading .gd-stats dt,
+  .is-reading .gd-stats dd {
+    grid-column: 1;
+  }
+
+  .is-reading .gd-stats dd {
+    font-size: 1rem;
+  }
+
+  .is-reading .gd-stats dd.gd-stat-note {
+    font-size: var(--fs-small);
+  }
+
+  .is-reading .gd-actions {
+    display: grid;
+    flex-basis: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-left: 0;
+  }
+
+  .is-reading .gd-actions .btn {
+    justify-content: center;
+    min-width: 0;
+    padding-inline: var(--space-2);
+  }
+}
+
+/* ---------- "New book" / "Edit the book" (docs/design/book-modal.png) ---------- */
+.book-modal .modal-header {
+  gap: var(--space-3);
+}
+
+.book-modal-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+  font-size: 1.4rem;
+}
+
+.book-modal .modal-title {
+  font-size: var(--fs-section) !important;
+  font-weight: 800;
+}
+
+.book-fields {
+  display: grid;
+  align-content: start; /* a full-screen dialog on a phone: the fields stay together at the top */
+  gap: var(--space-3);
+}
+
+/* One frame [grey icon | divider | field (+ "pages")]: the whole frame gets the focus ring in the accent
+   colour chosen in Settings (the field itself has no border, no ring, no shadow). An error: the frame is red. */
+.book-field {
+  display: flex;
+  align-items: stretch;
+  min-height: 3.25rem;
+  overflow: hidden;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.book-field:focus-within {
+  border-color: var(--lifeos-primary);
+  box-shadow: 0 0 0 1px var(--lifeos-primary); /* together: a 2px ring of the whole frame */
+}
+
+.book-field:has(.is-invalid) {
+  border-color: var(--bs-form-invalid-border-color);
+}
+
+.book-field:has(.is-invalid):focus-within {
+  box-shadow: 0 0 0 1px var(--bs-form-invalid-border-color);
+}
+
+.book-field-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  margin: var(--space-2) 0;
+  border-right: 1px solid var(--lifeos-border); /* the thin divider */
+  color: var(--lifeos-text-muted);
+  font-size: 1.15rem;
+}
+
+.book-field .book-field-input,
+.book-field .book-field-input:focus {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--lifeos-text);
+}
+
+.book-field .book-field-input::placeholder {
+  color: var(--lifeos-text-muted);
+  opacity: 1;
+}
+
+.book-field select.book-field-input {
+  background-position: right var(--space-3) center;
+}
+
+/* "pages" on the right, on a grey background, no frame of its own */
+.book-field-unit {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 0 var(--space-3);
+  background-color: color-mix(in srgb, var(--lifeos-bg) 70%, var(--lifeos-surface));
+  color: var(--lifeos-text-muted);
+}
+
+.book-fields .field-error {
+  margin-top: var(--space-1);
+}
+
+/* ⋯ on a touch screen: a small window in the middle (js/books.js, openSheet) — the book title (2 lines),
+   ✕, big rows, "Cancel" as a clear outline button of the accent colour */
+.book-sheet-dialog {
+  max-width: calc(320px + 2 * var(--space-3)); /* the window itself is 320px wide */
+  margin-inline: auto;
+  padding-inline: var(--space-3);
+}
+
+.book-sheet .modal-header {
+  align-items: flex-start;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  border-bottom: 0;
+}
+
+.book-sheet .modal-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--fs-card);
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.book-sheet-body {
+  display: grid;
+  gap: var(--space-1);
+  padding: 0 var(--space-3) var(--space-4);
+}
+
+.book-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 3rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--lifeos-text);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: left;
+}
+
+.book-sheet-item .bi {
+  font-size: 1.2rem;
+}
+
+.book-sheet-item:hover,
+.book-sheet-item:focus-visible {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.book-sheet-item.is-danger {
+  color: var(--tone-danger-fg);
+}
+
+.book-sheet-cancel {
+  min-height: 48px;
+  margin-top: var(--space-2);
+  /* 1.5px of the accent: Chrome draws a border only in whole pixels, so 1px border + 0.5px inside */
+  box-shadow: inset 0 0 0 0.5px var(--lifeos-primary);
+}
+
+/* "Cancel" and "✓ Save" in one row (also on a phone, half and half) */
+.book-modal-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--space-3);
+}
+
+.book-modal-foot > .btn {
+  margin: 0;
+  min-height: 3rem;
+}
+
+@media (max-width: 575.98px) {
+  .book-modal-foot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Rows of cards */
 .gd-row {
   display: grid;
@@ -7450,6 +7747,29 @@ small,
     opacity: 1;
   }
 
+  /* A touch screen: a finger swipes the strip, the fade at the edge says there is more: no arrows */
+  @media (hover: none), (pointer: coarse) {
+    .scroll-arrow {
+      display: none;
+    }
+  }
+
+  /* A mouse: the strip moves aside, the arrows lie next to it (never over a tab) and can be clicked */
+  @media (hover: hover) and (pointer: fine) {
+    .scroll-hint.has-more-left {
+      padding-left: 2rem;
+    }
+
+    .scroll-hint.has-more-right {
+      padding-right: 2rem;
+    }
+
+    .scroll-arrow {
+      cursor: pointer;
+      pointer-events: auto;
+    }
+  }
+
   /* 5. Goal details, history: the date on its own line; text and value below; the bin on the right */
   .gd-history li {
     grid-template-areas: "date date bin" "note change bin";
@@ -8191,7 +8511,7 @@ small,
     0 3px 0 -1px var(--lifeos-surface), 0 3px 0 0 var(--lifeos-border),
     0 6px 0 -2px var(--lifeos-surface), 0 6px 0 -1px var(--lifeos-border),
     0 8px 16px -8px rgb(0 0 0 / 0.18);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, outline-color 0.3s ease;
+  transition: border-color 0.15s ease, outline-color 0.3s ease;
 }
 
 .book-card::before {
@@ -8214,8 +8534,16 @@ small,
   --book-bar: var(--tone-success-fg);
 }
 
-.book-card:hover {
-  transform: translateY(-2px);
+/* With a mouse: the frame of the cover shows it can be pressed (no movement: the ⋯ menu stays with its button) */
+@media (hover: hover) and (pointer: fine) {
+  .book-card:hover {
+    border-color: var(--lifeos-border-strong);
+  }
+}
+
+/* The cover with an open ⋯ menu lies over its neighbours, so the menu is never under the next cover */
+.book-card:has(.dropdown-menu.show) {
+  z-index: 5;
 }
 
 /* The whole cover is a button: title (4 lines max), author, then at the bottom the status and the pages */
@@ -8406,11 +8734,6 @@ small,
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .book-card:hover {
-    transform: none;
-  }
-}
 
 /* Dashboard goal card: "Reading now: «…» — 120/320" */
 .dash-goal-reading {

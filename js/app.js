@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.8';
+const APP_VERSION = '1.5.9';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -898,13 +898,19 @@ const ScrollHints = {
     ['left', 'right'].forEach((side) => {
       const arrow = createEl('span', { class: `scroll-arrow is-${side}`, 'aria-hidden': 'true' });
       arrow.append(createEl('i', { class: `bi bi-chevron-${side}` }));
+      // A mouse has no swipe: the arrow (outside the strip, style.css) moves it by most of its width.
+      // On a touch screen the arrows are hidden: a finger swipes, the fade shows there is more.
+      arrow.addEventListener('click', () => {
+        strip.scrollBy({ left: (side === 'left' ? -1 : 1) * strip.clientWidth * 0.7, behavior: 'smooth' });
+      });
       wrapper.append(arrow);
     });
     strip.addEventListener('scroll', () => this.update(strip), { passive: true });
   },
 
-  // The active tab / period is shown in the middle of the strip (only the strip moves, not the page).
-  // Returns true when an active item was found (the strip is placed once, later the user scrolls).
+  // The active tab / period is shown in the middle of the strip (only the strip moves, not the page),
+  // so it is never under the fade at an edge. Returns true when an active item was found (the strip is
+  // placed once when it appears; a page may call it again after the user chose another tab).
   scrollToActive(strip) {
     const active = strip.querySelector('.active, [aria-pressed="true"], [aria-current="page"]');
     if (!active) return false;

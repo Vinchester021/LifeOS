@@ -51,48 +51,78 @@ function bookStatusChoices(book, hasFinishEntry) {
 
 /* ---------- Markup ---------- */
 
+// A field of the book dialog (docs/design/book-modal.png): one frame [grey icon | divider | field (+ "pages")].
+// The hint is the grey text of the empty field; the label is for screen readers (and aria-label on the field).
+function bookFieldHtml({ id, icon, labelKey, control, unit = '' }) {
+  return `
+            <label class="visually-hidden" for="${id}" data-i18n="${labelKey}"></label>
+            <div class="book-field">
+              <span class="book-field-icon" aria-hidden="true"><i class="bi ${icon}"></i></span>
+              ${control}
+              ${unit}
+            </div>`;
+}
+
+// The input of a field: the hint inside and the same text as its aria-label.
+function bookInputHtml(id, labelKey, extra) {
+  return `<input class="form-control book-field-input" type="text" id="${id}" autocomplete="off" ${extra}
+                       data-i18n-placeholder="${labelKey}" data-i18n-aria-label="${labelKey}">`;
+}
+
 const BOOK_DIALOG_HTML = `
   <div class="modal fade" id="book-modal" tabindex="-1" aria-labelledby="book-modal-title">
-    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
+    <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down book-modal">
       <form class="modal-content" id="book-form" novalidate>
         <div class="modal-header">
+          <span class="book-modal-icon" aria-hidden="true"><i class="bi bi-book"></i></span>
           <h2 class="modal-title fs-5" id="book-modal-title"></h2>
           <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close"></button>
         </div>
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label" for="book-title" data-i18n="books.dialog.title"></label>
-              <input class="form-control" type="text" id="book-title" maxlength="${BOOK_TEXT_MAX}" autocomplete="off" list="book-title-options">
-              <datalist id="book-title-options"></datalist>
-              <p class="field-error" id="book-title-error"></p>
-            </div>
-            <div class="col-12">
-              <label class="form-label" for="book-author" data-i18n="books.dialog.author"></label>
-              <input class="form-control" type="text" id="book-author" maxlength="${BOOK_TEXT_MAX}" autocomplete="off" list="book-author-options">
-              <datalist id="book-author-options"></datalist>
-            </div>
-            <div class="col-sm-6">
-              <label class="form-label" for="book-pages" data-i18n="books.dialog.pages"></label>
-              <div class="input-group">
-                <input class="form-control" type="text" id="book-pages" inputmode="numeric" autocomplete="off" data-number="integer">
-                <span class="input-group-text" data-i18n="details.entry.pagesUnit"></span>
-              </div>
-              <div class="form-text" id="book-pages-hint" data-i18n="books.dialog.pagesHint"></div>
-              <p class="field-error" id="book-pages-error"></p>
-            </div>
-            <div class="col-sm-6">
-              <label class="form-label" for="book-status" data-i18n="books.dialog.status"></label>
-              <select class="form-select" id="book-status"></select>
-              <div class="form-text" id="book-status-hint" hidden></div>
-            </div>
+        <div class="modal-body book-fields">
+          <div>
+            ${bookFieldHtml({ id: 'book-title', icon: 'bi-book', labelKey: 'books.dialog.title',
+              control: bookInputHtml('book-title', 'books.dialog.title', `maxlength="${BOOK_TEXT_MAX}" list="book-title-options"`) })}
+            <datalist id="book-title-options"></datalist>
+            <p class="field-error" id="book-title-error"></p>
+          </div>
+          <div>
+            ${bookFieldHtml({ id: 'book-author', icon: 'bi-pencil', labelKey: 'books.dialog.author',
+              control: bookInputHtml('book-author', 'books.dialog.author', `maxlength="${BOOK_TEXT_MAX}" list="book-author-options"`) })}
+            <datalist id="book-author-options"></datalist>
+          </div>
+          <div>
+            ${bookFieldHtml({ id: 'book-pages', icon: 'bi-files', labelKey: 'books.dialog.pages',
+              control: bookInputHtml('book-pages', 'books.dialog.pages', 'inputmode="numeric" data-number="integer"'),
+              unit: '<span class="book-field-unit" data-i18n="details.entry.pagesUnit"></span>' })}
+            <p class="field-error" id="book-pages-error"></p>
+          </div>
+          <div>
+            ${bookFieldHtml({ id: 'book-status', icon: 'bi-circle', labelKey: 'books.dialog.status',
+              control: '<select class="form-select book-field-input" id="book-status" data-i18n-aria-label="books.dialog.status"></select>' })}
+            <div class="form-text" id="book-status-hint" hidden></div>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer book-modal-foot">
           <button type="button" class="btn btn-tool" data-bs-dismiss="modal" data-i18n="delete.cancel"></button>
           <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-2" aria-hidden="true"></i><span data-i18n="books.dialog.save"></span></button>
         </div>
       </form>
+    </div>
+  </div>
+  <div class="modal fade book-sheet" tabindex="-1" id="book-sheet" aria-labelledby="book-sheet-title">
+    <div class="modal-dialog modal-dialog-centered book-sheet-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="book-sheet-title"></h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close"></button>
+        </div>
+        <div class="modal-body book-sheet-body">
+          <button type="button" class="book-sheet-item" data-sheet-action="edit"><i class="bi bi-pencil" aria-hidden="true"></i><span data-i18n="books.card.edit"></span></button>
+          <button type="button" class="book-sheet-item" data-sheet-action="finish"><i class="bi bi-check2-circle" aria-hidden="true"></i><span data-i18n="books.card.finish"></span></button>
+          <button type="button" class="book-sheet-item is-danger" data-sheet-action="delete"><i class="bi bi-trash" aria-hidden="true"></i><span data-i18n="books.card.delete"></span></button>
+          <button type="button" class="btn btn-outline-primary book-sheet-cancel" data-bs-dismiss="modal"><span data-i18n="delete.cancel"></span></button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="modal fade" id="book-delete-modal" tabindex="-1" aria-labelledby="book-delete-title" aria-describedby="book-delete-text">
@@ -151,7 +181,7 @@ function bookMenuHtml(book) {
     </button></li>`;
   return `
     <div class="dropdown book-card-menu">
-      <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false"
+      <button type="button" class="btn btn-icon" data-bs-toggle="dropdown" data-book-menu="${escapeHtml(book.id)}" aria-expanded="false"
               aria-label="${escapeHtml(t('books.card.menu', { title }))}" title="${escapeHtml(t('books.card.menu', { title }))}">
         <i class="bi bi-three-dots" aria-hidden="true"></i>
       </button>
@@ -212,6 +242,11 @@ const BookShelf = {
 
   // Called by renderDetailsPage (goal-details.js) on every change of the goal.
   render(goal) {
+    if (this.menuOpen()) {
+      this.pendingRender = true; // drawn again when the menu closes (bind: hidden.bs.dropdown / hidden.bs.modal)
+      return;
+    }
+    this.pendingRender = false;
     const panel = byId('books-panel');
     panel.hidden = !hasBookList(goal);
     if (panel.hidden) return;
@@ -287,6 +322,62 @@ const BookShelf = {
     byId('books-title').focus({ preventScroll: true });
   },
 
+  menuOpen() {
+    return Boolean(byId('books-list')?.querySelector('.dropdown-menu.show')) || Boolean(byId('book-sheet')?.classList.contains('show'));
+  },
+
+  renderIfPending() {
+    if (this.pendingRender && !this.menuOpen()) this.render(this.goal());
+  },
+
+  /* ----- ⋯: Bootstrap's dropdown with a mouse, a bottom sheet on a touch screen ----- */
+
+  // Only one ⋯ menu at a time: opening one closes the others (Esc and a click outside close it: Bootstrap).
+  closeOtherMenus(toggle) {
+    byId('books-list').querySelectorAll('[data-book-menu].show').forEach((other) => {
+      if (other !== toggle) bootstrap.Dropdown.getInstance(other)?.hide();
+    });
+  },
+
+  // A touch screen: the click is caught before Bootstrap (window, capture phase), so no dropdown opens;
+  // a small window in the middle of the screen opens instead (openSheet).
+  catchTouchMenu(event) {
+    const toggle = event.target.closest?.('#books-list [data-book-menu]');
+    if (!toggle || !window.matchMedia('(pointer: coarse)').matches) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.openSheet(toggle.dataset.bookMenu, toggle);
+  },
+
+  // The small window: the book title (2 lines max) and ✕, big rows "Edit", "Mark as read", "Delete" (red),
+  // "Cancel". Esc, ✕, "Cancel" and a tap on the dark background close it; the focus goes back to ⋯.
+  openSheet(bookId, opener) {
+    const book = goalBooks(this.goal()).find((item) => item.id === bookId);
+    if (!book || !window.bootstrap) return;
+    this.ensureDialogs();
+    this.sheetBookId = bookId;
+    this.sheetAction = null;
+    this.opener = opener;
+    byId('book-sheet-title').textContent = bookTitle(book);
+    byId('book-sheet').querySelector('[data-sheet-action="finish"]').hidden = book.status === 'done';
+    bootstrap.Modal.getOrCreateInstance(byId('book-sheet')).show();
+  },
+
+  // A row of the window: it closes first, then the action (a dialog never opens over it).
+  onSheetHidden() {
+    const action = this.sheetAction;
+    this.sheetAction = null;
+    if (action) this.runAction(action, this.sheetBookId, this.opener);
+    else this.opener?.focus();
+    this.renderIfPending();
+  },
+
+  runAction(action, bookId, opener) {
+    if (action === 'edit') this.openDialog(bookId, opener);
+    if (action === 'finish') this.markRead(bookId);
+    if (action === 'delete') this.askDelete(bookId, opener);
+  },
+
   /* ----- "Add / Edit a book" ----- */
 
   ensureDialogs() {
@@ -298,6 +389,15 @@ const BookShelf = {
     byId('book-delete-confirm').addEventListener('click', () => this.confirmDelete());
     byId('book-modal').addEventListener('shown.bs.modal', () => byId('book-title').focus());
     byId('book-delete-modal').addEventListener('shown.bs.modal', () => byId('book-delete-cancel').focus());
+    byId('book-sheet').addEventListener('shown.bs.modal', () => byId('book-sheet').querySelector('.book-sheet-item:not([hidden])')?.focus());
+    byId('book-sheet').addEventListener('hidden.bs.modal', () => this.onSheetHidden());
+    byId('book-sheet').addEventListener('click', (event) => {
+      const row = event.target.closest('[data-sheet-action]');
+      if (!row) return;
+      this.sheetAction = row.dataset.sheetAction;
+      bootstrap.Modal.getInstance(byId('book-sheet')).hide();
+    });
+    I18n.apply(byId('book-sheet'));
     ['book-modal', 'book-delete-modal'].forEach((id) => byId(id).addEventListener('hidden.bs.modal', () => this.restoreFocus()));
   },
 
@@ -427,7 +527,8 @@ const BookShelf = {
       if (!button) return;
       this.filter = button.dataset.bookFilter;
       this.render(this.goal());
-      byId('books-filter').querySelector(`[data-book-filter="${this.filter}"]`)?.focus();
+      byId('books-filter').querySelector(`[data-book-filter="${this.filter}"]`)?.focus({ preventScroll: true });
+      ScrollHints.scrollToActive(byId('books-filter')); // app.js
     });
     byId('books-more').addEventListener('click', () => {
       this.expanded = !this.expanded;
@@ -439,6 +540,21 @@ const BookShelf = {
       resizeFrame = requestAnimationFrame(() => { if (!byId('books-panel').hidden) this.applyLimit(); });
     });
     byId('books-list').addEventListener('click', (event) => {
+      // ⋯ (Bootstrap has already opened its menu): the click goes no further — the book is not chosen
+      const menuToggle = event.target.closest('[data-book-menu]');
+      if (menuToggle) {
+        event.stopPropagation();
+        this.closeOtherMenus(menuToggle);
+        return;
+      }
+      const item = event.target.closest('[data-book-action]');
+      if (item) {
+        event.stopPropagation();
+        const menuToggle = item.closest('.book-card')?.querySelector('[data-book-menu]');
+        bootstrap.Dropdown.getInstance(menuToggle)?.hide();
+        this.runAction(item.dataset.bookAction, item.dataset.bookId, menuToggle);
+        return;
+      }
       if (event.target.closest('[data-book-add-first]')) {
         this.openDialog(null, event.target.closest('button'));
         return;
@@ -448,14 +564,10 @@ const BookShelf = {
         this.pick(cover.dataset.bookPick);
         return;
       }
-      const button = event.target.closest('[data-book-action]');
-      if (!button) return;
-      const { bookAction, bookId } = button.dataset;
-      const opener = button.closest('.book-card')?.querySelector('[data-bs-toggle="dropdown"]');
-      if (bookAction === 'edit') this.openDialog(bookId, opener);
-      if (bookAction === 'finish') this.markRead(bookId);
-      if (bookAction === 'delete') this.askDelete(bookId, opener);
     });
+    window.addEventListener('click', (event) => this.catchTouchMenu(event), true);
+    // A redraw that waited for the menu (render) happens when it closes
+    byId('books-list').addEventListener('hidden.bs.dropdown', () => this.renderIfPending());
     // "No book to read yet — add a book" in the entry form: opens the dialog right here.
     document.addEventListener('click', (event) => {
       if (event.target.closest('#entry-book-empty-link')) {
