@@ -172,15 +172,19 @@ function paceShort(goal, percent) {
   return { value: t('details.pace.day', { value: paceValue(goal, perDay) }), note: '' };
 }
 
-// The 4th tile of a money goal (app.js: moneyPerMonth): "Needed a month ≈ 2 108 000 ₸",
-// "The deadline has passed", "The target is reached"; no deadline — "Average a month" of the last 3 months.
+// The title of the tile by the horizon (app.js: paceUnit): "Needed a day / a week / a month"
+const NEED_TITLES = { day: 'details.money.needDay', week: 'details.money.needWeek', month: 'details.money.perMonth' };
+
+// The 4th tile of a money goal (app.js: moneyNeedPace — the same as "To make it" in the forecast):
+// "Needed a week ≈ 105 000 ₸", "The deadline has passed", "The target is reached";
+// no deadline — "Average a month" of the last 3 months.
 function moneyPace(goal) {
-  const { kind, amount } = moneyPerMonth(goal, Dates.today(), getGoalEntries(goal.id));
+  const { kind, unit, amount } = moneyNeedPace(goal, Dates.today(), getGoalEntries(goal.id));
   const money = amount === null ? '—' : t('details.money.approx', { value: Format.money(amount, goal.unit || DEFAULT_CURRENCY) });
   if (kind === 'reached') return { titleKey: 'details.money.perMonth', value: t('details.money.reached'), note: '' };
   if (kind === 'overdue') return { titleKey: 'details.money.perMonth', value: t('details.money.overdue'), note: '' };
   if (kind === 'average') return { titleKey: 'details.money.average', value: money, note: t('details.money.averageNote') };
-  return { titleKey: 'details.money.perMonth', value: money, note: '' };
+  return { titleKey: NEED_TITLES[unit], value: money, note: '' };
 }
 
 function renderPace(goal, percent) {
@@ -219,6 +223,7 @@ function submitEntry(event) {
   event.preventDefault();
   const goal = loadGoal();
   const editedId = entryForm.editedId();
+  const idsBefore = new Set(goal ? getGoalEntries(goal.id).map((entry) => entry.id) : []);
   if (!goal || !entryForm.save(goal)) return; // errors are shown next to the fields
   if (editedId) {
     showToast('toast.entryUpdated', 'success');
@@ -231,7 +236,10 @@ function submitEntry(event) {
   entryForm.toastAfterSave('toast.entryAdded'); // or "Book finished: «…»"
   entryForm.reset();
   renderDetailsPage();
-  scrollHistoryToTop();
+  // The new entry is seen: a money goal shows its month (and the row), other histories go back to the top
+  const added = getGoalEntries(goal.id).find((entry) => !idsBefore.has(entry.id));
+  if (goal.progressType === 'money' && added) MoneyHistory.show(added.id);
+  else scrollHistoryToTop();
   offerFinish(goal);
 }
 
@@ -264,34 +272,54 @@ function cancelEdit() {
 // Back to the row's ✎ after saving or cancelling (or to the title if the row is gone).
 function focusHistoryEntry(entryId) {
   revealHistoryRow(entryId);
-  const button = byId('history-list').querySelector(`[data-edit-entry="${CSS.escape(entryId ?? '')}"]`);
+  const button = byId('history-panel').querySelector(`[data-edit-entry="${CSS.escape(entryId ?? '')}"]`);
   (button ?? byId('history-title')).focus();
 }
 
 /* ---------- History ---------- */
 
-// "Deposit: bonus" / "Withdrawal" for money, otherwise just the note.
+// "Deposit: Salary" / "Withdrawal" for money (the source, 1.6.1), otherwise just the note.
 function entryLabel(goal, entry) {
   if (goal.progressType !== 'money') return entry.note ?? '';
   const kind = t((Number(entry.value) || 0) < 0 ? 'details.history.out' : 'details.history.in');
-  return entry.note ? `${kind}: ${entry.note}` : kind;
+  return entry.source ? `${kind}: ${entry.source}` : kind;
+}
+
+// A money entry made before 1.6.1 may have a note: it is shown under the label, small and grey.
+function oldMoneyNoteHtml(goal, entry) {
+  if (goal.progressType !== 'money' || !entry.note) return '';
+  return `<span class="gd-history-note gd-history-oldnote">${escapeHtml(entry.note)}</span>`;
 }
 
 // + green, − red (the sign is written, the color only helps); absolute values stay neutral.
 function entryTone(goal, entry) {
   if (!DELTA_TYPES.includes(goal.progressType)) return '';
-  return (Number(entry.value) || 0) < 0 ? 'is-minus' : 'is-plus';
+  const money = goal.progressType === 'money' ? 'is-money ' : ''; // the fixed operation colors (style.css)
+  return money + ((Number(entry.value) || 0) < 0 ? 'is-minus' : 'is-plus');
 }
 
 // Notes and values are escaped before going into the HTML string.
 function renderHistory(goal) {
   const entries = getGoalEntries(goal.id);
   const isReading = hasBookList(goal);
+  const isMoney = goal.progressType === 'money';
   byId('history-panel').hidden = !usesEntries(goal) && entries.length === 0;
+  byId('history-panel').classList.toggle('is-money', isMoney);
   byId('history-empty').hidden = entries.length > 0;
-  const title = byId('history-title');
+  const title = byId('history-title-text');
   title.dataset.i18n = isReading ? 'books.history.title' : 'details.history.titleLong'; // "Reading history"
+  if (isMoney) title.dataset.i18n = 'money.history.title'; // "Operations history"
   title.textContent = t(title.dataset.i18n);
+  byId('history-title-icon').hidden = !isMoney;
+  // A money goal has its own history: the month, the filters, the table (js/money-history.js)
+  byId('money-history').hidden = !isMoney;
+  byId('history-box').hidden = isMoney;
+  if (isMoney) {
+    byId('history-list').replaceChildren();
+    byId('history-more').hidden = true;
+    MoneyHistory.render(goal);
+    return;
+  }
   const editedId = entryForm.editedId();
   byId('history-list').classList.toggle('is-reading', isReading);
   byId('history-list').innerHTML = entries
@@ -340,6 +368,10 @@ function scrollHistoryToTop() {
 // The row being edited (or just saved) is shown: a hidden row opens the full list (phone),
 // a row outside the scrolling block brings the block to it (computer). The page itself does not jump.
 function revealHistoryRow(entryId) {
+  if (byId('history-panel').classList.contains('is-money')) {
+    MoneyHistory.show(entryId); // its month, no hiding filter (js/money-history.js)
+    return;
+  }
   const row = byId('history-list').querySelector(`[data-entry-row="${CSS.escape(entryId ?? '')}"]`);
   if (!row) return;
   if (row.hidden) {
@@ -362,6 +394,7 @@ function historyItemHtml(goal, entry, editedId) {
         <div class="gd-history-main">
           <span class="gd-history-date">${escapeHtml(date)}</span>
           ${label ? `<span class="gd-history-note">${escapeHtml(label)}</span>` : ''}
+          ${oldMoneyNoteHtml(goal, entry)}
         </div>
         <strong class="gd-history-change ${entryTone(goal, entry)} ${entry.bookId ? 'is-book' : ''}">${escapeHtml(entryChangeText(goal, entry))}</strong>
         ${historyActionsHtml(goal, entry, date)}
@@ -434,6 +467,80 @@ function deleteEntry(entryId) {
   renderDetailsPage();
   byId('history-title').focus(); // the deleted button is gone; keep focus in the same area
 }
+
+/* ----- "Delete the entry?" — the same window as "Delete the book?" (js/books.js): the same markup and classes,
+   "Cancel" has the focus, the red "Delete". It says what is deleted: "Deposit +78 000 ₸ of 17.11.2026 · Salary". ----- */
+const ENTRY_DELETE_HTML = `
+  <div class="modal fade" id="entry-delete-modal" tabindex="-1" aria-labelledby="entry-delete-title" aria-describedby="entry-delete-text">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="entry-delete-title" data-i18n="details.delete.entryTitle"></h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="delete-goal-name" id="entry-delete-name"></p>
+          <p class="mb-0" id="entry-delete-text" data-i18n="details.delete.entryText"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-tool" id="entry-delete-cancel" data-bs-dismiss="modal" data-i18n="delete.cancel"></button>
+          <button type="button" class="btn btn-danger" id="entry-delete-confirm">
+            <i class="bi bi-trash me-1" aria-hidden="true"></i><span data-i18n="delete.confirm"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+// "Deposit +78 000 ₸ of 17.11.2026 · Salary" (money), "+20 pages · «Title» of 17.11.2026" (books), "→ 86.5 kg of …"
+function entryDeleteName(goal, entry) {
+  const date = Format.shortDate(entry.date);
+  if (goal.progressType !== 'money') return t('details.delete.entryOf', { what: entryChangeText(goal, entry), date });
+  const kind = t((Number(entry.value) || 0) < 0 ? 'details.history.out' : 'details.history.in');
+  const name = t('details.delete.entryOf', { what: `${kind} ${entryChangeText(goal, entry)}`, date });
+  const source = tidyMoneySource(entry.source);
+  return source ? `${name} · ${source}` : name;
+}
+
+const EntryDelete = {
+  entryId: null,
+  opener: null, // the 🗑 that asked: the focus goes back to it when the window is closed without deleting
+
+  ensure() {
+    if (byId('entry-delete-modal')) return;
+    document.body.insertAdjacentHTML('beforeend', ENTRY_DELETE_HTML);
+    const modal = byId('entry-delete-modal');
+    I18n.apply(modal);
+    byId('entry-delete-confirm').addEventListener('click', () => this.confirm());
+    modal.addEventListener('shown.bs.modal', () => byId('entry-delete-cancel').focus());
+    modal.addEventListener('hidden.bs.modal', () => {
+      if (this.entryId && this.opener?.isConnected) this.opener.focus(); // cancelled: back to the 🗑
+      this.entryId = null;
+    });
+  },
+
+  ask(entryId, opener) {
+    const goal = loadGoal();
+    const entry = goal ? getGoalEntries(goal.id).find((item) => item.id === entryId) : null;
+    if (!entry) return;
+    if (!window.bootstrap) {
+      deleteEntry(entryId); // no Bootstrap: delete at once (the toast still offers "Undo")
+      return;
+    }
+    this.ensure();
+    this.entryId = entryId;
+    this.opener = opener;
+    byId('entry-delete-name').textContent = entryDeleteName(goal, entry);
+    bootstrap.Modal.getOrCreateInstance(byId('entry-delete-modal')).show();
+  },
+
+  confirm() {
+    const entryId = this.entryId;
+    this.entryId = null; // deleted: the focus goes to the history title (deleteEntry)
+    bootstrap.Modal.getInstance(byId('entry-delete-modal')).hide();
+    if (entryId) deleteEntry(entryId);
+  }
+};
 
 // The entry goes back to its place, the goal (and the book) are counted again.
 function undoDelete(goalId, removed) {
@@ -642,11 +749,12 @@ function toggleChecklistItem(index, done) {
 
 /* ---------- Related tasks (TaskList and TaskForm come from tasks.js) ---------- */
 
+// A book list goal and a money goal: a compact block on the whole width — "Add task" in the head, ⋯ on a task.
 function renderGoalTasks(goal) {
-  const isReading = hasBookList(goal);
-  TaskList.render(byId('goal-tasks'), getTasksForGoal(goal.id), { showDate: true, emptyKey: 'details.tasks.empty', menu: isReading });
-  byId('goal-task-add-head').hidden = !isReading;
-  byId('goal-task-add').hidden = isReading;
+  const compact = hasBookList(goal) || goal.progressType === 'money';
+  TaskList.render(byId('goal-tasks'), getTasksForGoal(goal.id), { showDate: true, emptyKey: 'details.tasks.empty', menu: compact });
+  byId('goal-task-add-head').hidden = !compact;
+  byId('goal-task-add').hidden = compact;
 }
 
 // After ticking a task the list is redrawn; focus goes back to the same checkbox.
@@ -737,20 +845,126 @@ function pickBookForReading(bookId) {
   byId('entry-bookpages').focus({ preventScroll: true });
 }
 
-// A goal with a book list is a reading diary (docs/design/reading-diary.png): no milestones and no notes
-// on the page (they stay in the data), the related tasks take the whole row.
+// A goal with a book list is a reading diary (docs/design/reading-diary.png); a money goal has the forecast
+// next to the form and the operations history under them (1.6.3). Both: no milestones and no notes on the page
+// (they stay in the data), the related tasks take the whole row.
 function renderReadingLayout(goal) {
   const isReading = hasBookList(goal);
+  const isMoney = goal.progressType === 'money';
   byId('details-content').classList.toggle('is-reading', isReading);
-  byId('milestones-panel').hidden = isReading;
-  byId('notes-panel').hidden = isReading;
+  byId('details-content').classList.toggle('is-money-goal', isMoney);
+  byId('milestones-panel').hidden = isReading || isMoney;
+  byId('notes-panel').hidden = isReading || isMoney;
+  byId('forecast-panel').hidden = !isMoney;
+  if (isMoney) renderForecast(goal);
+}
+
+/* ---------- Forecast of a money goal (docs/design/money-forecast-v2.png; the numbers: app.js moneyForecast) ---------- */
+
+// The badge of a status: its tone (the fixed .badge-status tones, not the accent), its icon and its text.
+const FORECAST_BADGES = {
+  late: ['is-warning', 'bi-exclamation-triangle', 'money.forecast.badge.late'],
+  onTime: ['is-success', 'bi-check-circle', 'money.forecast.badge.onTime'],
+  never: ['is-danger', 'bi-x-circle', 'money.forecast.badge.never'],
+  few: ['', 'bi-hourglass-split', 'money.forecast.badge.few'],
+  reached: ['is-success', 'bi-check-circle-fill', 'money.forecast.badge.reached'],
+  noDeadline: ['', 'bi-infinity', 'money.forecast.badge.noDeadline']
+};
+
+// "June 2027"; in Russian after "Около" the month is in the genitive: "июня 2027" (Intl writes it so next to a day)
+function forecastMonthText(date) {
+  const year = date.getFullYear();
+  if (I18n.lang === 'ru') return `${Format.date(date, { day: 'numeric', month: 'long' }).replace(/^\d+\s*/, '')} ${year}`;
+  return `${Format.date(date, { month: 'long' })} ${year}`;
+}
+
+function forecastMoney(goal, amount) {
+  return formatGoalValue(goal, Math.round(amount));
+}
+
+// "45 000 ₸/мес", "15 000 ₸/нед.", "2 000 ₸/день" — the unit of the horizon (app.js paceUnit)
+function forecastPaceText(goal, amount, unit) {
+  return t(`money.unit.${unit}`, { value: forecastMoney(goal, amount) });
+}
+
+// "1 year 9 months after the deadline" / "2 months before the deadline" / "Right at the deadline"
+function forecastGapLine(forecast) {
+  if (forecast.status === 'late') return t('money.forecast.lateBy', { gap: forecastGapText(forecast.gap) });
+  if (forecast.status !== 'onTime') return '';
+  return forecast.gap > 0 ? t('money.forecast.early', { gap: forecastGapText(forecast.gap) }) : t('money.forecast.exact');
+}
+
+function forecastTileHtml(title, value, extraClass = '') {
+  return `<div class="forecast-tile ${extraClass}"><span class="forecast-tile-title">${escapeHtml(title)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+// "Now on average" and "To make it" (only with a deadline)
+function forecastTilesHtml(goal, forecast) {
+  const tiles = [forecastTileHtml(t('money.forecast.avgTitle'), forecastPaceText(goal, forecast.average, forecast.unit))];
+  const { need } = forecast;
+  if (need.kind === 'need') {
+    tiles.push(forecastTileHtml(t('money.forecast.needTitle'), t('details.money.approx', { value: forecastPaceText(goal, need.amount, need.unit) })));
+  } else if (need.kind === 'overdue') {
+    tiles.push(forecastTileHtml(t('money.forecast.needTitle'), t('details.money.overdue'), 'is-text'));
+  }
+  return `<div class="forecast-tiles">${tiles.join('')}</div>`;
+}
+
+// "Counted by 1 full month" / "Counted by 12 days since the first deposit"
+function forecastBasisHtml(forecast) {
+  if (!forecast.basis) return '';
+  const key = forecast.basis.type === 'months' ? 'money.forecast.basisMonths' : 'money.forecast.basisDays';
+  return `<p class="forecast-basis"><i class="bi bi-database" aria-hidden="true"></i>${escapeHtml(tPlural(key, forecast.basis.count))}</p>`;
+}
+
+// "Plan for today": Plan | Saved, then "Behind the plan: 8 929 ₸" (orange) / "Ahead …" (green) / "Right on the plan"
+function forecastPlanHtml(goal, forecast) {
+  const { plan } = forecast;
+  if (!plan) return '';
+  let note = ['', 'bi-check2-circle', t('money.forecast.onPlan')];
+  if (plan.delta < 0) note = ['is-warning', 'bi-exclamation-triangle', t('money.forecast.behind', { value: forecastMoney(goal, -plan.delta) })];
+  if (plan.delta > 0) note = ['is-success', 'bi-arrow-up-circle', t('money.forecast.ahead', { value: forecastMoney(goal, plan.delta) })];
+  return `
+    <div class="forecast-plan">
+      <h3 class="forecast-plan-title">${escapeHtml(t('money.forecast.planTitle'))}</h3>
+      <dl class="forecast-plan-numbers">
+        <div><dt>${escapeHtml(t('money.forecast.planLabel'))}</dt><dd>${escapeHtml(forecastMoney(goal, plan.value))}</dd></div>
+        <div><dt>${escapeHtml(t('money.forecast.savedLabel'))}</dt><dd>${escapeHtml(forecastMoney(goal, goal.currentValue))}</dd></div>
+      </dl>
+      <p class="forecast-plan-note ${note[0]}"><i class="bi ${note[1]}" aria-hidden="true"></i>${escapeHtml(note[2])}</p>
+    </div>`;
+}
+
+// Too little data / the target reached: a short text instead of the numbers
+function forecastBodyHtml(goal, forecast) {
+  if (forecast.status === 'reached') return `<p class="forecast-short">${escapeHtml(t('money.forecast.reachedText'))}</p>`;
+  if (forecast.status === 'few') return `<p class="forecast-short">${escapeHtml(t('money.forecast.fewText'))}</p>`;
+  const big = forecast.date ? t('money.forecast.dateAbout', { date: forecastMonthText(forecast.date) }) : t('money.forecast.neverBig');
+  const gapLine = forecastGapLine(forecast);
+  return `
+    <p class="forecast-lead">${escapeHtml(t('money.forecast.lead'))}</p>
+    <p class="forecast-date">${escapeHtml(big)}</p>
+    ${gapLine ? `<p class="forecast-gap">${escapeHtml(gapLine)}</p>` : ''}
+    ${forecastTilesHtml(goal, forecast)}
+    ${forecastBasisHtml(forecast)}
+    ${forecastPlanHtml(goal, forecast)}`;
+}
+
+function renderForecast(goal) {
+  const forecast = moneyForecast(goal, getGoalEntries(goal.id));
+  const [tone, icon, key] = FORECAST_BADGES[forecast.status];
+  const badge = byId('forecast-badge');
+  badge.className = `badge-status forecast-badge ${tone}`;
+  badge.dataset.status = forecast.status; // for the tests and the styles
+  badge.innerHTML = `<i class="bi ${icon}" aria-hidden="true"></i><span>${escapeHtml(t(key))}</span>`;
+  byId('forecast-body').innerHTML = forecastBodyHtml(goal, forecast);
 }
 
 // 🗑 deletes, ✎ edits; a click anywhere else on the row edits too (the ✎ is the keyboard way).
 function onHistoryClick(event) {
   const remove = event.target.closest('[data-delete-entry]');
   if (remove) {
-    deleteEntry(remove.dataset.deleteEntry);
+    EntryDelete.ask(remove.dataset.deleteEntry, remove); // first the question, as for a book
     return;
   }
   const row = event.target.closest('[data-entry-row]');
@@ -760,6 +974,8 @@ function onHistoryClick(event) {
 function bindDetailsEvents() {
   byId('entry-form').addEventListener('submit', submitOnce(submitEntry));
   byId('history-list').addEventListener('click', onHistoryClick);
+  byId('money-history').addEventListener('click', onHistoryClick); // ✎ 🗑 and a click on a row
+  MoneyHistory.bind();
   byId('history-more').addEventListener('click', toggleHistoryLimit);
   byId('history-scroll').addEventListener('scroll', updateHistoryFade, { passive: true });
   // The block follows the height of "Log reading" (an error or the edit note changes it)

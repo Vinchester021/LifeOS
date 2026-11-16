@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.0">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.0">
-  <link rel="stylesheet" href="./css/style.css?v=1.6.0">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.3">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.3">
+  <link rel="stylesheet" href="./css/style.css?v=1.6.3">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.6.0">
+  <link rel="manifest" href="./manifest.json?v=1.6.3">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,21 +19,21 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.0" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.0" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.3" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.3" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.6.0"></script>
-  <script src="./data/quotes-fallback.js?v=1.6.0"></script>
-  <script src="./data/changelog-fallback.js?v=1.6.0"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.6.0"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.6.0" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.6.0" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.6.0" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.6.0" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
-  <script src="./js/tasks.js?v=1.6.0" defer></script>
-  <script src="./js/goal-wizard.js?v=1.6.0" defer></script> <!-- the goal wizard for First steps → step 1 -->
-  <script src="./js/entry-form.js?v=1.6.0" defer></script> <!-- the "Quick result" dialog -->
-  <script src="./js/dashboard.js?v=1.6.0" defer></script>
+  <script src="./data/translations-fallback.js?v=1.6.3"></script>
+  <script src="./data/quotes-fallback.js?v=1.6.3"></script>
+  <script src="./data/changelog-fallback.js?v=1.6.3"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.6.3"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.6.3" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.6.3" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.6.3" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.6.3" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./js/tasks.js?v=1.6.3" defer></script>
+  <script src="./js/goal-wizard.js?v=1.6.3" defer></script> <!-- the goal wizard for First steps → step 1 -->
+  <script src="./js/entry-form.js?v=1.6.3" defer></script> <!-- the "Quick result" dialog -->
+  <script src="./js/dashboard.js?v=1.6.3" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -182,7 +182,9 @@
           <div id="dash-year"></div>
         </section>
 
-        <section class="panel" aria-labelledby="today-card-title">
+        <!-- A computer: as tall as the other two cards, the tasks scroll inside (the title and the quick field stay);
+             a phone and a tablet: the first 5 open tasks and "Show all (N)" (js/dashboard.js) -->
+        <section class="panel dash-today-panel" aria-labelledby="today-card-title">
           <div class="panel-head">
             <h2 class="panel-title" id="today-card-title" data-i18n="planner.level.today">Today</h2>
             <a href="planner.html?level=today"><span data-i18n="dashboard.today.openShort">Open the day</span><i class="bi bi-arrow-right" aria-hidden="true"></i></a>
@@ -199,7 +201,14 @@
           </form>
           <!-- Today's workout from the Sport plan (one line, js/app.js sportDayLineHtml) -->
           <div id="dash-sport-line"></div>
-          <div id="dash-today-tasks"></div>
+          <div class="dash-today-box" id="dash-today-box">
+            <div class="dash-today-scroll" id="dash-today-scroll">
+              <div id="dash-today-tasks"></div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-tool dash-today-more" id="dash-today-more" aria-controls="dash-today-tasks" aria-expanded="false" hidden>
+            <i class="bi bi-chevron-down me-2" aria-hidden="true"></i><span></span>
+          </button>
         </section>
 
         <section class="panel" aria-labelledby="focus-card-title">

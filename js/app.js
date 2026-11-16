@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.3';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -1827,6 +1827,7 @@ function recordProgress(goalId, fields) {
   const entries = getProgressEntries();
   const entry = { id: createId('entry'), date: fields.date, goalId, value: fields.value, note: fields.note ?? '' };
   if (fields.pages) entry.pages = fields.pages;
+  if ('source' in fields) entry.source = fields.source; // a money entry: "Salary" or '' (see moneySourceList)
   entries.push(entry);
   const change = DELTA_TYPES.includes(goal.progressType) ? Number(entry.value) || 0 : 0;
   goal.currentValue = recalculateCurrentValue(goal, getGoalEntries(goalId, entries), change);
@@ -1867,10 +1868,11 @@ function hasBookList(goal) {
   return isBookGoal(goal) && goal.bookList === true;
 }
 
-// Milestones that the pages show and count. A goal with a book list has none: its progress is the books
-// (the data stays in storage, the export and the import; only the pages ignore it).
+// Milestones that the pages show and count. A goal with a book list has none (its progress is the books),
+// a money goal neither (its progress is the operations, 1.6.3). The data stays in storage, the export and
+// the import; only the pages ignore it.
 function goalMilestones(goal) {
-  return hasBookList(goal) ? [] : asArray(goal?.milestones);
+  return hasBookList(goal) || goal?.progressType === 'money' ? [] : asArray(goal?.milestones);
 }
 
 function goalBooks(goal) {
@@ -2013,25 +2015,251 @@ function bookShelfStats(goal, today = Dates.today(), looseEntries = []) {
   return { done, target, pages, perDay };
 }
 
-/* ----- The money goal head (docs/design/money-goal-hero.png): "Needed a month" ----- */
+/* ----- A money entry (docs/design/money-entry.png): the source of a deposit or the reason of a withdrawal.
+   entry.source is a string ('' = none). Hints come from the sources this goal already has — deposits and
+   withdrawals apart; the same text in another case (or with ё / е) is saved in the spelling already used. ----- */
+
+const MONEY_SOURCE_MAX = 40;
+const MONEY_HINTS_MAX = 6;
+
+// "  Зарплата   за  май " -> "Зарплата за май"
+function tidyMoneySource(text) {
+  return String(text ?? '').trim().replace(/\s+/g, ' ');
+}
+
+// One key for "Ёлка", "ёлка" and "елка": no case, ё = е.
+function moneySourceKey(text) {
+  return tidyMoneySource(text).toLowerCase().replace(/ё/g, 'е');
+}
+
+// 'in' — a deposit (+), 'out' — a withdrawal (−)
+function moneyEntryKind(entry) {
+  return (Number(entry.value) || 0) < 0 ? 'out' : 'in';
+}
+
+// Pure: the sources of one kind, each once, in the order of the entries (newest first = the spelling used last).
+function moneySourceList(entries, kind) {
+  const found = new Map();
+  entries.filter((entry) => moneyEntryKind(entry) === kind).forEach((entry) => {
+    const text = tidyMoneySource(entry.source);
+    if (text && !found.has(moneySourceKey(text))) found.set(moneySourceKey(text), text);
+  });
+  return [...found.values()];
+}
+
+// Pure: the hints for what is typed: the sources that start with it first, then those that contain it.
+// A text typed exactly as it is saved needs no hint.
+function moneySourceHints(list, query) {
+  const key = moneySourceKey(query);
+  if (list.some((text) => moneySourceKey(text) === key) && key) return [];
+  const starts = list.filter((text) => moneySourceKey(text).startsWith(key));
+  const contains = list.filter((text) => !moneySourceKey(text).startsWith(key) && moneySourceKey(text).includes(key));
+  return [...starts, ...contains].slice(0, MONEY_HINTS_MAX);
+}
+
+// Pure: the text to save. A known source (any case, ё / е) keeps its spelling ("зарплата" -> "Зарплата");
+// a new one is saved as typed, with a capital first letter. Empty -> ''.
+function normalizeMoneySource(text, known) {
+  const tidy = tidyMoneySource(text).slice(0, MONEY_SOURCE_MAX);
+  if (!tidy) return '';
+  const same = known.find((item) => moneySourceKey(item) === moneySourceKey(tidy));
+  return same ?? tidy.charAt(0).toLocaleUpperCase() + tidy.slice(1);
+}
+
+// Pure: the line "After saving: 1 000 000 ₸ → 1 050 000 ₸". null — nothing to show yet;
+// { error } — a withdrawal bigger than the money there is.
+function moneyEntryPreview(current, amount, sign) {
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  if (sign < 0 && amount > current) return { error: 'details.error.notEnough' };
+  return { from: current, to: current + sign * amount };
+}
+
+/* ----- "Forecast" of a money goal (docs/design/money-forecast.png, js/goal-details.js: renderForecast) -----
+   "Now on average" = (deposits − withdrawals) of the last full calendar months (up to 3, from the month the goal
+   started) ÷ their number, or by the days since the first deposit; the date = today + what is left ÷ the average
+   a day; the plan of today = a straight line from the start value (creation) to the target (deadline). */
+
+const FORECAST_MONTHS = 3;
+
+// "2026-08" … the full months before the month of today (newest first), not before the start of the goal.
+function forecastFullMonths(goal, entries, today) {
+  const startMonths = entries.map(entryMonthKey).filter(Boolean);
+  const created = Dates.parse(String(goal.createdAt ?? '').slice(0, 10));
+  if (created) startMonths.push(Dates.monthKey(created));
+  const start = startMonths.length ? startMonths.reduce((min, key) => (key < min ? key : min)) : Dates.monthKey(today);
+  const months = [];
+  for (let step = 1; step <= FORECAST_MONTHS; step += 1) {
+    const month = Dates.monthKey(Dates.addMonths(Dates.parse(`${Dates.monthKey(today)}-01`), -step));
+    if (month >= start) months.push(month);
+  }
+  return months;
+}
+
+const FORECAST_MIN_DAYS = 7;
+
+// Pure: "now on average" per day. By the full months (up to 3) when one of them has a deposit; else by the days
+// since the first deposit (at least 7). basis: { type: 'months' | 'days', count }; perDay null = too little data.
+function moneyAveragePace(goal, entries, today = Dates.today()) {
+  const months = forecastFullMonths(goal, entries, today);
+  const inMonths = entries.filter((entry) => months.includes(entryMonthKey(entry)));
+  if (inMonths.some((entry) => Number(entry.value) > 0)) {
+    return { perDay: moneyEntriesSum(inMonths) / months.length / MONTH_DAYS, basis: { type: 'months', count: months.length } };
+  }
+  const past = entries.filter((entry) => Dates.parse(entry.date) && Dates.parse(entry.date) <= today);
+  const deposits = past.filter((entry) => Number(entry.value) > 0).map((entry) => Dates.parse(entry.date));
+  if (deposits.length === 0) return { perDay: null, basis: null };
+  const first = deposits.reduce((min, date) => (date < min ? date : min));
+  const days = Dates.daysBetween(first, today) + 1;
+  if (days < FORECAST_MIN_DAYS) return { perDay: null, basis: { type: 'days', count: days } };
+  const since = past.filter((entry) => Dates.parse(entry.date) >= first);
+  return { perDay: moneyEntriesSum(since) / days, basis: { type: 'days', count: days } };
+}
+
+// Pure: the plan of today — start + (target − start) × the time passed ÷ the time from the creation to the deadline.
+function moneyPlanToday(goal, today = Dates.today()) {
+  const created = Dates.parse(String(goal.createdAt ?? '').slice(0, 10));
+  const deadline = Dates.parse(goal.deadline);
+  if (!created || !deadline || deadline <= created) return null;
+  const start = Number(goal.startValue) || 0;
+  const target = Number(goal.targetValue) || 0;
+  const share = Math.min(Math.max(Dates.daysBetween(created, today) / Dates.daysBetween(created, deadline), 0), 1);
+  return Math.round(start + (target - start) * share);
+}
+
+// Whole months between two dates by the calendar: June 2027 − April 2027 = 2.
+function monthsBetween(from, to) {
+  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+}
+
+// 41 -> { years: 3, months: 5 }
+function splitMonths(total) {
+  return { years: Math.floor(total / 12), months: total % 12 };
+}
+
+// "2 мес.", "1 год", "3 года 5 мес.", "5 лет" (the forms come from the dictionary: tPlural)
+function forecastGapText(total) {
+  const { years, months } = splitMonths(total);
+  const parts = [];
+  if (years > 0) parts.push(tPlural('money.forecast.years', years));
+  if (months > 0 || years === 0) parts.push(tPlural('money.forecast.months', months));
+  return parts.join(' ');
+}
+
+// Pure: the forecast. status: reached | few | never | onTime | late | noDeadline.
+// unit — the unit of "To make it" (and of "Now on average"); average — the average in that unit; need — moneyNeedPace;
+// date — the day the target is reached at the average pace; gap — whole months before / after the deadline;
+// plan — { value, delta } (with a deadline).
+function moneyForecast(goal, entries, today = Dates.today()) {
+  const current = Number(goal.currentValue) || 0;
+  const need = moneyNeedPace(goal, today, entries);
+  const { perDay, basis } = moneyAveragePace(goal, entries, today);
+  const unit = need.kind === 'need' ? need.unit : 'month';
+  const planValue = moneyPlanToday(goal, today);
+  const plan = planValue === null ? null : { value: planValue, delta: current - planValue };
+  const average = perDay === null ? null : Math.round(perDay * PACE_UNITS[unit]);
+  const base = { perDay, basis, unit, average, need, plan, date: null, gap: 0 };
+  if (getGoalPercent(goal) >= 100) return { ...base, status: 'reached' };
+  if (perDay === null) return { ...base, status: 'few' };
+  if (perDay <= 0) return { ...base, status: 'never' };
+  const left = Math.abs((Number(goal.targetValue) || 0) - current);
+  const date = Dates.addDays(today, Math.ceil(left / perDay));
+  const deadline = Dates.parse(goal.deadline);
+  if (!deadline) return { ...base, status: 'noDeadline', date };
+  const onTime = date <= deadline;
+  const gap = onTime ? monthsBetween(date, deadline) : Math.max(monthsBetween(deadline, date), 1);
+  return { ...base, date, status: onTime ? 'onTime' : 'late', gap };
+}
+
+/* ----- "Operations history" of a money goal (docs/design/money-history.png, js/money-history.js) -----
+   A month is "YYYY-MM"; MONEY_ALL_TIME instead of a month means every operation. */
+
+const MONEY_ALL_TIME = 'all';
+
+function entryMonthKey(entry) {
+  return String(entry.date ?? '').slice(0, 7);
+}
+
+// Pure: the operations of one month (or of all time), in the order given (newest first).
+function moneyPeriodEntries(entries, month) {
+  return month === MONEY_ALL_TIME ? [...entries] : entries.filter((entry) => entryMonthKey(entry) === month);
+}
+
+// Pure: deposits minus withdrawals.
+function moneyEntriesSum(entries) {
+  return entries.reduce((sum, entry) => sum + (Number(entry.value) || 0), 0);
+}
+
+// Pure: the months of the list, newest first: from the first operation (or the creation of the goal,
+// whichever is earlier) to the month of today.
+function moneyHistoryMonths(goal, entries, today = Dates.today()) {
+  const created = Dates.parse(String(goal.createdAt ?? '').slice(0, 10));
+  const starts = entries.map(entryMonthKey).filter(Boolean);
+  if (created) starts.push(Dates.monthKey(created));
+  const current = Dates.monthKey(today);
+  let month = starts.length ? starts.reduce((min, key) => (key < min ? key : min)) : current;
+  if (month > current) month = current;
+  const months = [];
+  while (month <= current) {
+    months.unshift(month);
+    month = Dates.monthKey(Dates.addMonths(Dates.parse(`${month}-01`), 1));
+  }
+  return months;
+}
+
+// Pure: the month shown first: this month if it has operations, else the last month with operations.
+function defaultMoneyMonth(entries, today = Dates.today()) {
+  const current = Dates.monthKey(today);
+  const months = entries.map(entryMonthKey).filter((key) => key && key <= current).sort();
+  if (months.length === 0 || months.includes(current)) return current;
+  return months[months.length - 1];
+}
+
+// Pure: the sources and reasons of a period, each once, by the alphabet (for the "Source" filter).
+function moneySourceOptions(entries, locale = I18n.locale()) {
+  const found = new Map();
+  entries.forEach((entry) => {
+    const text = tidyMoneySource(entry.source);
+    if (text && !found.has(moneySourceKey(text))) found.set(moneySourceKey(text), text);
+  });
+  return [...found.values()].sort((a, b) => a.localeCompare(b, locale));
+}
+
+// Pure: the filters of the table. kind: 'all' | 'in' | 'out'; source: '' = any (compared without case, ё = е).
+function filterMoneyEntries(entries, { kind = 'all', source = '' } = {}) {
+  const sourceKey = moneySourceKey(source);
+  return entries.filter((entry) => (kind === 'all' || moneyEntryKind(entry) === kind)
+    && (!sourceKey || moneySourceKey(entry.source) === sourceKey));
+}
+
+/* ----- The pace of a money goal: the head "Needed a day / a week / a month" and the forecast use the same
+   functions. Everything is counted by days — what is left ÷ the days left (the deadline day counts) — and shown
+   in the unit of the horizon: up to 14 days a day, 15–60 days a week (×7), more a month (×30.44). ----- */
 
 const MONTH_DAYS = 30.44; // an average month
+const PACE_UNITS = { day: 1, week: 7, month: MONTH_DAYS };
 
 // Rounded UP: to thousands from 10 000 ("≈ 2 108 000 ₸"), small sums ($ 250) to whole units.
 function roundUpMoney(amount) {
   return amount >= 10000 ? Math.ceil(amount / 1000) * 1000 : Math.ceil(amount);
 }
 
-// Pure: the 4th tile of a money goal. kind = reached | overdue | perMonth | average; amount may be null.
-// perMonth = what is left ÷ the months left (less than a month left = all of it this month).
-function moneyPerMonth(goal, today = Dates.today(), entries = []) {
-  if (getGoalPercent(goal) >= 100) return { kind: 'reached', amount: null };
+// 'day' | 'week' | 'month' for the days left
+function paceUnit(daysLeft) {
+  if (daysLeft <= 14) return 'day';
+  return daysLeft <= 60 ? 'week' : 'month';
+}
+
+// Pure: what has to be put aside. kind = reached | overdue | need | average; need: { perDay, unit, amount }
+// (15 000 a day with 30 days left -> 'week', ≈ 105 000). No deadline: the average month of the last 3 months.
+function moneyNeedPace(goal, today = Dates.today(), entries = []) {
+  if (getGoalPercent(goal) >= 100) return { kind: 'reached', unit: null, amount: null };
   const days = Dates.daysUntil(goal.deadline, today);
-  if (days === null) return { kind: 'average', amount: moneyAverage(entries, today) };
-  if (days < 0) return { kind: 'overdue', amount: null };
-  const left = Math.abs((Number(goal.targetValue) || 0) - (Number(goal.currentValue) || 0));
-  const monthsLeft = Math.max((days + 1) / MONTH_DAYS, 1); // today counts too
-  return { kind: 'perMonth', amount: roundUpMoney(left / monthsLeft) };
+  if (days === null) return { kind: 'average', unit: 'month', amount: moneyAverage(entries, today) };
+  if (days < 0) return { kind: 'overdue', unit: null, amount: null };
+  const daysLeft = days + 1; // today counts too
+  const perDay = Math.abs((Number(goal.targetValue) || 0) - (Number(goal.currentValue) || 0)) / daysLeft;
+  const unit = paceUnit(daysLeft);
+  return { kind: 'need', perDay, unit, amount: roundUpMoney(perDay * PACE_UNITS[unit]) };
 }
 
 // No deadline: the average month of the last 3 months (deposits minus withdrawals), counted from
@@ -2476,6 +2704,7 @@ function withEntryChanged(goal, entries, entryId, fields) {
   if (!without) return null;
   const { entry: old, index } = without.removed;
   let changed = { ...old, date: fields.date, note: fields.note ?? '' };
+  if ('source' in fields) changed.source = fields.source;
   let updated;
   if (entryChangesBook(goal, old)) {
     const book = goalBooks(goal).find((item) => item.id === old.bookId);
@@ -2707,6 +2936,15 @@ function compareTaskOccurrences(a, b) {
   const priority = TASK_PRIORITIES.indexOf(b.task.priority) - TASK_PRIORITIES.indexOf(a.task.priority);
   if (priority !== 0) return priority;
   return a.date.localeCompare(b.date) || String(a.task.title).localeCompare(String(b.task.title));
+}
+
+// Pure: the tasks of "Today" on the Dashboard: open ones first, done ones at the end (compareTaskOccurrences);
+// a task just added from the quick field (firstId) is the very first one, so it is seen at once.
+function orderTodayTasks(occurrences, firstId = null) {
+  const sorted = [...occurrences].sort(compareTaskOccurrences);
+  const index = sorted.findIndex((occurrence) => occurrence.task.id === firstId && !occurrence.done);
+  if (index > 0) sorted.unshift(...sorted.splice(index, 1));
+  return sorted;
 }
 
 // All tasks of one day as "occurrences": [{ task, date, done }].
@@ -3270,7 +3508,8 @@ function runDateSelfTest() {
   check('preview: an empty field shows nothing', line(bookReadingPreview(reading40, { pages: NaN })), 'none');
   const oldMilestones = [{ id: 'm', title: 'Half', dueDate: '2026-12-01', done: false }];
   check('book list goal: old milestones are not shown', goalMilestones({ category: 'books', progressType: 'number', bookList: true, milestones: oldMilestones }).length, 0);
-  check('other goals keep their milestones', goalMilestones({ category: 'finance', progressType: 'money', milestones: oldMilestones }).length, 1);
+  check('money goal (1.6.3): old milestones are not shown either', goalMilestones({ category: 'finance', progressType: 'money', milestones: oldMilestones }).length, 0);
+  check('other goals keep their milestones', goalMilestones({ category: 'health', progressType: 'measurements', milestones: oldMilestones }).length, 1);
   runHistorySelfTest(check, book);
   const old = migrateBookGoal(goal({ category: 'books', progressType: 'number', currentValue: 3, targetValue: 13 }));
   check('books: an old goal of 3 books -> 3 finished untitled books', `${old.bookList} ${old.books.length} ${countDoneBooks(old.books)} ${old.currentValue} "${old.books[0].title}"`, 'true 3 3 3 ""');
@@ -3280,15 +3519,100 @@ function runDateSelfTest() {
   const stats = bookShelfStats(shelf, new Date(2026, 10, 21));
   check('books: shelf 2 of 13, 920 pages, 11 × 400 pages / 10 days', `${stats.done}/${stats.target} ${stats.pages} ${stats.perDay}`, '2/13 920 440');
   check('books: no deadline -> no pace', bookShelfStats({ ...shelf, deadline: null }).perDay, null);
+  // Money entry (1.6.1): the source, its hints and the line "after saving"
+  const moneyEntries = [
+    { value: 50000, source: 'Зарплата' }, { value: -20000, source: 'Ремонт' }, { value: 10000, source: 'зарплата' },
+    { value: 5000, source: ' Подработка  вечером ' }, { value: -3000, source: 'Ёлка' }, { value: 7000, source: '' }, { value: 1000 }
+  ];
+  const moneyIn = moneySourceList(moneyEntries, 'in');
+  check('source: moneyIn only, each once, the newest spelling, spaces tidied', moneyIn.join('|'), 'Зарплата|Подработка вечером');
+  check('source: withdrawals apart from moneyIn', moneySourceList(moneyEntries, 'out').join('|'), 'Ремонт|Ёлка');
+  check('source: "  зарплата " -> the saved spelling "Зарплата"', normalizeMoneySource('  зарплата ', moneyIn), 'Зарплата');
+  check('source: ё = е ("елка" -> "Ёлка")', normalizeMoneySource('елка', moneySourceList(moneyEntries, 'out')), 'Ёлка');
+  check('source: a new one keeps its text, a capital first letter, single spaces', normalizeMoneySource('  кэшбэк   по  карте', moneyIn), 'Кэшбэк по карте');
+  check('source: empty -> ""; longer than 40 -> cut', `${normalizeMoneySource('   ', moneyIn)}|${normalizeMoneySource('я'.repeat(50), []).length}`, '|40');
+  check('hints: by the start, then inside the text', moneySourceHints(['Подработка вечером', 'Зарплата', 'Премия к зарплате'], 'зар').join('|'), 'Зарплата|Премия к зарплате');
+  check('hints: empty field -> all of this kind; a deposit source is not a withdrawal hint', `${moneySourceHints(moneyIn, '').length} ${moneySourceHints(moneySourceList(moneyEntries, 'out'), 'зар').length}`, '2 0');
+  check('hints: the text typed exactly as saved -> no hint', moneySourceHints(moneyIn, 'ЗАРПЛАТА').length, 0);
+  const after = (current, amount, sign) => JSON.stringify(moneyEntryPreview(current, amount, sign));
+  check('after saving: 1 000 000 + 50 000 -> 1 050 000', after(1000000, 50000, 1), '{"from":1000000,"to":1050000}');
+  check('after saving: a withdrawal of everything -> 0', after(1000000, 1000000, -1), '{"from":1000000,"to":0}');
+  check('after saving: a withdrawal bigger than the balance -> the error', after(1000000, 1000001, -1), '{"error":"details.error.notEnough"}');
+  check('after saving: nothing typed -> no line', `${after(1000000, NaN, 1)} ${after(1000000, 0, 1)}`, 'null null');
+  // Dashboard "Today" (1.6.3): open tasks first, done ones last, a task just added on the very top
+  const occ = (id, done, priority = 'medium') => ({ task: { id, title: id, priority }, date: '2026-11-16', done });
+  const todayList = [occ('d1', true, 'high'), occ('a', false, 'low'), occ('b', false, 'high'), occ('d2', true), occ('new', false, 'low')];
+  check('today: open first (high priority first), done at the end', orderTodayTasks(todayList).map((o) => o.task.id).join(), 'b,a,new,d1,d2');
+  check('today: a task just added is the first one', orderTodayTasks(todayList, 'new').map((o) => o.task.id).join(), 'new,b,a,d1,d2');
+  check('today: a done task is not moved up', orderTodayTasks(todayList, 'd2').map((o) => o.task.id).join(), 'b,a,new,d1,d2');
+  // Forecast (1.6.3): every status, the gap with the forms of years / months, the plan of today
+  const fGoal = (fields) => goal({ category: 'finance', progressType: 'money', unit: 'KZT', createdAt: '2026-06-01T10:00:00Z',
+    startValue: 0, currentValue: 1000000, targetValue: 10000000, deadline: '2027-03-25', ...fields });
+  const fToday = new Date(2026, 10, 16);
+  const monthly = (amount) => [{ date: '2026-08-10', value: amount }, { date: '2026-09-10', value: amount }, { date: '2026-10-10', value: amount }];
+  const forecast = (fields, entries) => moneyForecast(fGoal(fields), entries, fToday);
+  const fLate = forecast({}, monthly(200000));
+  check('forecast: 200 000 a month -> late, ≈ August 2030, 41 months after the deadline',
+    `${fLate.status} ${Dates.monthKey(fLate.date)} ${fLate.gap} ${fLate.average} ${fLate.unit} ${fLate.basis.type} ${fLate.basis.count}`, 'late 2030-08 41 200000 month months 3');
+  const fOn = forecast({ deadline: '2027-04-30' }, monthly(3000000));
+  check('forecast: 3 000 000 a month -> on time, ≈ February 2027, 2 months before the deadline', `${fOn.status} ${Dates.monthKey(fOn.date)} ${fOn.gap}`, 'onTime 2027-02 2');
+  check('forecast: no deadline -> the month only', `${forecast({ deadline: null }, monthly(3000000)).status} ${forecast({ deadline: null }, monthly(3000000)).plan}`, 'noDeadline null');
+  check('forecast: the target is reached', forecast({ currentValue: 10000000 }, monthly(200000)).status, 'reached');
+  check('forecast: no full month yet -> too little data', forecast({ createdAt: '2026-11-02T10:00:00Z' }, []).status, 'few');
+  check('forecast: full months without deposits, the first deposit 5 days ago -> too little data', forecast({}, [{ date: '2026-11-12', value: 500000 }]).status, 'few');
+  const young = fGoal({ createdAt: '2026-11-01T10:00:00Z', currentValue: 60000 });
+  const byDays = moneyAveragePace(young, [{ date: '2026-11-04', value: 50000 }, { date: '2026-11-10', value: 10000 }], fToday);
+  check('average of a goal younger than a month: by the 13 days since the first deposit', `${byDays.basis.type} ${byDays.basis.count} ${Math.round(byDays.perDay)}`, 'days 13 4615');
+  check('forecast: the average ≤ 0 -> never', forecast({}, [{ date: '2026-09-10', value: 100000 }, { date: '2026-10-10', value: -100000 }]).status, 'never');
+  const twoMonths = moneyAveragePace(fGoal({ createdAt: '2026-09-20T10:00:00Z' }), [{ date: '2026-10-01', value: 400000 }], fToday);
+  check('average: less than 3 full months -> as many as there are', `${twoMonths.basis.type} ${twoMonths.basis.count} ${Math.round(twoMonths.perDay * MONTH_DAYS)}`, 'months 2 200000');
+  check('plan of today: 0 → 10 000 000 from 01.06.2026 to 01.06.2027, 168 of 365 days', moneyPlanToday(fGoal({ deadline: '2027-06-01' }), fToday), 4602740);
+  check('plan: ahead of the plan -> + delta', forecast({ currentValue: 5000000, deadline: '2027-06-01' }, monthly(100000)).plan.delta, 397260);
+  check('forecast: the unit of a short horizon (20 days -> a week)', forecast({ deadline: '2026-12-05' }, monthly(3000000)).unit, 'week');
+  check('gap: 41 months = 3 years 5 months; 12 = 1 year 0', `${JSON.stringify(splitMonths(41))} ${JSON.stringify(splitMonths(12))}`, '{"years":3,"months":5} {"years":1,"months":0}');
+  check('gap text', [41, 2, 12, 60, 0].map(forecastGapText).join(' | '),
+    [41, 2, 12, 60, 0].map((n) => [n >= 12 ? tPlural('money.forecast.years', Math.floor(n / 12)) : '', n % 12 || n < 12 ? tPlural('money.forecast.months', n % 12) : ''].filter(Boolean).join(' ')).join(' | '));
+  if (I18n.lang === 'ru') check('gap text (ru): года / лет / год', [41, 2, 12, 60, 252].map(forecastGapText).join(' | '), '3 года 5 мес. | 2 мес. | 1 год | 5 лет | 21 год');
+  // Operations history (1.6.2): the month total, the default month, the filters, all time
+  const ops = [
+    { date: '2026-11-16', value: 200000, source: 'Зарплата' }, { date: '2026-11-08', value: 150000, source: 'Подработка' },
+    { date: '2026-11-05', value: -50000, source: 'Ремонт' }, { date: '2026-10-20', value: 100000, source: 'зарплата' },
+    { date: '2026-08-02', value: 30000, source: '' }
+  ];
+  const nov16 = new Date(2026, 10, 16);
+  check('history: the month total = deposits − withdrawals', moneyEntriesSum(moneyPeriodEntries(ops, '2026-11')), 300000);
+  check('history: all time = every operation', `${moneyPeriodEntries(ops, MONEY_ALL_TIME).length} ${moneyEntriesSum(moneyPeriodEntries(ops, MONEY_ALL_TIME))}`, '5 430000');
+  check('history: a month without operations -> 0', moneyEntriesSum(moneyPeriodEntries(ops, '2026-09')), 0);
+  check('history: default = this month when it has operations', defaultMoneyMonth(ops, nov16), '2026-11');
+  check('history: default = the last month with operations', defaultMoneyMonth(ops.slice(3), nov16), '2026-10');
+  check('history: default without operations = this month', defaultMoneyMonth([], nov16), '2026-11');
+  check('history: months from the first operation to now, newest first',
+    moneyHistoryMonths({ createdAt: '2026-09-02T10:00:00Z' }, ops, nov16).join(' '), '2026-11 2026-10 2026-09 2026-08');
+  check('history: months from the creation when it is earlier', moneyHistoryMonths({ createdAt: '2026-09-02T10:00:00Z' }, [], nov16).join(' '), '2026-11 2026-10 2026-09');
+  const nov = moneyPeriodEntries(ops, '2026-11');
+  const novIn = filterMoneyEntries(nov, { kind: 'in' });
+  check('filter: deposits 2 of 3, their sum +350 000', `${novIn.length}/${nov.length} ${moneyEntriesSum(novIn)}`, '2/3 350000');
+  check('filter: withdrawals', moneyEntriesSum(filterMoneyEntries(nov, { kind: 'out' })), -50000);
+  check('filter: a source without case (all time: "зарплата" = "Зарплата")', filterMoneyEntries(ops, { source: 'ЗАРПЛАТА' }).length, 2);
+  check('filter: kind and source together', filterMoneyEntries(ops, { kind: 'out', source: 'Зарплата' }).length, 0);
+  check('filter: the sources of a period by the alphabet, each once', moneySourceOptions(ops, 'ru').join('|'), 'Зарплата|Подработка|Ремонт');
   // Money goal head (1.6.0): "Needed a month"
   const money = (fields) => goal({ category: 'finance', progressType: 'money', unit: 'KZT', startValue: 0, currentValue: 1000000, targetValue: 10000000, deadline: '2027-03-25', ...fields });
   const perMonth = (fields, entries) => {
-    const result = moneyPerMonth(money(fields), new Date(2026, 10, 16), entries);
+    const result = moneyNeedPace(money(fields), new Date(2026, 10, 16), entries);
     return `${result.kind} ${result.amount}`;
   };
-  check('money: 9 000 000 left, 130 days -> ≈ 2 108 000 a month (up to thousands)', perMonth({}), 'perMonth 2108000');
-  check('money: small sums are rounded up to whole units ($ 3 000 in a year -> 250)', perMonth({ unit: 'USD', currentValue: 0, targetValue: 3000, deadline: '2027-11-16' }), 'perMonth 250');
-  check('money: less than a month left -> all of it this month', perMonth({ deadline: '2026-11-25' }), 'perMonth 9000000');
+  const need = (fields) => {
+    const result = moneyNeedPace(money({ currentValue: 0, targetValue: 450000, ...fields }), new Date(2026, 10, 16));
+    return `${result.unit} ${result.amount}`;
+  };
+  check('need: 450 000 in 30 days -> a week ≈ 105 000', need({ deadline: '2026-12-15' }), 'week 105000');
+  check('need: 450 000 in 10 days -> a day ≈ 45 000', need({ deadline: '2026-11-25' }), 'day 45000');
+  check('need: 450 000 in a year -> a month ≈ 38 000', need({ deadline: '2027-11-15' }), 'month 38000');
+  check('need: the horizon 14 / 15 / 60 / 61 days -> day / week / week / month', [14, 15, 60, 61].map(paceUnit).join(' '), 'day week week month');
+  check('money: 9 000 000 left, 130 days -> ≈ 2 108 000 a month (up to thousands)', perMonth({}), 'need 2108000');
+  check('money: small sums are rounded up to whole units ($ 3 000 in a year -> 250)', perMonth({ unit: 'USD', currentValue: 0, targetValue: 3000, deadline: '2027-11-16' }), 'need 250');
+  check('money: 10 days left -> a day: 9 000 000 ÷ 10', perMonth({ deadline: '2026-11-25' }), 'need 900000');
   check('money: the deadline has passed', perMonth({ deadline: '2026-11-01' }), 'overdue null');
   check('money: the target is reached', perMonth({ currentValue: 10000000 }), 'reached null');
   const deposits = [{ date: '2026-10-20', value: 300000 }, { date: '2026-11-10', value: -50000 }, { date: '2026-05-01', value: 999999 }];

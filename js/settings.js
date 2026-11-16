@@ -146,6 +146,8 @@ function cleanEntry(entry) {
   if ('goalId' in entry) clean.goalId = cleanId(entry.goalId);
   if ('bookId' in entry) clean.bookId = cleanId(entry.bookId);
   if ('note' in entry) clean.note = String(entry.note ?? '');
+  // The source of a money entry: a string of at most 40 characters (shown with textContent / escapeHtml)
+  if ('source' in entry) clean.source = tidyMoneySource(entry.source).slice(0, MONEY_SOURCE_MAX);
   return clean;
 }
 
@@ -602,6 +604,10 @@ function runSettingsSelfTest() {
   check('planner: focus days keep only dates', JSON.stringify(cleanPlanner({ '2026-W46': { focus: 'A', focusDays: ['2026-11-10', 'x', '2026-11-09', '2026-11-10', 5] } })['2026-W46'].focusDays), '["2026-11-09","2026-11-10"]');
   check('planner: a week without focus days stays as it is', JSON.stringify(cleanPlanner({ '2026-W45': { focus: 'B' } })), '{"2026-W45":{"focus":"B"}}');
   check('books: an entry keeps its book id', cleanEntry({ id: 'e', date: '2026-11-10', goalId: 'g', bookId: 'b', pages: '40' }).bookId, 'b');
+  const moneyEntry = (source) => cleanEntry({ id: 'm', date: '2026-11-10', goalId: 'g', value: 5000, source });
+  check('money: the source is kept as text (shown escaped)', moneyEntry('<b>Зарплата</b>').source, '<b>Зарплата</b>');
+  check('money: the source is a string of at most 40 characters', `${moneyEntry(123).source}|${moneyEntry('я'.repeat(60)).source.length}|${moneyEntry(null).source}`, '123|40|');
+  check('money: an old entry without a source stays without it', 'source' in cleanEntry({ id: 'o', date: '2026-11-10', goalId: 'g', value: 1, note: 'бонус' }), false);
   check('csv: separator in quotes', csvCell('a;b', ';'), '"a;b"');
   check('csv: quotes doubled', csvCell('say "hi"', ','), '"say ""hi"""');
   check('csv: formula made safe', csvCell('=SUM(A1)', ','), "'=SUM(A1)");

@@ -785,10 +785,10 @@ const GoalWizard = {
     else this.save();
   },
 
-  // A goal with a book list has no milestones (its progress is the books): step 6 is skipped both ways.
-  // Its old milestones stay in the goal (this.milestones is saved as it is).
+  // A goal with a book list (its progress is the books) and a money goal (its progress is the operations,
+  // 1.6.3) have no milestones: step 6 is skipped both ways. Old milestones stay in the goal (saved as they are).
   skipsMilestones() {
-    return this.bookListOn();
+    return this.bookListOn() || this.selected('progressType') === 'money';
   },
 
   stepAfter(step, direction) {

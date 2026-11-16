@@ -10,7 +10,7 @@ const ENTRY_NOTE_MAX_LENGTH = 200;
 // Which blocks of the form are visible (data-entry-field in the HTML).
 // A checklist on Goal Details has no form (items are ticked in the list there).
 const ENTRY_FIELDS = {
-  money: ['sign', 'amount'],
+  money: ['sign', 'amount', 'source'], // docs/design/money-entry.png: no note, no example; the line "after saving" is in "source"
   number: ['amount'],
   books: ['pages'],
   booklist: ['book', 'pagesmode', 'bookpages', 'bookpreview', 'memo'], // a goal with a book list (js/books.js)
@@ -146,6 +146,99 @@ function bookMemoHtml(prefix) {
     </div>`;
 }
 
+// A money goal (docs/design/money-entry.png), after the date: "Source (optional)" — "Reason" for a
+// withdrawal — with hints (a combobox, see bindSourceHints), and under it, in the same block,
+// "After saving: 1 000 000 ₸ → 1 050 000 ₸" (one part of the form: the gaps of the form stay even).
+function moneyFieldsHtml(prefix) {
+  return `
+    <div class="col-12" data-entry-field="source">
+      <label class="form-label" for="${prefix}-source" id="${prefix}-source-label" data-i18n="money.entry.source"></label>
+      <div class="entry-hints">
+        <input class="form-control" type="text" id="${prefix}-source" maxlength="${MONEY_SOURCE_MAX}" autocomplete="off"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${prefix}-source-list">
+        <ul class="entry-hints-list" id="${prefix}-source-list" role="listbox" aria-labelledby="${prefix}-source-label" hidden></ul>
+      </div>
+      <p class="entry-money-preview" id="${prefix}-moneypreview" aria-live="polite" hidden>
+        <i class="bi bi-database" aria-hidden="true"></i><!-- a stack of coins (bi-coin has a "$" on it) -->
+        <span class="entry-money-preview-label" data-i18n="money.entry.after"></span>
+        <strong class="entry-money-preview-value" id="${prefix}-moneypreview-value"></strong>
+      </p>
+    </div>`;
+}
+
+// The hints under a text field (an ARIA combobox): typing (or the focus) shows the matching texts,
+// ↑ ↓ go through them, Enter or a click / tap puts one into the field, Esc closes the list.
+// getHints(text) returns the texts to show. Returns { close }.
+function bindSourceHints(input, list, getHints) {
+  let active = -1;
+  const options = () => [...list.children];
+
+  function close() {
+    list.hidden = true;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+    active = -1;
+  }
+
+  function open() {
+    const hints = getHints(input.value);
+    list.replaceChildren(...hints.map((text, index) => createEl('li', { id: `${list.id}-${index}`, role: 'option', 'aria-selected': 'false' }, text)));
+    if (hints.length === 0) {
+      close();
+      return;
+    }
+    list.hidden = false;
+    input.setAttribute('aria-expanded', 'true');
+    active = -1;
+  }
+
+  function mark(index) {
+    active = index;
+    options().forEach((option, i) => {
+      option.setAttribute('aria-selected', String(i === index));
+      option.classList.toggle('is-active', i === index);
+    });
+    input.setAttribute('aria-activedescendant', options()[index].id);
+    options()[index].scrollIntoView({ block: 'nearest' });
+  }
+
+  function pick(option) {
+    input.value = option.textContent;
+    close();
+  }
+
+  function onKeydown(event) {
+    const count = options().length;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (list.hidden) open();
+      if (options().length === 0) return;
+      event.preventDefault();
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      mark((active + step + options().length) % options().length);
+    } else if (event.key === 'Enter' && !list.hidden && active >= 0 && active < count) {
+      event.preventDefault(); // takes the hint, does not send the form
+      pick(options()[active]);
+    } else if (event.key === 'Escape' && !list.hidden) {
+      event.preventDefault();
+      event.stopPropagation(); // the dialog around stays open
+      close();
+    }
+  }
+
+  input.addEventListener('input', open);
+  input.addEventListener('focus', open);
+  input.addEventListener('blur', close);
+  input.addEventListener('keydown', onKeydown);
+  // mousedown (not click): the field keeps the focus, so the list is not closed by "blur" first
+  list.addEventListener('mousedown', (event) => {
+    const option = event.target.closest('[role="option"]');
+    if (!option) return;
+    event.preventDefault();
+    pick(option);
+  });
+  return { close };
+}
+
 // "40 → 60 of 158 pages" / "158 of 158 — the book will be finished" / "40 → 60 pages" (no page count).
 function bookPreviewText({ from, to, total, finishes }) {
   const values = { from: Format.number(from), to: Format.number(to) };
@@ -208,21 +301,93 @@ function createEntryForm(prefix) {
   const amountBlock = form.querySelector('[data-entry-field="amount"]');
   amountBlock.insertAdjacentHTML('beforebegin', bookFieldsHtml(prefix));
   el('date').closest('[data-entry-common]').insertAdjacentHTML('afterend', bookAfterDateHtml(prefix));
+  el('date').closest('[data-entry-common]').insertAdjacentHTML('afterend', moneyFieldsHtml(prefix));
   el('note').closest('[data-entry-common]').insertAdjacentHTML('afterend', bookMemoHtml(prefix));
   I18n.apply(amountBlock.parentElement);
   // finishedTitle: the title of the book the last save finished (for the toast);
-  // edit: the history entry shown in the form ("Edit the entry"), null = a new entry.
+  // edit: the history entry shown in the form ("Edit the entry"), null = a new entry
+  //   (its old note is kept: a money entry has no note field any more);
   // preferBookId: a book just added on the shelf — "Add an entry" chooses it once.
   const state = { finishedTitle: null, edit: null, preferBookId: null };
+  const sourceHints = bindSourceHints(el('source'), el('source-list'), (text) => {
+    const goal = getGoalById(form.dataset.goalId);
+    return goal ? moneySourceHints(moneySourceList(getGoalEntries(goal.id), signKind()), text) : [];
+  });
   form.addEventListener('change', (event) => {
     if (event.target === el('book') || event.target.name === `${prefix}-pagesmode`) renderBookState(true);
     if (event.target === el('date') && form.classList.contains('is-reading')) renderBookPreview(true);
     if (event.target === el('sign-minus')) hideMinusNote(el('amount')); // the user did what the note asked
+    if (event.target.name === `${prefix}-sign`) renderMoneySign();
   });
-  // The live line is counted again while the pages are typed
+  // The live lines are counted again while the pages / the amount are typed
   form.addEventListener('input', (event) => {
     if (event.target === el('bookpages')) renderBookPreview(true);
+    if (event.target === el('amount') && form.classList.contains('is-money')) renderMoneyPreview(true);
   });
+
+  /* ----- A money goal: deposit / withdrawal ----- */
+
+  function signKind() {
+    return el('sign-minus').checked ? 'out' : 'in';
+  }
+
+  // The title, "Source" / "Reason" and the line follow the switch.
+  function renderMoneySign() {
+    const out = signKind() === 'out';
+    const label = el('source-label');
+    label.dataset.i18n = out ? 'money.entry.reason' : 'money.entry.source';
+    label.textContent = t(label.dataset.i18n);
+    el('source').placeholder = t(out ? 'money.entry.reasonPlaceholder' : 'money.entry.sourcePlaceholder');
+    sourceHints.close(); // the hints of the other kind
+    const goal = getGoalById(form.dataset.goalId);
+    if (goal) renderTitle(goal);
+    renderMoneyPreview(el('amount').value.trim() !== '');
+  }
+
+  // The money there is before this entry (editing: without the entry being edited — as saveEdit checks it).
+  function moneyBefore(goal) {
+    const without = isEditing() ? withoutEntry(goal, getProgressEntries(), state.edit.id) : null;
+    return Number((without?.goal ?? goal).currentValue) || 0;
+  }
+
+  // "After saving: 1 000 000 ₸ → 1 050 000 ₸"; a withdrawal bigger than the balance shows the error instead.
+  function renderMoneyPreview(live) {
+    const goal = getGoalById(form.dataset.goalId);
+    if (!goal || goal.progressType !== 'money') return;
+    const input = el('amount');
+    const amount = input.value.trim() === '' ? NaN : readNumber(input);
+    const preview = moneyEntryPreview(moneyBefore(goal), amount, signKind() === 'out' ? -1 : 1);
+    if (live) setFieldError(input, preview?.error ?? null);
+    const show = Boolean(preview) && !preview.error;
+    el('moneypreview').hidden = !show;
+    el('moneypreview-value').textContent = show
+      ? t('money.entry.afterValue', { from: formatGoalValue(goal, preview.from), to: formatGoalValue(goal, preview.to) }) : '';
+  }
+
+  // "⊕ Record a deposit" / "⊖ Record a withdrawal" (a money goal), "Edit the entry", or the usual title.
+  // The quick dialog keeps "Quick result" for other goals. Both titles: an icon and a text span.
+  function renderTitle(goal) {
+    const text = el('title-text');
+    if (!text) return;
+    let key = prefix === 'quick-entry' ? 'quickEntry.title' : 'details.entry.title';
+    if (hasBookList(goal) && prefix !== 'quick-entry') key = 'books.entry.title'; // "Log reading"
+    let icon = '';
+    if (goal.progressType === 'money') {
+      const out = signKind() === 'out';
+      key = out ? 'money.entry.titleOut' : 'money.entry.titleIn';
+      icon = out ? 'bi-dash-circle' : 'bi-plus-circle';
+    }
+    if (isEditing()) {
+      key = 'details.entry.editTitle';
+      icon = '';
+    }
+    text.dataset.i18n = key;
+    text.textContent = t(key);
+    el('title-icon').className = `bi ${icon} entry-title-icon`;
+    el('title-icon').hidden = icon === '';
+    // A withdrawal: the red of the operation on the switch and on "Save" (style.css)
+    form.classList.toggle('is-out', goal.progressType === 'money' && signKind() === 'out');
+  }
 
   // Shows the fields for this goal type. Values the user typed are not touched.
   function render(goal) {
@@ -235,9 +400,13 @@ function createEntryForm(prefix) {
     // A checklist item has no date and no note; a book list has its own memo field instead of the note
     form.querySelectorAll('[data-entry-common]').forEach((block) => { block.hidden = mode === 'checklist'; });
     const isBookList = mode === 'booklist';
-    el('note').closest('[data-entry-common]').hidden = mode === 'checklist' || isBookList;
+    const isMoney = mode === 'money';
+    // A money goal has no note (the source says it) — an old note of an edited entry stays in the data
+    el('note').closest('[data-entry-common]').hidden = mode === 'checklist' || isBookList || isMoney;
     form.classList.toggle('is-reading', isBookList); // "Log reading": no labels above the fields (style.css)
-    el('example').closest('.col-12').hidden = isBookList; // the long hint is not needed there
+    form.classList.toggle('is-money', isMoney); // a deposit / withdrawal (docs/design/money-entry.png)
+    el('example').closest('.col-12').hidden = isBookList || isMoney; // the long hint is not needed there
+    el('amount-hint').hidden = isMoney; // "After saving: …" shows what the amount does
     el('example').textContent = entryExampleText(goal);
     el('note').placeholder = noteExampleText(goal); // drawn again on a language change (render)
 
@@ -257,7 +426,10 @@ function createEntryForm(prefix) {
     let submitKey = 'details.entry.submit';
     if (mode === 'streak') submitKey = 'details.entry.markDay';
     if (isBookList) submitKey = 'books.entry.save';
+    if (isMoney) submitKey = 'money.entry.save';
     el('submit-label').textContent = t(submitKey);
+    renderTitle(goal);
+    if (isMoney) renderMoneySign();
     if (el('cancel')) renderEditState(goal); // only the Goal Details form can edit entries
   }
 
@@ -274,7 +446,7 @@ function createEntryForm(prefix) {
   // Opens an entry of the history in the form. The caller checks entryEditBlock() first.
   function startEdit(goal, entry) {
     reset();
-    state.edit = { id: entry.id, bookId: entry.bookId ?? null };
+    state.edit = { id: entry.id, bookId: entry.bookId ?? null, note: entry.note ?? '' };
     render(goal);
     fillFromEntry(goal, entry);
   }
@@ -288,12 +460,9 @@ function createEntryForm(prefix) {
   // The title, the buttons and the line "Entry of 12/11/2026: +20 000 ₸".
   function renderEditState(goal) {
     const editing = isEditing();
-    const title = el('title');
-    const addKey = hasBookList(goal) ? 'books.entry.title' : 'details.entry.title'; // "Log reading"
-    title.dataset.i18n = editing ? 'details.entry.editTitle' : addKey;
-    title.textContent = t(title.dataset.i18n);
     el('cancel').hidden = !editing;
-    form.querySelector('.gd-submit i').className = `bi ${editing ? 'bi-check-lg' : 'bi-plus-lg'} me-2`;
+    const saveIcon = editing || goal.progressType === 'money' ? 'bi-check-lg' : 'bi-plus-lg';
+    form.querySelector('.gd-submit i').className = `bi ${saveIcon} me-2`;
     if (editing) el('submit-label').textContent = t('details.entry.saveEdit');
     const entry = editing ? getGoalEntries(goal.id).find((item) => item.id === state.edit.id) : null;
     el('edit-note').hidden = !entry;
@@ -314,7 +483,11 @@ function createEntryForm(prefix) {
     const mode = entryMode(goal);
     const value = Number(entry.value) || 0;
     if (mode === 'money' || mode === 'number') setNumberValue(el('amount'), Math.abs(value));
-    if (mode === 'money') el(value < 0 ? 'sign-minus' : 'sign-plus').checked = true;
+    if (mode === 'money') {
+      el(value < 0 ? 'sign-minus' : 'sign-plus').checked = true;
+      el('source').value = entry.source ?? '';
+      renderMoneySign(); // the title, "Reason" for a withdrawal and the line
+    }
     if (mode === 'books') {
       if (entry.pages) setNumberValue(el('pages'), Number(entry.pages));
       el('finished').checked = value > 0;
@@ -469,8 +642,10 @@ function createEntryForm(prefix) {
   }
 
   function reset() {
-    ['amount', 'pages', 'value', 'note', 'bookpages', 'memo'].forEach((name) => { el(name).value = ''; });
+    ['amount', 'pages', 'value', 'note', 'bookpages', 'memo', 'source'].forEach((name) => { el(name).value = ''; });
     el('bookpreview').hidden = true;
+    el('moneypreview').hidden = true;
+    sourceHints.close();
     hideMinusNote(el('amount'));
     el('finished').checked = false;
     el('pagesmode-add').checked = true;
@@ -492,12 +667,17 @@ function createEntryForm(prefix) {
 
     const date = getDateValue(el('date'));
     const noteInput = mode === 'booklist' ? el('memo') : el('note'); // "What stayed with me" for books
-    const note = noteInput.value.trim();
+    let note = noteInput.value.trim();
     const extra = {};
     let value = 0;
     errors.set(el('date'), entryDateError(date, mode, goalEntries));
     errors.set(noteInput, note.length > ENTRY_NOTE_MAX_LENGTH ? 'details.error.noteLength' : null);
 
+    if (mode === 'money') {
+      // No note field: a new entry has none, an edited old one keeps its note as it was
+      note = state.edit?.note ?? '';
+      extra.source = normalizeMoneySource(el('source').value, moneySourceList(goalEntries, signKind()));
+    }
     if (mode === 'money' || mode === 'number') {
       const amount = readNumber(el('amount'));
       const sign = mode === 'money' && el('sign-minus').checked ? -1 : 1;
@@ -602,7 +782,7 @@ const QUICK_ENTRY_HTML = `
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
       <form class="modal-content" id="quick-entry-form" novalidate>
         <div class="modal-header">
-          <h2 class="modal-title fs-5" id="quick-entry-title" data-i18n="quickEntry.title"></h2>
+          <h2 class="modal-title entry-title" id="quick-entry-title"><i class="bi entry-title-icon" id="quick-entry-title-icon" aria-hidden="true" hidden></i><span id="quick-entry-title-text" data-i18n="quickEntry.title"></span></h2>
           <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close"></button>
         </div>
         <div class="modal-body">
@@ -619,12 +799,12 @@ const QUICK_ENTRY_HTML = `
             <div class="col-12"><p class="entry-example" id="quick-entry-example"></p></div>
 
             <fieldset class="col-12" data-entry-field="sign">
-              <legend class="form-label fs-6" data-i18n="details.entry.operation"></legend>
+              <legend class="visually-hidden" data-i18n="details.entry.operation"></legend>
               <div class="gd-switch">
                 <input class="btn-check" type="radio" name="quick-entry-sign" id="quick-entry-sign-plus" value="1" checked>
-                <label class="btn" for="quick-entry-sign-plus"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="details.entry.deposit"></span></label>
+                <label class="btn" for="quick-entry-sign-plus"><span data-i18n="money.entry.deposit"></span></label>
                 <input class="btn-check" type="radio" name="quick-entry-sign" id="quick-entry-sign-minus" value="-1">
-                <label class="btn" for="quick-entry-sign-minus"><i class="bi bi-dash-lg me-2" aria-hidden="true"></i><span data-i18n="details.entry.withdraw"></span></label>
+                <label class="btn" for="quick-entry-sign-minus"><span data-i18n="money.entry.withdraw"></span></label>
               </div>
             </fieldset>
 

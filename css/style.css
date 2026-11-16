@@ -40,6 +40,12 @@
   --tone-warning-fg: #6f4b0f;
   --tone-danger-bg: #f8e3e3;
   --tone-danger-fg: #8c2f2f;
+  /* Money operations: fixed colors, the accent of the profile does not change them.
+     White on them 5.04 / 5.01:1; as text on a card 5.04 / 5.01:1 (on the page 4.55 / 4.51:1). */
+  --color-income: #1a7f45;
+  --color-expense: #c93c3c;
+  --on-income: #ffffff;
+  --on-expense: #ffffff;
   --tone-neutral-bg: #eeebe4;
   --tone-neutral-fg: #4b5450;
 
@@ -84,6 +90,12 @@
   --tone-warning-fg: #f0c987;
   --tone-danger-bg: #3a2224;
   --tone-danger-fg: #f2a9a9;
+  /* Money operations (dark): white on them is only 2.69 / 3.01:1, so the text is dark — 6.87 / 6.14:1;
+     as text on a card 6.03 / 5.39:1 */
+  --color-income: #3bb273;
+  --color-expense: #f06a6a;
+  --on-income: #0e1513;
+  --on-expense: #0e1513;
   --tone-neutral-bg: #252e2c;
   --tone-neutral-fg: #c3cfcb;
 
@@ -1219,27 +1231,39 @@ a:hover {
   color: var(--lifeos-text-muted);
 }
 
-/* Activity: 4 weeks in columns, week labels on top, weekdays on the left, no gaps between them */
+/* Activity (1.6.3): the grid of days fills the card — 4 week columns of 1fr, cells 40px high (32px on a phone),
+   the week labels on top and the weekdays on the left (13px) right next to it; under it the summary and the
+   legend. The card is as tall as "By category" next to it (the bottom row stretches both). */
+.dash-bottom > .panel {
+  display: flex;
+  flex-direction: column;
+}
+
+#dash-activity {
+  position: relative; /* the hint of a cell is placed in it */
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
 .dash-heatmap {
   display: grid;
-  grid-template-columns: auto repeat(var(--weeks), minmax(0, 5.5rem));
-  justify-content: start; /* free space goes to the right, the day labels stay next to the cells */
-  gap: 4px;
+  grid-template-columns: auto repeat(var(--weeks), minmax(0, 1fr));
+  gap: 7px;
   align-items: center;
 }
 
 .heat-week {
-  padding-bottom: 2px;
   color: var(--lifeos-text-muted);
-  font-size: 0.75rem;
+  font-size: 13px;
   line-height: 1.2;
   text-align: center;
 }
 
 .heat-day {
-  padding-right: var(--space-2);
+  padding-right: var(--space-1);
   color: var(--lifeos-text-muted);
-  font-size: 0.75rem;
+  font-size: 13px;
 }
 
 .heat-cell {
@@ -1252,8 +1276,12 @@ a:hover {
 
 .dash-heatmap .heat-cell {
   width: 100%;
-  height: 1.5rem;
-  border-radius: 0.35rem;
+  height: 40px;
+  border-radius: var(--radius-sm);
+}
+
+.dash-heatmap .heat-cell[data-heat-tip] {
+  cursor: pointer;
 }
 
 .heat-cell.level-1 { background-color: color-mix(in srgb, var(--lifeos-primary) 25%, var(--lifeos-surface)); }
@@ -1262,8 +1290,26 @@ a:hover {
 .heat-cell.level-4 { background-color: var(--lifeos-primary); }
 
 .heat-cell.is-future {
-  border: 1px dashed var(--lifeos-border);
+  border: 1px dashed var(--lifeos-border-strong);
   background-color: transparent;
+}
+
+/* "16.11.2026: 3 actions" over a cell */
+.heat-tip {
+  position: absolute;
+  z-index: 5;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-text);
+  color: var(--lifeos-surface);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.heat-tip[hidden] {
+  display: none;
 }
 
 .dash-activity-foot {
@@ -1272,12 +1318,13 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2) var(--space-3);
-  margin-top: var(--space-3);
+  margin-top: auto; /* at the bottom of the card */
+  padding-top: var(--space-3);
 }
 
 .dash-activity-summary {
   margin: 0;
-  font-size: var(--fs-small);
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1292,12 +1339,83 @@ a:hover {
   gap: 4px;
   margin: 0;
   color: var(--lifeos-text-muted);
-  font-size: 0.75rem;
+  font-size: 13px;
 }
 
 .heat-legend .heat-cell {
   width: 0.9rem;
   height: 0.9rem;
+}
+
+@media (max-width: 767.98px) {
+  .dash-heatmap {
+    gap: 5px;
+  }
+
+  .dash-heatmap .heat-cell {
+    height: 32px;
+  }
+}
+
+/* "Today" (1.6.3): a computer — the card is as tall as the other two of the row, the tasks scroll inside it
+   (the title and the quick field stay), a thin bar and a fade at the bottom while more tasks are below.
+   Phone and tablet: no inner scroll — the first 5 open tasks and "Show all (N)" (js/dashboard.js). */
+.dash-today-more {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.dash-today-more[hidden] {
+  display: none;
+}
+
+#dash-today-tasks .task-item[hidden] {
+  display: none;
+}
+
+@media (min-width: 992px) {
+  .dash-today-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dash-today-box {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 10rem;
+  }
+
+  .dash-today-scroll {
+    position: absolute; /* the list does not stretch the row: the other cards set its height */
+    inset: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--lifeos-border-strong) transparent;
+  }
+
+  .dash-today-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .dash-today-scroll::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-pill);
+    background-color: var(--lifeos-border-strong);
+  }
+
+  .dash-today-box::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 3rem;
+    background: linear-gradient(to bottom, transparent, var(--lifeos-surface));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .dash-today-box.has-more-below::after {
+    opacity: 1;
+  }
 }
 
 /* By category: icon tile, "Name (N goals)", bar, % */
@@ -4655,7 +4773,7 @@ small,
 
 .book-field:focus-within {
   border-color: var(--lifeos-primary);
-  box-shadow: 0 0 0 1px var(--lifeos-primary); /* together: a 2px ring of the whole frame */
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary); /* together: a 2px frame inside, nothing outside */
 }
 
 .book-field:has(.is-invalid) {
@@ -4663,7 +4781,7 @@ small,
 }
 
 .book-field:has(.is-invalid):focus-within {
-  box-shadow: 0 0 0 1px var(--bs-form-invalid-border-color);
+  box-shadow: inset 0 0 0 1px var(--bs-form-invalid-border-color);
 }
 
 .book-field-icon {
@@ -5010,6 +5128,858 @@ small,
   color: var(--tone-success-fg);
 }
 
+/* ---------- A money entry (docs/design/money-entry.png, js/entry-form.js) ----------
+   "⊕ Record a deposit" / "⊖ Record a withdrawal", the switch on the whole width, Amount | Date,
+   "Source" with hints, "After saving: 1 000 000 ₸ → 1 050 000 ₸", "Save". */
+.entry-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.entry-title-icon {
+  color: var(--lifeos-primary-text);
+  font-size: 1.35em;
+  line-height: 1;
+}
+
+/* The colors of the operation (--color-income / --color-expense): the title icon, the chosen half
+   of the switch and "Save" — the same in the history (.gd-history-change.is-money) */
+.entry-title-icon.bi-plus-circle {
+  color: var(--color-income);
+}
+
+.entry-title-icon.bi-dash-circle {
+  color: var(--color-expense);
+}
+
+/* The sizes of this form are the same as of every entry form: "The size of the entry forms" below */
+.is-money .gd-switch .btn {
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text-muted);
+}
+
+.is-money .gd-switch .btn:hover {
+  background-color: var(--tone-neutral-bg);
+}
+
+.is-money .gd-switch .btn-check[value="1"]:checked + .btn {
+  background-color: var(--color-income);
+  color: var(--on-income);
+}
+
+.is-money .gd-switch .btn-check[value="-1"]:checked + .btn {
+  background-color: var(--color-expense);
+  color: var(--on-expense);
+}
+
+/* "Save" (Goal Details and the quick dialog): the color of the operation */
+.is-money .gd-submit,
+.is-money #quick-entry-submit {
+  --op-color: var(--color-income);
+  --op-text: var(--on-income);
+  --bs-btn-bg: var(--op-color);
+  --bs-btn-border-color: var(--op-color);
+  --bs-btn-color: var(--op-text);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--op-color) 88%, #000);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--op-color) 88%, #000);
+  --bs-btn-hover-color: var(--op-text);
+  --bs-btn-active-bg: color-mix(in srgb, var(--op-color) 80%, #000);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--op-color) 80%, #000);
+  --bs-btn-active-color: var(--op-text);
+}
+
+.is-money.is-out .gd-submit,
+.is-money.is-out #quick-entry-submit {
+  --op-color: var(--color-expense);
+  --op-text: var(--on-expense);
+}
+
+/* The hints under "Source": a list over the next fields (in the quick dialog — in the flow,
+   so the scrolling dialog never cuts it) */
+.entry-hints {
+  position: relative;
+}
+
+.entry-hints-list {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  left: 0;
+  z-index: 20;
+  max-height: 15rem;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--lifeos-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+
+.entry-hints-list[hidden] {
+  display: none;
+}
+
+.entry-hints-list li {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border-radius: calc(var(--radius-sm) - 2px);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.entry-hints-list li:hover,
+.entry-hints-list li.is-active {
+  background-color: var(--lifeos-primary-soft);
+}
+
+#quick-entry-form .entry-hints-list {
+  position: static;
+  margin-top: var(--space-1);
+  box-shadow: none;
+}
+
+.entry-money-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background-color: var(--tone-success-bg);
+  color: var(--lifeos-text);
+}
+
+.entry-money-preview[hidden] {
+  display: none;
+}
+
+.entry-money-preview .bi {
+  color: var(--tone-success-fg);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.entry-money-preview-value {
+  margin-left: auto;
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The plate decides by its own width (a container query): wide — one line; narrow (a phone, the quick dialog,
+   a narrow card) — "After saving:" with the icon, and under it "193 555 ₸ → 271 555 ₸" on the left, 17px bold. */
+.entry-money-preview {
+  container-type: inline-size;
+}
+
+@container (max-width: 36rem) {
+  .entry-money-preview-value {
+    flex-basis: 100%;
+    margin-left: 0;
+    padding-left: calc(1.4rem + var(--space-3)); /* under the label, not under the icon */
+    font-size: 17px;
+    font-weight: 700;
+  }
+}
+
+/* ---------- The size of the entry forms ----------
+   Every "record a result" form — Goal Details ("entry-…": money, "Log reading", a weight, percent, levels,
+   a streak, a number) and the quick dialog ("quick-entry-…", Dashboard, Planner) — has the same sizes:
+   the title 22px, the labels 15px, the fields 48px high with 17px text, the switch and the buttons 48px, 16px
+   semi-bold. The ids of the two forms make these rules stronger than Bootstrap and the rules of one goal type
+   (.is-reading, .is-money), so no !important is needed. Compact mode: fields 44px, text 16px — never less:
+   iPhone zooms into a field with a smaller text. */
+#entry-title,
+#quick-entry-title {
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+:is(#entry-form, #quick-entry-form) .form-label {
+  font-size: 15px;
+}
+
+:is(#entry-form, #quick-entry-form) :is(.form-control, .form-select, .input-group-text),
+:is(#entry-form, #quick-entry-form) .entry-hints-list li {
+  font-size: 17px;
+}
+
+:is(#entry-form, #quick-entry-form) :is(input.form-control, .form-select) {
+  min-height: 48px;
+}
+
+:is(#entry-form, #quick-entry-form) .gd-switch .btn,
+#entry-form .gd-entry-actions .btn,
+#quick-entry-form .modal-footer .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.entry-money-preview {
+  font-size: 16px;
+}
+
+[data-compact="true"] :is(#entry-form, #quick-entry-form) :is(input.form-control, .form-select) {
+  min-height: 44px;
+}
+
+[data-compact="true"] :is(#entry-form, #quick-entry-form) :is(.form-control, .form-select, .input-group-text),
+[data-compact="true"] :is(#entry-form, #quick-entry-form) .entry-hints-list li {
+  font-size: 16px;
+}
+
+/* ---------- "Operations history" of a money goal (docs/design/money-history-v2.png, js/money-history.js) ----------
+   One row of filters — Month (with a calendar icon), Operation, Source — and "Total for the month" on the right;
+   then the table Date | ⊞ Deposit | Source | Amount | ✎ 🗑. A computer: the rows scroll inside the block when they
+   do not fit (the wheel goes on to the page at the end); a phone: cards, the last 5 and "Show all". */
+.gd-history-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gd-history-title .bi {
+  color: var(--lifeos-primary-text);
+}
+
+.mh-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "month month" "kind source" "total total";
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.mh-field-month { grid-area: month; }
+.mh-filters .mh-field:nth-child(2) { grid-area: kind; }
+.mh-filters .mh-field:nth-child(3) { grid-area: source; }
+
+.mh-field {
+  min-width: 0;
+}
+
+.mh-field .form-label {
+  margin-bottom: var(--space-1);
+  color: var(--lifeos-text-muted);
+  font-size: 14px;
+}
+
+.mh-field .form-select {
+  min-height: 48px;
+  font-size: 16px; /* iPhone does not zoom into a field of 16px */
+  font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+  .mh-field .form-select {
+    padding-right: 1.9rem; /* "All sources" fits the half width: a little less room around the arrow */
+    padding-left: 0.65rem;
+    background-position: right 0.55rem center;
+    font-weight: 400;
+  }
+
+  .mh-select.has-icon .form-select {
+    padding-left: 2.6rem;
+  }
+}
+
+.mh-field.is-active .form-select {
+  border-color: var(--lifeos-primary);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+}
+
+.mh-select.has-icon {
+  position: relative;
+}
+
+.mh-select.has-icon > .bi {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  transform: translateY(-50%);
+  color: var(--lifeos-primary-text);
+  pointer-events: none;
+}
+
+.mh-select.has-icon .form-select {
+  padding-left: 2.6rem;
+}
+
+/* "Total for the month +17 500 ₸": a light green plate for a plus, light red for a minus, grey for zero
+   (the fixed --tone-* pairs: the text is at least 4.5:1 on its plate in both themes) */
+.mh-total {
+  display: flex;
+  grid-area: total;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 48px;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  background-color: var(--tone-neutral-bg);
+  color: var(--tone-neutral-fg);
+  font-size: 14px;
+}
+
+.mh-total.is-plus { background-color: var(--tone-success-bg); color: var(--tone-success-fg); }
+.mh-total.is-minus { background-color: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+
+/* "Total for the month": 15px semi-bold in the main text color (the sum keeps the color of its sign) */
+.mh-total > span {
+  color: var(--lifeos-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mh-total-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A computer: Month | Operation | Source | the total, in one row */
+@media (min-width: 992px) {
+  .mh-filters {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-areas: "month kind source total";
+  }
+
+  .mh-total {
+    align-self: stretch;
+  }
+}
+
+/* The table */
+.mh-box {
+  position: relative;
+}
+
+.mh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.mh-table th {
+  position: sticky; /* the head stays while the rows scroll (a computer) */
+  top: 0;
+  z-index: 1;
+  padding: var(--space-2);
+  border-top: 1px solid var(--lifeos-border);
+  border-bottom: 1px solid var(--lifeos-border);
+  background-color: var(--lifeos-surface);
+  color: var(--lifeos-text);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.mh-table td {
+  padding: 12px var(--space-2);
+  border-bottom: 1px solid var(--lifeos-border);
+  font-size: 15px; /* not bigger than the heads */
+  vertical-align: middle;
+}
+
+.mh-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.mh-table tr[hidden] {
+  display: none;
+}
+
+.mh-table tbody tr {
+  cursor: pointer; /* a click on a row opens it in the form, as in every history */
+}
+
+.mh-table tr.is-editing td {
+  background-color: var(--lifeos-primary-soft);
+}
+
+.mh-table .mh-date {
+  white-space: nowrap;
+}
+
+.mh-table td.mh-op {
+  white-space: nowrap;
+}
+
+.mh-op-word {
+  margin-left: var(--space-2);
+  font-weight: 600;
+}
+
+.mh-table .mh-amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mh-table td.mh-amount {
+  font-weight: 700;
+}
+
+.mh-table .mh-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* ✎ "Edit" — neutral (light grey, a dark icon); 🗑 "Delete" — the fixed red of a withdrawal: a light red
+   square with a red icon, filled red with a white icon on hover. Both 40px, with a hint (title). */
+.mh-table .gd-history-actions {
+  gap: var(--space-2);
+}
+
+.mh-table .gd-history-actions .btn-icon {
+  min-width: 40px;
+  width: 40px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+
+.mh-table .gd-history-actions [data-edit-entry] {
+  background-color: var(--tone-neutral-bg);
+  color: var(--lifeos-text);
+}
+
+.mh-table .gd-history-actions [data-edit-entry]:hover {
+  background-color: color-mix(in srgb, var(--lifeos-text) 14%, var(--lifeos-surface));
+}
+
+.mh-table .gd-history-actions [data-delete-entry] {
+  background-color: color-mix(in srgb, var(--color-expense) 14%, var(--lifeos-surface));
+  color: var(--color-expense);
+}
+
+.mh-table .gd-history-actions [data-delete-entry]:hover {
+  background-color: var(--color-expense);
+  color: #ffffff;
+}
+
+.mh-sign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  vertical-align: middle;
+}
+
+.mh-sign.is-in {
+  background-color: var(--color-income);
+  color: var(--on-income);
+}
+
+.mh-sign.is-out {
+  background-color: var(--color-expense);
+  color: var(--on-expense);
+}
+
+.mh-source-text {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.mh-source-text.is-none {
+  color: var(--lifeos-text-muted);
+}
+
+.mh-note {
+  display: block;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+.mh-filter-line {
+  margin: var(--space-3) 0 0;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+.mh-empty-filter {
+  margin: var(--space-3) 0 0;
+  color: var(--lifeos-text-muted);
+  text-align: center;
+}
+
+/* A long list scrolls inside the block: js/money-history.js (fitHeight) measures the height of 3 cards (phone)
+   or of the head and 12 rows (tablet, computer) and sets max-height; a shorter list has none, so no inner scroll.
+   A thin bar, a fade at the bottom while more is below. No overscroll-behavior: at the start or the end of the
+   list the wheel or the finger scrolls the page. */
+.mh-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--lifeos-border-strong) transparent;
+}
+
+.mh-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mh-scroll::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-pill);
+  background-color: var(--lifeos-border-strong);
+}
+
+.mh-box::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 3.5rem;
+  background: linear-gradient(to bottom, transparent, var(--lifeos-surface));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.mh-box.has-more-below::after {
+  opacity: 1;
+}
+
+/* A phone: cards — the sign on the left, the source and the date under it in the middle, the amount on the right
+   with ✎ 🗑 under it (the word "Deposit" is read by screen readers only) */
+@media (max-width: 767.98px) {
+  .mh-table thead {
+    display: none;
+  }
+
+  .mh-table,
+  .mh-table tbody {
+    display: block;
+  }
+
+  .mh-table tbody {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .mh-table tbody tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "op source amount" "op date actions";
+    align-items: center;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    padding: var(--space-3);
+    border: 1px solid var(--lifeos-border);
+    border-radius: var(--radius);
+  }
+
+  .mh-table tbody tr[hidden] {
+    display: none;
+  }
+
+  .mh-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .mh-table tr.is-editing {
+    background-color: var(--lifeos-primary-soft);
+  }
+
+  .mh-table tr.is-editing td {
+    background-color: transparent;
+  }
+
+  .mh-table td.mh-op { grid-area: op; }
+  .mh-table td.mh-source { grid-area: source; font-weight: 600; }
+  .mh-table td.mh-date { grid-area: date; color: var(--lifeos-text-muted); font-size: var(--fs-small); }
+  .mh-table td.mh-amount { grid-area: amount; }
+  .mh-table td.mh-actions { grid-area: actions; justify-self: end; width: auto; }
+
+  .mh-op-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .mh-sign {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* ---------- A money goal page (1.6.3): a computer — "Record a deposit" | "Forecast" 50/50 of one height, the
+   operations history under them on the whole width; a phone: the forecast right after the goal card.
+   Milestones and notes are hidden (js/goal-details.js). ---------- */
+@media (min-width: 992px) {
+  .is-money-goal .gd-row-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .is-money-goal #history-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .is-money-goal #forecast-panel {
+    order: -1;
+  }
+}
+
+/* "Forecast" (docs/design/money-forecast-v2.png): the status badge in the head (fixed .badge-status tones),
+   "At the current pace", the date in big letters, the gap; two tiles; how it is counted; the plan of today */
+.forecast-head {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.forecast-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.forecast-body > p {
+  margin: 0;
+}
+
+.forecast-lead {
+  color: var(--lifeos-text-muted);
+  font-size: 15px;
+}
+
+.forecast-date {
+  font-size: clamp(1.6rem, 1.3rem + 1vw, 2.1rem);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.forecast-gap {
+  margin-top: var(--space-1);
+  color: var(--lifeos-text-muted);
+  font-size: 16px;
+}
+
+.forecast-short {
+  color: var(--lifeos-text-muted);
+  font-size: 16px;
+}
+
+.forecast-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); /* a phone: one under the other */
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.forecast-tile {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background-color: color-mix(in srgb, var(--lifeos-bg) 60%, var(--lifeos-surface));
+}
+
+.forecast-tile-title {
+  color: var(--lifeos-text-muted);
+  font-size: 14px;
+}
+
+.forecast-tile strong {
+  font-size: clamp(1.15rem, 1rem + 0.5vw, 1.4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word; /* "≈ 2 202 000 ₸/мес" breaks only between the words */
+}
+
+.forecast-tile.is-text strong {
+  font-size: 16px;
+}
+
+.forecast-body > .forecast-basis {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  color: var(--lifeos-text-muted);
+  font-size: 14px;
+}
+
+.forecast-plan {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--lifeos-border);
+}
+
+.forecast-plan-title {
+  margin: 0 0 var(--space-2);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.forecast-plan-numbers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.forecast-plan-numbers > div + div {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--lifeos-border);
+}
+
+.forecast-plan-numbers dt {
+  color: var(--lifeos-text-muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.forecast-plan-numbers dd {
+  margin: 0;
+  color: var(--lifeos-primary-text);
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecast-plan-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-neutral-bg);
+  color: var(--tone-neutral-fg);
+  font-weight: 600;
+}
+
+.forecast-plan-note.is-warning { background-color: var(--tone-warning-bg); color: var(--tone-warning-fg); }
+.forecast-plan-note.is-success { background-color: var(--tone-success-bg); color: var(--tone-success-fg); }
+
+/* ---------- The focus of a field on the goal pages and in the entry forms (as in the book window) ----------
+   No outer ring or shadow over the next blocks: the frame of the field itself turns into the accent, 2px inside
+   (1px border + 1px inset shadow). A field with "₸" or with the calendar button is framed whole, as one field.
+   The field keeps no outline of its own (the frame is the visible focus, also from the keyboard). */
+:is(#details-content, #quick-entry-form) :is(.form-control, .form-select):is(:focus, :focus-visible),
+:is(#details-content, #quick-entry-form) .date-native:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+:is(#details-content, #quick-entry-form) :is(.form-control, .form-select):not(.input-group > *):focus {
+  border-color: var(--lifeos-primary);
+  box-shadow: inset 0 0 0 1px var(--lifeos-primary);
+}
+
+/* A group: the outer sides of its parts get the accent; the line between the field and "₸" stays grey */
+:is(#details-content, #quick-entry-form) .input-group:focus-within > * {
+  border-top-color: var(--lifeos-primary);
+  border-bottom-color: var(--lifeos-primary);
+  box-shadow: inset 0 1px 0 var(--lifeos-primary), inset 0 -1px 0 var(--lifeos-primary);
+}
+
+:is(#details-content, #quick-entry-form) .input-group:focus-within > :first-child {
+  border-left-color: var(--lifeos-primary);
+  box-shadow: inset 1px 1px 0 var(--lifeos-primary), inset 0 -1px 0 var(--lifeos-primary);
+}
+
+:is(#details-content, #quick-entry-form) .input-group:focus-within > :last-child {
+  border-right-color: var(--lifeos-primary);
+  box-shadow: inset -1px 1px 0 var(--lifeos-primary), inset 0 -1px 0 var(--lifeos-primary);
+}
+
+:is(#details-content, #quick-entry-form) .date-pick:has(.date-native:focus-visible) {
+  outline: none;
+}
+
+/* A field with an error keeps its red frame */
+:is(#details-content, #quick-entry-form) .form-control.is-invalid:focus {
+  border-color: var(--bs-form-invalid-border-color);
+  box-shadow: inset 0 0 0 1px var(--bs-form-invalid-border-color);
+}
+
+:is(#details-content, #quick-entry-form) .input-group:has(.is-invalid):focus-within > * {
+  border-top-color: var(--bs-form-invalid-border-color);
+  border-bottom-color: var(--bs-form-invalid-border-color);
+}
+
+/* ---------- "Record a deposit" of a money goal: five even parts ----------
+   The title, the switch, "Amount | Date", "Source" (with "After saving" under it) and "Save" are the rows of one
+   grid on the whole card: the form and its Bootstrap row are display: contents, so their blocks are the grid items.
+   A label stays right on its field (it is inside its block). The gaps are 16px; a computer stretches the card to
+   the height of "Forecast" next to it, and the free height is shared equally between the gaps (space-between:
+   the title at the top, "Save" at the bottom). A phone and a tablet: just 16px, nothing is stretched. */
+.is-money-goal #entry-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: var(--space-3);
+  align-content: start;
+}
+
+.is-money-goal #entry-panel > * {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.is-money-goal #entry-form,
+.is-money-goal #entry-form > .row {
+  display: contents;
+}
+
+.is-money-goal #entry-form > .row > * {
+  grid-column: 1 / -1;
+  width: auto;
+  max-width: none;
+  margin-top: 0;
+  padding-inline: 0;
+}
+
+@media (min-width: 576px) {
+  .is-money-goal #entry-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-3);
+  }
+
+  .is-money-goal #entry-form > .row > .col-sm-6 {
+    grid-column: auto; /* "Amount" and "Date" side by side */
+  }
+}
+
+@media (min-width: 992px) {
+  .is-money-goal #entry-panel {
+    align-content: space-between;
+  }
+}
+
+/* "After saving" belongs to the "Source" block */
+[data-entry-field="source"] .entry-money-preview {
+  margin-top: var(--space-3);
+}
+
+/* An old money entry (before 1.6.1) keeps its note: a line under "Deposit: Salary" */
+.gd-history-oldnote {
+  font-style: italic;
+}
+
 [data-entry-field="bookpreview"] .field-error {
   margin-top: 0;
 }
@@ -5130,7 +6100,6 @@ small,
     inset: 0;
     overflow-x: hidden;
     overflow-y: auto;
-    overscroll-behavior: contain;
     padding-inline: var(--space-2);
     scrollbar-width: thin;
     scrollbar-color: var(--lifeos-border-strong) transparent;
@@ -5255,6 +6224,9 @@ small,
 
 .gd-history-change.is-plus { color: var(--tone-success-fg); }
 .gd-history-change.is-minus { color: var(--tone-danger-fg); }
+/* A money goal: the colors of the operations, as in the entry form */
+.gd-history-change.is-money.is-plus { color: var(--color-income); }
+.gd-history-change.is-money.is-minus { color: var(--color-expense); }
 
 /* ✎ and 🗑 of a row: 44px each with a gap, so the bin is not hit by mistake */
 .gd-history-actions {

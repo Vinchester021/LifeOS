@@ -1,5 +1,55 @@
 [
   {
+    "version": "1.6.3",
+    "date": "2026-11-17",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "A forecast for money goals: when you will reach the amount at the current pace and how much to put aside a day, a week or a month to make it.",
+          "ru": "Прогноз для денежных целей: когда накопите при текущем темпе и сколько откладывать в день, неделю или месяц, чтобы успеть.",
+          "kk": "Ақша мақсаттарына болжам: қазіргі қарқынмен соманы қашан жинайсыз және үлгеру үшін күніне, аптасына немесе айына қанша жинау керек."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Money goals no longer show extra milestones and notes; long lists on the Dashboard and in the history no longer stretch the page; the “Activity” card is bigger; the entry forms are bigger and easier to use.",
+          "ru": "У денежных целей убраны лишние этапы и заметки; длинные списки на Главной и в истории больше не растягивают страницу; карточка «Активность» крупнее; формы записи крупнее и удобнее.",
+          "kk": "Ақша мақсаттарында артық кезеңдер мен жазбалар алынып тасталды; Басты беттегі және тарихтағы ұзын тізімдер енді бетті созбайды; «Белсенділік» карточкасы үлкейді; жазу формалары үлкейіп, ыңғайлырақ болды."
+        }
+      }
+    ]
+  },
+  {
+    "version": "1.6.2",
+    "date": "2026-11-17",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "Operations history by month: the month total, filters by operation and source, deleting with confirmation.",
+          "ru": "История операций по месяцам: итог месяца, фильтры по операции и источнику, удаление с подтверждением.",
+          "kk": "Айлар бойынша операциялар тарихы: айдың қорытындысы, операция және көзі бойынша сүзгілер, растаумен жою."
+        }
+      }
+    ]
+  },
+  {
+    "version": "1.6.1",
+    "date": "2026-11-17",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "Money goals: clear recording of deposits and withdrawals, a source with hints, and the balance after saving shown in advance.",
+          "ru": "Денежные цели: понятная запись пополнения и снятия, источник с подсказками, сумма после сохранения видна заранее.",
+          "kk": "Ақша мақсаттары: толықтыру мен алуды түсінікті жазу, кеңестері бар көзі, сақтағаннан кейінгі сома алдын ала көрінеді."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-11-16",
     "items": [

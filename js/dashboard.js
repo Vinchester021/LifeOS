@@ -115,9 +115,48 @@ function renderYearCard(year) {
 
 /* ---------- Today: tasks + quick add ---------- */
 
+// newId: the task just added from the quick field — it stays on the very top (app.js orderTodayTasks).
+// expanded: a phone / tablet shows the first 5 open tasks until "Show all (N)".
+const todayView = { newId: null, expanded: false };
+const TODAY_PHONE_LIMIT = 5;
+const dashWide = window.matchMedia('(min-width: 992px)'); // a computer: the list scrolls inside the card
+
 function renderTodayTasks() {
   byId('dash-sport-line').innerHTML = sportDayLineHtml(todayIso());
-  TaskList.render(byId('dash-today-tasks'), getTasksForDate(todayIso()), { emptyKey: 'dashboard.today.empty' });
+  const occurrences = orderTodayTasks(getTasksForDate(todayIso()), todayView.newId);
+  TaskList.render(byId('dash-today-tasks'), occurrences, { emptyKey: 'dashboard.today.empty' });
+  applyTodayLimit(occurrences);
+  updateTodayFade();
+}
+
+// Phone and tablet: only the first 5 open tasks (done ones are hidden too) until "Show all (N)".
+function applyTodayLimit(occurrences) {
+  const items = [...byId('dash-today-tasks').querySelectorAll('.task-item')];
+  const limited = !dashWide.matches;
+  let open = 0;
+  items.forEach((item, index) => {
+    const shown = occurrences[index] && !occurrences[index].done && open < TODAY_PHONE_LIMIT;
+    if (shown) open += 1;
+    item.hidden = limited && !todayView.expanded && !shown;
+  });
+  const more = byId('dash-today-more');
+  more.hidden = !limited || !items.some((item) => item.hidden) && !todayView.expanded;
+  more.setAttribute('aria-expanded', String(todayView.expanded));
+  more.querySelector('span').textContent = todayView.expanded
+    ? t('books.shelf.less') : t('books.shelf.more', { count: Format.number(items.length) });
+  more.querySelector('i').className = `bi ${todayView.expanded ? 'bi-chevron-up' : 'bi-chevron-down'} me-2`;
+}
+
+function toggleTodayLimit() {
+  todayView.expanded = !todayView.expanded;
+  renderTodayTasks();
+}
+
+// The fade at the bottom of the card while more tasks are below (a computer).
+function updateTodayFade() {
+  const scroller = byId('dash-today-scroll');
+  const moreBelow = scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 2;
+  byId('dash-today-box').classList.toggle('has-more-below', moreBelow);
 }
 
 function addDashboardTask(event) {
@@ -126,13 +165,17 @@ function addDashboardTask(event) {
   const fields = { title: input.value.trim(), date: todayIso(), priority: 'medium', period: 'day' };
   const error = validateTask(fields).title;
   setFieldError(input, error);
-  if (error || !addTask(fields)) {
+  const task = error ? null : addTask(fields);
+  if (!task) {
     input.focus();
     return;
   }
   showToast('toast.taskCreated', 'success');
   input.value = '';
+  todayView.newId = task.id; // on the very top, the list scrolls to it
   renderDashboard();
+  byId('dash-today-scroll').scrollTop = 0;
+  updateTodayFade();
   input.focus();
 }
 
@@ -334,8 +377,8 @@ function renderActivity() {
       const count = counts.get(iso) ?? 0;
       pastDays++;
       if (count > 0) activeDays++;
-      const title = `${Format.shortDate(iso)}: ${tPlural('dashboard.activity.actions', count)}`;
-      return `<span class="heat-cell level-${activityLevel(count)}" title="${escapeHtml(title)}"></span>`;
+      const tip = `${Format.shortDate(iso)}: ${tPlural('dashboard.activity.actions', count)}`;
+      return `<span class="heat-cell level-${activityLevel(count)}" data-heat-tip="${escapeHtml(tip)}"></span>`;
     }).join('');
     return `<span class="heat-day">${escapeHtml(label)}</span>${cells}`;
   }).join('');
@@ -347,6 +390,7 @@ function renderActivity() {
   // The grid is only a picture; the line under it says the same in words.
   byId('dash-activity').innerHTML = `
     <div class="dash-heatmap" style="--weeks: ${ACTIVITY_WEEKS}" aria-hidden="true">${head}${rows}</div>
+    <p class="heat-tip" id="dash-heat-tip" aria-hidden="true" hidden></p>
     <div class="dash-activity-foot">
       <p class="dash-activity-summary${activeDays ? '' : ' is-empty'}">${escapeHtml(summary)}</p>
       <p class="heat-legend" aria-hidden="true">
@@ -355,6 +399,36 @@ function renderActivity() {
         ${escapeHtml(t('dashboard.activity.more'))}
       </p>
     </div>`;
+}
+
+// The hint of a cell: "16.11.2026: 3 actions" — on a hover (mouse) or a tap (touch). The grid is a picture
+// (aria-hidden): the line under it says the same in words.
+function showHeatTip(cell) {
+  const tip = byId('dash-heat-tip');
+  if (!tip) return;
+  if (!cell) {
+    tip.hidden = true;
+    return;
+  }
+  const box = byId('dash-activity').getBoundingClientRect();
+  const place = cell.getBoundingClientRect();
+  tip.textContent = cell.dataset.heatTip;
+  tip.hidden = false;
+  const left = Math.min(Math.max(place.left - box.left + place.width / 2 - tip.offsetWidth / 2, 0), box.width - tip.offsetWidth);
+  tip.style.left = `${left}px`;
+  tip.style.top = `${place.top - box.top - tip.offsetHeight - 6}px`;
+}
+
+function bindHeatTips() {
+  const area = byId('dash-activity');
+  area.addEventListener('pointerover', (event) => {
+    if (event.pointerType === 'mouse') showHeatTip(event.target.closest('[data-heat-tip]'));
+  });
+  area.addEventListener('pointerleave', () => showHeatTip(null));
+  area.addEventListener('click', (event) => showHeatTip(event.target.closest('[data-heat-tip]')));
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('#dash-activity')) showHeatTip(null);
+  });
 }
 
 /* ---------- Statistics by category ---------- */
@@ -411,6 +485,11 @@ function onDashboardTasksChanged({ focusId } = {}) {
 onAppReady(() => {
   byId('dash-task-form').addEventListener('submit', submitOnce(addDashboardTask));
   TaskList.bind(byId('dash-today-tasks'), onDashboardTasksChanged);
+  byId('dash-today-more').addEventListener('click', toggleTodayLimit);
+  byId('dash-today-scroll').addEventListener('scroll', updateTodayFade, { passive: true });
+  new ResizeObserver(updateTodayFade).observe(byId('dash-today-scroll'));
+  dashWide.addEventListener('change', renderTodayTasks);
+  bindHeatTips();
   FocusDays.bind(byId('dash-focus-days'), onDashboardTasksChanged); // the days the focus was followed (app.js)
   byId('dash-week-progress').addEventListener('click', openWeekTaskForm);
   byId('dash-focus-edit').addEventListener('click', () => setFocusFormOpen(byId('dash-focus-form').hidden));

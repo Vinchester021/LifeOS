@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.0">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.0">
-  <link rel="stylesheet" href="./css/style.css?v=1.6.0">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.3">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.3">
+  <link rel="stylesheet" href="./css/style.css?v=1.6.3">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.6.0">
+  <link rel="manifest" href="./manifest.json?v=1.6.3">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,21 +19,22 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.0" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.0" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.3" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.3" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.6.0"></script>
-  <script src="./data/quotes-fallback.js?v=1.6.0"></script>
-  <script src="./data/changelog-fallback.js?v=1.6.0"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.6.0"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.6.0" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.6.0" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.6.0" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.6.0" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
-  <script src="./js/tasks.js?v=1.6.0" defer></script>
-  <script src="./js/entry-form.js?v=1.6.0" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
-  <script src="./js/books.js?v=1.6.0" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
-  <script src="./js/goal-details.js?v=1.6.0" defer></script>
+  <script src="./data/translations-fallback.js?v=1.6.3"></script>
+  <script src="./data/quotes-fallback.js?v=1.6.3"></script>
+  <script src="./data/changelog-fallback.js?v=1.6.3"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.6.3"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.6.3" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.6.3" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.6.3" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.6.3" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./js/tasks.js?v=1.6.3" defer></script>
+  <script src="./js/entry-form.js?v=1.6.3" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
+  <script src="./js/books.js?v=1.6.3" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
+  <script src="./js/money-history.js?v=1.6.3" defer></script> <!-- "Operations history" of a money goal: month, filters, table -->
+  <script src="./js/goal-details.js?v=1.6.3" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -241,7 +242,8 @@
 
           <!-- Add an entry: the fields depend on the progress type (data-entry-field) -->
           <section class="panel" id="entry-panel" aria-labelledby="entry-title">
-            <h2 class="panel-title" id="entry-title" tabindex="-1" data-i18n="details.entry.title">Add an entry</h2>
+            <!-- A money goal: "⊕ Record a deposit" / "⊖ Record a withdrawal" by the switch (js/entry-form.js) -->
+            <h2 class="panel-title entry-title" id="entry-title" tabindex="-1"><i class="bi entry-title-icon" id="entry-title-icon" aria-hidden="true" hidden></i><span id="entry-title-text" data-i18n="details.entry.title">Add an entry</span></h2>
             <!-- Edit mode: "Entry of 12/11/2026: +20 000 ₸" (js/entry-form.js) -->
             <p class="entry-edit-note" id="entry-edit-note" hidden></p>
             <form id="entry-form" novalidate>
@@ -250,12 +252,12 @@
                 <div class="col-12"><p class="entry-example" id="entry-example"></p></div>
 
                 <fieldset class="col-12" data-entry-field="sign">
-                  <legend class="form-label fs-6" data-i18n="details.entry.operation">Operation</legend>
+                  <legend class="visually-hidden" data-i18n="details.entry.operation">Operation</legend>
                   <div class="gd-switch">
                     <input class="btn-check" type="radio" name="entry-sign" id="entry-sign-plus" value="1" checked>
-                    <label class="btn" for="entry-sign-plus"><i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="details.entry.deposit">Deposit (+)</span></label>
+                    <label class="btn" for="entry-sign-plus"><span data-i18n="money.entry.deposit">Deposit</span></label>
                     <input class="btn-check" type="radio" name="entry-sign" id="entry-sign-minus" value="-1">
-                    <label class="btn" for="entry-sign-minus"><i class="bi bi-dash-lg me-2" aria-hidden="true"></i><span data-i18n="details.entry.withdraw">Withdrawal (−)</span></label>
+                    <label class="btn" for="entry-sign-minus"><span data-i18n="money.entry.withdraw">Withdrawal</span></label>
                   </div>
                 </fieldset>
 
@@ -323,8 +325,23 @@
             </form>
           </section>
 
+          <!-- A money goal (docs/design/money-forecast-v2.png): the status badge in the head; "At the current pace — around
+               August 2028 — 1 year 9 months after the deadline"; the tiles "Now on average" and "To make it"; how it is
+               counted; the plan of today and "Behind / Ahead of the plan" (js/goal-details.js: renderForecast).
+               A computer: next to the form (50/50), the history under both; a phone: right after the goal card. -->
+          <section class="panel gd-forecast" id="forecast-panel" aria-labelledby="forecast-title" hidden>
+            <div class="panel-head forecast-head">
+              <h2 class="panel-title gd-icon-title" id="forecast-title"><i class="bi bi-graph-up-arrow" aria-hidden="true"></i><span data-i18n="money.forecast.title">Forecast</span></h2>
+              <span class="badge-status forecast-badge" id="forecast-badge"></span>
+            </div>
+            <div class="forecast-body" id="forecast-body" aria-live="polite"></div>
+          </section>
+
           <section class="panel" id="history-panel" aria-labelledby="history-title">
-            <h2 class="panel-title" id="history-title" tabindex="-1" data-i18n="details.history.titleLong">History of entries</h2>
+            <!-- A money goal: "Operations history" with an icon (js/goal-details.js: renderHistory) -->
+            <h2 class="panel-title gd-history-title" id="history-title" tabindex="-1"><i class="bi bi-clock-history" id="history-title-icon" aria-hidden="true" hidden></i><span id="history-title-text" data-i18n="details.history.titleLong">History of entries</span></h2>
+            <!-- A money goal (docs/design/money-history.png): the month, the filters, the table — js/money-history.js -->
+            <div class="money-history" id="money-history" hidden></div>
             <!-- A reading goal on a computer: the list scrolls inside the block (as tall as "Log reading"),
                  a fade at the bottom while more entries are below. On a phone: 5 entries and "Show all (N)". -->
             <div class="gd-history-box" id="history-box">
@@ -342,7 +359,7 @@
           </section>
         </div>
 
-        <!-- Row 2: milestones, notes, related tasks. A goal with a book list shows only the tasks (full width):
+        <!-- Row 2: milestones, notes, related tasks. A goal with a book list and a money goal show only the tasks (full width):
              its milestones and notes stay in the data, but are not shown (js/goal-details.js). -->
         <div class="gd-row gd-row-bottom">
           <section class="panel" id="milestones-panel" aria-labelledby="milestones-title">
