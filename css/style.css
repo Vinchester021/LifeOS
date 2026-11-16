@@ -4711,6 +4711,18 @@ small,
   }
 }
 
+/* Finishing a goal (app.js: GoalFinish): three buttons; on a phone one under another, the main one first */
+@media (max-width: 575.98px) {
+  .goal-finish-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .goal-finish-actions > .btn {
+    margin-inline: 0;
+  }
+}
+
 /* "Undo" in a toast (app.js: addToastAction): text in the toast's own color */
 .toast-action {
   --bs-btn-color: currentColor;

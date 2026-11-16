@@ -1295,7 +1295,8 @@ const GoalWizard = {
     }
 
     this.setSaving(true);
-    const goal = this.readGoal();
+    // A raised target (below 100 % again): "Goal reached! 🎉" may come again (app.js: withReachedReset).
+    const goal = withReachedReset(this.readGoal());
     const goals = getGoals();
     const wasEdit = this.mode === 'edit';
     if (wasEdit) {

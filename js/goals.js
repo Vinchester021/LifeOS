@@ -322,7 +322,8 @@ function handleGoalAction(action, goalId) {
   }
   goalsFocus.returnTo = goalId;
   if (action === 'edit') GoalWizard.openEdit(goal);
-  if (action === 'complete') changeGoalStatus(goalId, 'completed', 'toast.goalCompleted');
+  // Below 100 % a question first (app.js: GoalFinish); the page redraws on "lifeos:goalschange".
+  if (action === 'complete') GoalFinish.askComplete(goal, () => restoreFocus(goalId));
   if (action === 'archive') changeGoalStatus(goalId, 'archived', 'toast.goalArchived');
   if (action === 'restore') changeGoalStatus(goalId, 'active', 'toast.goalRestored');
   if (action === 'delete') openDeleteDialog(goal);
@@ -347,6 +348,11 @@ function openDeleteDialog(goal) {
   pendingDeleteId = goal.id;
   // textContent: the title is shown exactly as typed, never as HTML.
   document.getElementById('delete-goal-name').textContent = goal.title;
+  // "2 related tasks will stay in the list without a goal" (tasks are kept, see confirmDeleteGoal)
+  const taskCount = getTasks().filter((task) => task.goalId === goal.id).length;
+  const tasksLine = document.getElementById('delete-goal-tasks');
+  tasksLine.hidden = taskCount === 0;
+  tasksLine.textContent = taskCount ? tPlural('delete.tasksLeft', taskCount) : '';
   bootstrap.Modal.getOrCreateInstance(document.getElementById('delete-goal-modal')).show();
 }
 
@@ -385,9 +391,15 @@ function handleGoalsHash() {
   if (hash === '#new') {
     GoalWizard.openCreate();
   } else {
-    const goal = getGoalById(decodeURIComponent(hash.slice('#edit='.length)));
-    if (goal) GoalWizard.openEdit(goal);
-    else showToast('toast.goalNotFound', 'warning');
+    // "#edit=<id>" or "#edit=<id>&step=5" ("Raise the bar" after a goal is reached: the values step)
+    const [id, stepPart] = hash.slice('#edit='.length).split('&step=');
+    const goal = getGoalById(decodeURIComponent(id));
+    if (goal) {
+      GoalWizard.openEdit(goal);
+      if (stepPart) GoalWizard.goToStep(Number(stepPart));
+    } else {
+      showToast('toast.goalNotFound', 'warning');
+    }
   }
   // Remove the hash, so a reload does not open the dialog again.
   history.replaceState(null, '', window.location.pathname + window.location.search);

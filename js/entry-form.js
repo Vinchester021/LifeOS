@@ -643,6 +643,8 @@ const QuickEntry = {
     if (!goal) return;
     const change = this.entryForm.save(goal);
     if (!change) return;
+    // "Goal reached! 🎉" (app.js: GoalFinish) opens after this dialog is closed: two dialogs never overlap.
+    this.modalEl.addEventListener('hidden.bs.modal', () => GoalFinish.afterEntry(goal), { once: true });
     bootstrap.Modal.getInstance(this.modalEl).hide();
     this.entryForm.toastAfterSave('quickEntry.saved', { change });
     // The Dashboard redraws its cards and First steps (dashboard.js)

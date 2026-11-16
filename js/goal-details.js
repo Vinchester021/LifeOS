@@ -63,6 +63,7 @@ function renderOverview(goal) {
   // One "Mark as completed" button: outline while < 100 %, filled (the main action) at 100 %.
   const complete = byId('details-complete');
   complete.hidden = goal.status !== 'active';
+  byId('details-reopen').hidden = goal.status !== 'completed';
   complete.classList.toggle('btn-primary', percent >= 100);
   complete.classList.toggle('btn-tool', percent < 100);
   renderPace(goal, percent);
@@ -193,11 +194,13 @@ function submitEntry(event) {
     entryForm.stopEdit();
     renderDetailsPage();
     focusHistoryEntry(editedId);
+    offerFinish(goal);
     return;
   }
   entryForm.toastAfterSave('toast.entryAdded'); // or "Book finished: «…»"
   entryForm.reset();
   renderDetailsPage();
+  offerFinish(goal);
 }
 
 /* ----- Editing an entry of the history in the same form ----- */
@@ -494,10 +497,12 @@ function toggleMilestone(index, done) {
 }
 
 function toggleChecklistItem(index, done) {
+  const before = loadGoal();
   if (!setChecklistItemDone(goalDetails.id, index, done)) return; // js/entry-form.js
   showToast('toast.checklistUpdated', 'success');
   renderDetailsPage();
   byId(`check-item-${index}`)?.focus();
+  if (before) offerFinish(before);
 }
 
 /* ---------- Related tasks (TaskList and TaskForm come from tasks.js) ---------- */
@@ -530,12 +535,29 @@ function saveNotes() {
   }
 }
 
-function completeGoal() {
-  const saved = updateGoal((goal) => { goal.status = 'completed'; });
-  if (!saved) return;
-  showToast('toast.goalCompleted', 'success', { title: saved.title });
+// After a finish dialog (or at once): the page is drawn again, the focus goes to the title.
+function afterGoalStatus() {
   renderDetailsPage();
   byId('details-title').focus();
+}
+
+// Below 100 % a question first (app.js: GoalFinish).
+function completeGoal() {
+  const goal = loadGoal();
+  if (goal) GoalFinish.askComplete(goal, afterGoalStatus);
+}
+
+// A completed goal goes back to "In progress".
+function reopenGoal() {
+  const saved = setGoalStatus(goalDetails.id, 'active');
+  if (!saved) return;
+  showToast('toast.goalReopened', 'success', { title: saved.title });
+  afterGoalStatus();
+}
+
+// An entry or a ticked item brought the goal to 100 % for the first time: "Goal reached! 🎉".
+function offerFinish(before) {
+  GoalFinish.afterEntry(before, afterGoalStatus);
 }
 
 /* ---------- Page ---------- */
@@ -593,6 +615,7 @@ function bindDetailsEvents() {
   TaskList.bind(byId('goal-tasks'), onGoalTasksChanged);
   byId('goal-task-add').addEventListener('click', openNewGoalTask);
   byId('details-complete').addEventListener('click', completeGoal);
+  byId('details-reopen').addEventListener('click', reopenGoal);
 }
 
 onAppReady(() => {

@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.5.3",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "Clearer goal completion: congratulations at 100%, a question if the goal is not reached yet, and a “Back to work” button.",
+          "ru": "Понятное завершение цели: поздравление при 100 %, вопрос, если цель ещё не достигнута, и кнопка «Вернуть в работу».",
+          "kk": "Мақсатты аяқтау түсініктірек: 100 % болғанда құттықтау, мақсат әлі орындалмаса — сұрақ, және «Қайта жалғастыру» батырмасы."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.2",
     "date": "2026-11-15",
     "items": [

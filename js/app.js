@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -2385,6 +2385,145 @@ function updateProgressEntry(goalId, entryId, fields) {
 }
 
 /* =========================================================
+   11d. Finishing a goal (Goal Details, Goals, Dashboard)
+   - "Mark as completed" below 100 %: a question first (complete anyway / archive / cancel);
+   - an entry that brings the goal to 100 % for the first time: "Goal reached! 🎉"
+     (complete / raise the bar / later). goal.reachedShown = true: this question is asked only once.
+   ========================================================= */
+
+// Changes the status of a saved goal. Returns the goal or null.
+function setGoalStatus(goalId, status) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  if (!goal) return null;
+  goal.status = status;
+  goal.updatedAt = new Date().toISOString();
+  return saveGoals(goals) ? goal : null;
+}
+
+// Pure: does this change bring the goal to 100 % for the first time? (before / after: the goal objects)
+function reachesGoalFirstTime(before, after) {
+  return after.status === 'active' && after.reachedShown !== true
+    && getGoalPercent(before) < 100 && getGoalPercent(after) >= 100;
+}
+
+// Pure: after the goal itself was edited ("Raise the bar" or any change in the wizard). If the goal is
+// below 100 % again, "Goal reached! 🎉" may be shown again when the new target is reached.
+function withReachedReset(goal) {
+  if (goal.reachedShown !== true || getGoalPercent({ ...goal, status: 'active' }) >= 100) return goal;
+  const { reachedShown, ...rest } = goal;
+  return rest;
+}
+
+// The goal as the page shows it: a streak is counted from today's dates.
+function liveGoal(goalId) {
+  const goal = getGoalById(goalId);
+  return goal ? withLiveStreak(goal, getProgressEntries()) : null;
+}
+
+const GOAL_FINISH_HTML = `
+  <div class="modal fade" id="goal-finish-modal" tabindex="-1" aria-labelledby="goal-finish-title" aria-describedby="goal-finish-text">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-5" id="goal-finish-title"></h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" data-i18n-aria-label="wizard.close"></button>
+        </div>
+        <div class="modal-body"><p class="mb-0" id="goal-finish-text"></p></div>
+        <div class="modal-footer goal-finish-actions" id="goal-finish-actions"></div>
+      </div>
+    </div>
+  </div>`;
+
+const GoalFinish = {
+  modalEl: null,
+
+  ensureModal() {
+    if (this.modalEl) return;
+    document.body.insertAdjacentHTML('beforeend', GOAL_FINISH_HTML);
+    this.modalEl = byId('goal-finish-modal');
+    I18n.apply(this.modalEl);
+  },
+
+  // buttons: [{ key, primary?, focus?, action? }] — every button closes the dialog, then runs its action.
+  // onDone runs when the dialog is closed (by any button, Esc or ×): the page redraws itself there.
+  ask({ titleKey, textKey, params, buttons, onDone }) {
+    this.ensureModal();
+    byId('goal-finish-title').textContent = t(titleKey, params);
+    byId('goal-finish-text').textContent = t(textKey, params); // the goal title is user data: textContent
+    let chosen = null;
+    byId('goal-finish-actions').replaceChildren(...buttons.map((button) => {
+      const element = createEl('button', { type: 'button', class: `btn ${button.primary ? 'btn-primary' : 'btn-tool'}` }, t(button.key));
+      element.addEventListener('click', () => {
+        chosen = button.action ?? null;
+        bootstrap.Modal.getInstance(this.modalEl).hide();
+      });
+      return element;
+    }));
+    const focusIndex = Math.max(buttons.findIndex((button) => button.focus), 0);
+    this.modalEl.addEventListener('shown.bs.modal', () => byId('goal-finish-actions').children[focusIndex].focus(), { once: true });
+    this.modalEl.addEventListener('hidden.bs.modal', () => {
+      chosen?.();
+      onDone?.();
+    }, { once: true });
+    bootstrap.Modal.getOrCreateInstance(this.modalEl).show();
+  },
+
+  // Saves the status and tells the open pages (Goals and the Dashboard redraw on "lifeos:goalschange").
+  changeStatus(goalId, status, toastKey, toastType = 'success') {
+    const goal = setGoalStatus(goalId, status);
+    if (!goal) return;
+    showToast(toastKey, toastType, { title: goal.title });
+    document.dispatchEvent(new CustomEvent('lifeos:goalschange', { detail: { goalId } }));
+  },
+
+  // "Mark as completed". At 100 %: completed at once ("Well done!"); below: the question.
+  // The safe "Cancel" has the focus first.
+  askComplete(goal, onDone) {
+    const percent = getGoalPercent(goal);
+    if (percent >= 100) {
+      this.changeStatus(goal.id, 'completed', 'toast.goalCompleted');
+      onDone?.();
+      return;
+    }
+    this.ask({
+      titleKey: 'goalFinish.partial.title',
+      textKey: 'goalFinish.partial.text',
+      params: { percent: Format.number(percent / 100, { style: 'percent' }), title: goal.title },
+      buttons: [
+        { key: 'delete.cancel', focus: true },
+        { key: 'goalFinish.partial.archive', action: () => this.changeStatus(goal.id, 'archived', 'toast.goalArchived') },
+        { key: 'goalFinish.partial.complete', primary: true, action: () => this.changeStatus(goal.id, 'completed', 'toast.goalCompletedPartly', 'info') }
+      ],
+      onDone
+    });
+  },
+
+  // After an entry or a ticked item: `before` = the goal before the change. Returns true if asked.
+  afterEntry(before, onDone) {
+    const goal = liveGoal(before.id);
+    if (!goal || !reachesGoalFirstTime(before, goal)) return false;
+    const goals = getGoals();
+    const saved = goals.find((item) => item.id === goal.id);
+    saved.reachedShown = true; // never asked again for this goal
+    saveGoals(goals);
+    this.ask({
+      titleKey: 'goalFinish.reached.title',
+      textKey: 'goalFinish.reached.text',
+      params: { title: goal.title },
+      buttons: [
+        { key: 'goalFinish.reached.later' },
+        // The wizard opens on the Goals page, on step 5 "Values and deadline".
+        { key: 'goalFinish.reached.raise', action: () => { window.location.href = `goals.html#edit=${encodeURIComponent(goal.id)}&step=5`; } },
+        { key: 'goalFinish.reached.complete', primary: true, focus: true, action: () => this.changeStatus(goal.id, 'completed', 'toast.goalCompleted') }
+      ],
+      onDone
+    });
+    return true;
+  }
+};
+
+/* =========================================================
    12. Tasks — lifeos_tasks (used by Dashboard, Planner, Goal Details)
    Task: { id, title, date, priority, category, goalId, completed, completedAt,
            recurrence, period, completions }
@@ -2878,6 +3017,17 @@ function runHistorySelfTest(check, book) {
   const reading = { ...books, books: [book({ status: 'reading', pagesRead: 50, startedAt: day(-3) })], currentValue: 0 };
   const pagesEdit = withEntryChanged(reading, [entry('a', day(-3), 0, { bookId: 'b1', pages: 50 })], 'a', { date: day(-3), pages: 80 });
   check('edit: book pages 50 -> 80', `${pagesEdit.goal.books[0].pagesRead} ${pagesEdit.entry.pages}`, '80 80');
+
+  // "Goal reached! 🎉" (section 11d): only the first time the goal gets to 100 %
+  const count = (current, more = {}) => ({ id: 'g', progressType: 'number', status: 'active', startValue: 0, targetValue: 10, currentValue: current, ...more });
+  check('reached: 9 -> 10 of 10 = asked', reachesGoalFirstTime(count(9), count(10)), true);
+  check('reached: already asked once', reachesGoalFirstTime(count(9), count(10, { reachedShown: true })), false);
+  check('reached: was already at 100 %', reachesGoalFirstTime(count(10), count(11)), false);
+  check('reached: 8 -> 9 is not 100 %', reachesGoalFirstTime(count(8), count(9)), false);
+  check('raise the bar 10 -> 20: asked again later', 'reachedShown' in withReachedReset(count(10, { reachedShown: true, targetValue: 20 })), false);
+  check('an edit that stays at 100 %: still asked once', withReachedReset(count(10, { reachedShown: true, title: 'New' })).reachedShown, true);
+  const raised = withReachedReset(count(10, { reachedShown: true, targetValue: 20 }));
+  check('raised goal reaches 20: asked again', reachesGoalFirstTime(raised, { ...raised, currentValue: 20 }), true);
 }
 
 function runDateSelfTest() {
