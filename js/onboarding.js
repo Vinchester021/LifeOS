@@ -204,6 +204,7 @@ function fillDemoData() {
   // Demo workouts and measurements are written the old way and moved to Sport like real old data.
   AppStorage.remove(STORAGE_KEYS.sport);
   migrateSportData();
+  migrateBookEntries(); // the demo reading entries are written the old way too ("+ pages")
   return saveSport({ ...getSport(), plan: createDemoSportPlan() });
 }
 

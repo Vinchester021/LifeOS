@@ -257,34 +257,80 @@ function entryTone(goal, entry) {
 // Notes and values are escaped before going into the HTML string.
 function renderHistory(goal) {
   const entries = getGoalEntries(goal.id);
+  const isReading = hasBookList(goal);
   byId('history-panel').hidden = !usesEntries(goal) && entries.length === 0;
   byId('history-empty').hidden = entries.length > 0;
+  const title = byId('history-title');
+  title.dataset.i18n = isReading ? 'books.history.title' : 'details.history.titleLong'; // "Reading history"
+  title.textContent = t(title.dataset.i18n);
   const editedId = entryForm.editedId();
-  byId('history-list').innerHTML = entries.map((entry) => {
-    const date = Format.shortDate(entry.date);
-    const label = entryLabel(goal, entry);
-    const id = escapeHtml(entry.id);
-    // An entry of a finished book cannot be edited: the ✎ then says why (entryEditBlock).
-    const editText = t(entryEditBlock(goal, entry) ?? 'details.history.edit', { date });
-    return `
-      <li class="${entry.id === editedId ? 'is-editing' : ''}" data-entry-row="${id}">
+  byId('history-list').classList.toggle('is-reading', isReading);
+  byId('history-list').innerHTML = entries
+    .map((entry) => (isReading ? bookHistoryItemHtml(goal, entry, editedId) : historyItemHtml(goal, entry, editedId)))
+    .join('');
+}
+
+function historyItemHtml(goal, entry, editedId) {
+  const date = Format.shortDate(entry.date);
+  const label = entryLabel(goal, entry);
+  return `
+      <li class="${entry.id === editedId ? 'is-editing' : ''}" data-entry-row="${escapeHtml(entry.id)}">
         <div class="gd-history-main">
           <span class="gd-history-date">${escapeHtml(date)}</span>
           ${label ? `<span class="gd-history-note">${escapeHtml(label)}</span>` : ''}
         </div>
         <strong class="gd-history-change ${entryTone(goal, entry)} ${entry.bookId ? 'is-book' : ''}">${escapeHtml(entryChangeText(goal, entry))}</strong>
+        ${historyActionsHtml(goal, entry, date)}
+      </li>`;
+}
+
+// A reading entry: [date] the book (bold), under it "+20 pages" or "Finished ✓" and the memo.
+// An old entry without a book (before the list) shows its change text instead of a title.
+function bookHistoryItemHtml(goal, entry, editedId) {
+  const date = Format.shortDate(entry.date);
+  const book = goalBooks(goal).find((item) => item.id === entry.bookId);
+  const finished = Number(entry.value) > 0;
+  let badge = '';
+  if (finished) badge = `<span class="badge-status is-success">${escapeHtml(t('books.history.finishedBadge'))}</span>`;
+  else if (entry.mode === 'to') badge = toPageBadgeHtml(entry);
+  else if (bookEntryPages(entry)) badge = `<span class="badge-status is-accent">${escapeHtml(tPlural('books.history.pagesBadge', bookEntryPages(entry)))}</span>`;
+  return `
+      <li class="gd-history-book${entry.id === editedId ? ' is-editing' : ''}" data-entry-row="${escapeHtml(entry.id)}">
+        <span class="gd-history-day">${escapeHtml(date)}</span>
+        <div class="gd-history-main">
+          <strong class="gd-history-book-title">${escapeHtml(book ? bookTitle(book) : entryChangeText(goal, entry))}</strong>
+          ${badge ? `<span class="gd-history-badges">${badge}</span>` : ''}
+          ${entry.note ? `<span class="gd-history-note">${escapeHtml(entry.note)}</span>` : ''}
+        </div>
+        ${historyActionsHtml(goal, entry, date)}
+      </li>`;
+}
+
+// "Stopped at page 95" -> the badge "at p. 95" and, small, what it added "(+10)": counted again by
+// replayBook whenever an older entry changes (app.js), so it is never stale.
+function toPageBadgeHtml(entry) {
+  const added = Number(entry.added) || 0;
+  const sign = added < 0 ? '−' : '+';
+  return `<span class="badge-status is-accent">${escapeHtml(t('books.history.toPage', { page: Format.number(Number(entry.page) || 0) }))}</span>
+          <span class="gd-history-added">(${sign}${escapeHtml(Format.number(Math.abs(added)))})</span>`;
+}
+
+// ✎ and 🗑. An entry of a finished book cannot be edited: the ✎ then says why (entryEditBlock).
+function historyActionsHtml(goal, entry, date) {
+  const id = escapeHtml(entry.id);
+  const editText = t(entryEditBlock(goal, entry) ?? 'details.history.edit', { date });
+  const deleteText = t('details.history.delete', { date });
+  return `
         <div class="gd-history-actions">
           <button type="button" class="btn btn-icon" data-edit-entry="${id}"
                   aria-label="${escapeHtml(editText)}" title="${escapeHtml(editText)}">
             <i class="bi bi-pencil" aria-hidden="true"></i>
           </button>
           <button type="button" class="btn btn-icon" data-delete-entry="${id}"
-                  aria-label="${escapeHtml(t('details.history.delete', { date }))}" title="${escapeHtml(t('details.history.delete', { date }))}">
+                  aria-label="${escapeHtml(deleteText)}" title="${escapeHtml(deleteText)}">
             <i class="bi bi-trash" aria-hidden="true"></i>
           </button>
-        </div>
-      </li>`;
-  }).join('');
+        </div>`;
 }
 
 // Deletes at once (app.js: deleteProgressEntry) and offers "Undo" for 7 seconds.
@@ -332,7 +378,7 @@ function milestoneStatus(milestone) {
 }
 
 function renderMilestones(goal) {
-  const milestones = asArray(goal.milestones);
+  const milestones = goalMilestones(goal); // app.js: none for a book list goal (the data stays)
   byId('milestones-empty').hidden = milestones.length > 0;
   byId('milestone-list').innerHTML = milestones.map((milestone, index) => {
     const status = milestoneStatus(milestone);
@@ -513,7 +559,10 @@ function toggleChecklistItem(index, done) {
 /* ---------- Related tasks (TaskList and TaskForm come from tasks.js) ---------- */
 
 function renderGoalTasks(goal) {
-  TaskList.render(byId('goal-tasks'), getTasksForGoal(goal.id), { showDate: true, emptyKey: 'details.tasks.empty' });
+  const isReading = hasBookList(goal);
+  TaskList.render(byId('goal-tasks'), getTasksForGoal(goal.id), { showDate: true, emptyKey: 'details.tasks.empty', menu: isReading });
+  byId('goal-task-add-head').hidden = !isReading;
+  byId('goal-task-add').hidden = isReading;
 }
 
 // After ticking a task the list is redrawn; focus goes back to the same checkbox.
@@ -522,13 +571,13 @@ function onGoalTasksChanged({ focusId } = {}) {
   if (focusId) byId(focusId)?.focus();
 }
 
-function openNewGoalTask() {
+function openNewGoalTask(event) {
   const goal = loadGoal();
   if (!goal) return;
   TaskForm.open({
     defaults: { goalId: goal.id, category: goal.category in GOAL_CATEGORIES ? goal.category : null },
     onSaved: onGoalTasksChanged,
-    returnFocusId: 'goal-task-add'
+    returnFocusId: event?.currentTarget?.id ?? 'goal-task-add'
   });
 }
 
@@ -582,12 +631,22 @@ function renderDetailsPage() {
   byId('details-missing').hidden = true;
   byId('details-content').hidden = false;
   renderOverview(goal);
+  renderReadingLayout(goal);
   BookShelf.render(goal); // "My books" (js/books.js): only for a goal with a book list
   renderEntryForm(goal);
   renderHistory(goal);
   renderMilestones(goal);
   renderChecklist(goal);
   renderGoalTasks(goal);
+}
+
+// A goal with a book list is a reading diary (docs/design/reading-diary.png): no milestones and no notes
+// on the page (they stay in the data), the related tasks take the whole row.
+function renderReadingLayout(goal) {
+  const isReading = hasBookList(goal);
+  byId('details-content').classList.toggle('is-reading', isReading);
+  byId('milestones-panel').hidden = isReading;
+  byId('notes-panel').hidden = isReading;
 }
 
 // 🗑 deletes, ✎ edits; a click anywhere else on the row edits too (the ✎ is the keyboard way).
@@ -619,6 +678,7 @@ function bindDetailsEvents() {
   byId('notes-save').addEventListener('click', submitOnce(saveNotes));
   TaskList.bind(byId('goal-tasks'), onGoalTasksChanged);
   byId('goal-task-add').addEventListener('click', openNewGoalTask);
+  byId('goal-task-add-head').addEventListener('click', openNewGoalTask);
   byId('details-complete').addEventListener('click', completeGoal);
   byId('details-reopen').addEventListener('click', reopenGoal);
 }

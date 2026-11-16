@@ -33,13 +33,14 @@ function taskDomId(task, date, prefix = 'task') {
 const TaskList = {
   // occurrences: [{ task, date, done }] — from getTasksForDate() or getTasksForGoal()
   // weekActions: the compact week card (Planner, week level): priority dot, move ‹ › and edit buttons.
-  render(container, occurrences, { showDate = false, emptyKey = 'task.list.empty', weekActions = false } = {}) {
+  // menu: a plain row with a ⋯ menu (a reading goal page): checkbox, title, date, ⋯ (edit, delete).
+  render(container, occurrences, { showDate = false, emptyKey = 'task.list.empty', weekActions = false, menu = false } = {}) {
     if (occurrences.length === 0) {
       container.innerHTML = `<p class="task-empty">${escapeHtml(t(emptyKey))}</p>`;
       return;
     }
     const goals = new Map(getGoals().map((goal) => [goal.id, goal]));
-    const items = occurrences.map((occurrence) => this.itemHtml(occurrence, goals, showDate, weekActions));
+    const items = occurrences.map((occurrence) => (menu ? this.menuItemHtml(occurrence) : this.itemHtml(occurrence, goals, showDate, weekActions)));
     container.innerHTML = `<ul class="task-list">${items.join('')}</ul>`;
   },
 
@@ -63,6 +64,52 @@ const TaskList = {
           ${this.editButtonHtml(task, date)}
         </span>
       </li>`;
+  },
+
+  // A row with a ⋯ menu (docs/design/reading-diary.png). The goal icon and the priority are not shown:
+  // the page is the goal itself.
+  menuItemHtml({ task, date, done }) {
+    const checkboxId = taskDomId(task, date);
+    const id = escapeHtml(task.id);
+    const menuLabel = t('task.menu', { title: task.title });
+    return `
+      <li class="task-item task-item-menu${done ? ' is-done' : ''}">
+        <input class="form-check-input" type="checkbox" id="${checkboxId}"
+               data-task-toggle="${id}" data-task-date="${escapeHtml(date)}"${done ? ' checked' : ''}>
+        <label class="task-title" for="${checkboxId}">${escapeHtml(task.title)}</label>
+        <span class="task-date"><i class="bi bi-calendar3" aria-hidden="true"></i>${escapeHtml(Format.shortDate(date))}${isRecurringTask(task) ? this.repeatHtml(task) : ''}</span>
+        <div class="dropdown">
+          <button type="button" class="btn btn-icon" id="${taskDomId(task, date, 'task-menu')}" data-bs-toggle="dropdown" aria-expanded="false"
+                  aria-label="${escapeHtml(menuLabel)}" title="${escapeHtml(menuLabel)}">
+            <i class="bi bi-three-dots" aria-hidden="true"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><button type="button" class="dropdown-item" data-task-edit="${id}"><i class="bi bi-pencil me-2" aria-hidden="true"></i>${escapeHtml(t('task.menu.edit'))}</button></li>
+            <li><button type="button" class="dropdown-item text-danger" data-task-delete="${id}"><i class="bi bi-trash me-2" aria-hidden="true"></i>${escapeHtml(t('task.menu.delete'))}</button></li>
+          </ul>
+        </div>
+      </li>`;
+  },
+
+  // ⋯ → "Delete": at once, with "Undo" in the toast (the task goes back to its place in the list).
+  deleteWithUndo(taskId, onChange) {
+    const tasks = getTasks();
+    const index = tasks.findIndex((item) => item.id === taskId);
+    if (index === -1 || !deleteTask(taskId)) return;
+    const task = tasks[index];
+    onChange({});
+    showToast('toast.taskDeleted', 'success', {}, {
+      delay: RECORD_OFFER_DELAY,
+      action: { labelKey: 'toast.undo', onClick: () => this.restore(task, index, onChange) }
+    });
+  },
+
+  restore(task, index, onChange) {
+    const tasks = getTasks();
+    tasks.splice(Math.min(index, tasks.length), 0, task);
+    if (!saveTasks(tasks)) return;
+    showToast('toast.taskRestored', 'success');
+    onChange({ focusId: taskDomId(task, task.date) });
   },
 
   // Week view: a compact card. Line 1: checkbox, title (2 lines max), priority dot.
@@ -190,10 +237,17 @@ const TaskList = {
         if (task) onChange({ focusId: taskDomId(task, task.date), moved: true });
         return;
       }
+      const remove = event.target.closest('[data-task-delete]');
+      if (remove) {
+        this.deleteWithUndo(remove.dataset.taskDelete, onChange);
+        return;
+      }
       const button = event.target.closest('[data-task-edit]');
       if (!button) return;
       const task = getTasks().find((item) => item.id === button.dataset.taskEdit);
-      if (task) TaskForm.open({ task, onSaved: onChange, returnFocusId: button.id });
+      // From the ⋯ menu the focus goes back to the ⋯ button
+      const returnFocusId = button.id || button.closest('.dropdown')?.querySelector('[data-bs-toggle]')?.id;
+      if (task) TaskForm.open({ task, onSaved: onChange, returnFocusId });
     });
   }
 };

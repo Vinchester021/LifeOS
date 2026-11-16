@@ -84,7 +84,7 @@ function overallGoalPercent(goals) {
 function bookStats(goals, entries, start, end) {
   const ids = new Set(goals.filter((goal) => goal.category === 'books' && goal.progressType === 'number').map((goal) => goal.id));
   const list = entriesInRange(entries, start, end).filter((entry) => ids.has(entry.goalId));
-  return { hasGoals: ids.size > 0, books: sumOf(list, (entry) => entry.value), pages: sumOf(list, (entry) => entry.pages) };
+  return { hasGoals: ids.size > 0, books: sumOf(list, (entry) => entry.value), pages: sumOf(list, bookEntryPages) }; // "stopped at page" entries: the pages they added (app.js)
 }
 
 // Months from the first month to the last one, both counted: Sep -> Nov = 3.

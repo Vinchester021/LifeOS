@@ -4601,6 +4601,217 @@ small,
   min-height: 2.75rem;
 }
 
+/* ---------- A goal with a book list = a reading diary (docs/design/reading-diary.png) ----------
+   "Log reading" | "Reading history" side by side, the related tasks on a row of their own. */
+@media (min-width: 992px) {
+  .is-reading .gd-row-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The fields speak through their placeholders: the labels stay for screen readers only */
+#entry-form.is-reading label[for="entry-date"],
+#quick-entry-form.is-reading label[for="quick-entry-date"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* The book and its progress: "40 of 158 pages" with a thin bar */
+.entry-book-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.entry-book-row .form-select {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.entry-book-progress {
+  display: grid;
+  flex: 0 1 12rem;
+  gap: 0.4rem;
+  color: var(--lifeos-text);
+  font-size: 0.875rem; /* 14px: readable next to the book */
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-book-bar {
+  height: 6px;
+  --bs-progress-bar-bg: var(--lifeos-primary);
+}
+
+/* "Pages read" / "Stopped at page": 15px, semi-bold, 44px high. Long words wrap on a phone, the text
+   does not get smaller. */
+.is-reading .gd-switch .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+/* "Save the entry": a usual button, without the "+" of "Add entry" */
+@media (min-width: 576px) {
+  #entry-form.is-reading .gd-entry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  #entry-form.is-reading .gd-entry-actions .btn {
+    width: auto !important; /* the shared button has w-100 */
+    padding-inline: var(--space-4);
+  }
+}
+
+#entry-form.is-reading .gd-submit .bi-plus-lg {
+  display: none;
+}
+
+@media (max-width: 575.98px) {
+  .entry-book-progress {
+    flex-basis: 100%;
+  }
+}
+
+/* The live line "40 → 60 of 158 pages" (a finished book: the success tone) */
+.entry-book-preview {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background-color: var(--lifeos-primary-soft);
+  color: var(--lifeos-primary-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.entry-book-preview.is-finish {
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+}
+
+[data-entry-field="bookpreview"] .field-error {
+  margin-top: 0;
+}
+
+.entry-memo {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+/* "Reading history": [date] the book, under it "+20 pages" and the memo; ✎ 🗑 on the right */
+.gd-history.is-reading li {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.gd-history-day {
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--tone-neutral-bg);
+  color: var(--tone-neutral-fg);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.gd-history.is-reading .gd-history-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.gd-history-book-title {
+  overflow-wrap: anywhere;
+}
+
+.gd-history-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.gd-history-added {
+  align-self: center;
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.gd-history.is-reading .gd-history-note {
+  color: var(--lifeos-text-muted);
+  font-size: var(--fs-small);
+}
+
+/* Phone: the date and the buttons on top, the book and its badges under them (nothing overlaps) */
+@media (max-width: 767.98px) {
+  .gd-history.is-reading li {
+    grid-template-areas: "day actions" "main main";
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-1);
+  }
+
+  .gd-history.is-reading .gd-history-day {
+    grid-area: day;
+    justify-self: start;
+    align-self: center;
+  }
+
+  .gd-history.is-reading .gd-history-main {
+    grid-area: main;
+  }
+
+  .gd-history.is-reading li > .gd-history-actions {
+    grid-area: actions;
+  }
+}
+
+/* Related tasks of a reading goal: checkbox, title, the date with a calendar icon, ⋯ */
+.task-item-menu {
+  flex-wrap: nowrap;
+}
+
+.task-item-menu .task-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--fs-small);
+}
+
+.task-item-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+}
+
+/* Phone: the date goes under the title, so the title keeps the width */
+@media (max-width: 575.98px) {
+  .task-item-menu {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "box title menu" "box date menu";
+    column-gap: 0.65rem;
+    row-gap: 0.1rem;
+  }
+
+  .task-item-menu .form-check-input { grid-area: box; }
+  .task-item-menu .task-title { grid-area: title; }
+  .task-item-menu .task-date { grid-area: date; }
+  .task-item-menu .dropdown { grid-area: menu; }
+}
+
 /* History: date + note | +200 000 ₸ | delete */
 .gd-history {
   margin: 0;

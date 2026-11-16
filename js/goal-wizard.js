@@ -486,7 +486,7 @@ const GoalWizard = {
       event.preventDefault();
       this.next();
     });
-    byId('wiz-back').addEventListener('click', () => this.goToStep(this.step - 1, true));
+    byId('wiz-back').addEventListener('click', () => this.goToStep(this.stepAfter(this.step, -1), true));
     this.form.addEventListener('change', (event) => this.onChange(event));
     this.form.addEventListener('input', (event) => {
       if (event.target.id === 'wiz-levels') this.refreshLevelSelects();
@@ -781,8 +781,19 @@ const GoalWizard = {
       this.focusFirstError();
       return;
     }
-    if (this.step < WIZARD_LAST_STEP) this.goToStep(this.step + 1, true);
+    if (this.step < WIZARD_LAST_STEP) this.goToStep(this.stepAfter(this.step, 1), true);
     else this.save();
+  },
+
+  // A goal with a book list has no milestones (its progress is the books): step 6 is skipped both ways.
+  // Its old milestones stay in the goal (this.milestones is saved as it is).
+  skipsMilestones() {
+    return this.bookListOn();
+  },
+
+  stepAfter(step, direction) {
+    const next = step + direction;
+    return next === 6 && this.skipsMilestones() ? next + direction : next;
   },
 
   focusFirstError() {
@@ -1208,9 +1219,10 @@ const GoalWizard = {
       ['wizard.description.label', goal.description || '—'],
       ['wizard.step.4', t(`progressType.${goal.progressType}`)],
       [goal.progressType === 'money' ? 'wizard.review.saved' : 'wizard.review.values', this.reviewValues(goal)], // money: "Saved"
-      ['wizard.values.deadline', goal.deadline ? Format.date(goal.deadline, { dateStyle: 'long' }) : t('goals.deadline.none')],
-      ['wizard.step.6', milestones.length ? milestones : t('wizard.milestones.empty')]
+      ['wizard.values.deadline', goal.deadline ? Format.date(goal.deadline, { dateStyle: 'long' }) : t('goals.deadline.none')]
     ];
+    // A book list goal: no milestones row (the step is skipped)
+    if (!this.skipsMilestones()) rows.push(['wizard.step.6', milestones.length ? milestones : t('wizard.milestones.empty')]);
     // Every value is escaped; a list of milestones becomes <ul>.
     byId('wiz-review').innerHTML = rows.map(([labelKey, value]) => {
       const valueHtml = Array.isArray(value)
@@ -1320,6 +1332,7 @@ const GoalWizard = {
     if (this.isSaving) return; // already saved, the dialog is closing
     // Check every step again: jump to the first one with a problem.
     for (let step = 1; step < WIZARD_LAST_STEP; step++) {
+      if (step === 6 && this.skipsMilestones()) continue; // hidden milestones never block saving
       if (!this.validateStep(step)) {
         this.setSaving(false);
         this.attempted.add(step);

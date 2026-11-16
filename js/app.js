@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.6';
+const APP_VERSION = '1.5.7';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -1861,6 +1861,12 @@ function hasBookList(goal) {
   return isBookGoal(goal) && goal.bookList === true;
 }
 
+// Milestones that the pages show and count. A goal with a book list has none: its progress is the books
+// (the data stays in storage, the export and the import; only the pages ignore it).
+function goalMilestones(goal) {
+  return hasBookList(goal) ? [] : asArray(goal?.milestones);
+}
+
 function goalBooks(goal) {
   return asArray(goal?.books).filter(isPlainObject);
 }
@@ -1897,44 +1903,90 @@ function untitledDoneBooks(count) {
   return Array.from({ length: safe }, (_, index) => ({ ...createBook({ status: 'done' }), id: `${createId('book')}-${index + 1}` }));
 }
 
-// Pure: pages read -> the new book. reading = { pages } ("+ pages") or { toPage } ("read up to page N").
-// Pages never go past totalPages. Returns { book, added, finished }.
-function readBookPages(book, { pages = 0, toPage = null }, date) {
-  const before = Number(book.pagesRead) || 0;
-  const total = bookPagesTotal(book);
-  let after = toPage !== null ? toPage : before + pages;
-  if (total !== null) after = Math.min(after, total);
-  const added = Math.max(after - before, 0);
-  const updated = { ...book, pagesRead: before + added, startedAt: book.startedAt ?? date };
-  if (updated.status === 'planned') updated.status = 'reading';
-  const finished = updated.status !== 'done' && total !== null && updated.pagesRead >= total;
-  if (finished) Object.assign(updated, { status: 'done', finishedAt: date });
-  return { book: updated, added, finished };
+/* A reading entry keeps what the user said: { mode: "add", pages } ("I read 20 pages") or
+   { mode: "to", page } ("I stopped at page 95"). The book is always counted by playing its entries
+   by date (and the order they were made within a day): "add" adds, "to" sets the page; 0…totalPages.
+   Playing also writes into every entry what it gave: added (pages, may be < 0 after an older entry
+   changed) and value (1 = this entry finished the book). Delete, Undo, edit and the migration use it. */
+
+// Pages an entry gave, for the statistics ("pages this month"): never below 0.
+function bookEntryPages(entry) {
+  return Math.max(Number(entry.added ?? entry.pages) || 0, 0);
 }
 
-// Pure: "Mark as read" — the rest of the pages (when the page count is known) and the status "done".
-function finishBook(book, date) {
-  const total = bookPagesTotal(book);
-  const before = Number(book.pagesRead) || 0;
-  const added = total !== null ? Math.max(total - before, 0) : 0;
-  return {
-    book: { ...book, pagesRead: before + added, status: 'done', startedAt: book.startedAt ?? date, finishedAt: date },
-    added,
-    finished: true
-  };
+// The book's own entries in reading order: by date, then by the order they were made (the list order).
+function bookEntriesInOrder(bookId, entries) {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.bookId === bookId)
+    .sort((a, b) => String(a.entry.date).localeCompare(String(b.entry.date)) || a.index - b.index);
 }
 
-// Pure: the book after one of its entries was deleted. `left` = the book's entries that stay.
-// The entry that finished the book (value 1) or fewer pages than the book has -> "reading" again;
-// no entries left and no pages -> back to "want to read".
-function undoBookEntry(book, entry, left) {
-  const pagesRead = Math.max((Number(book.pagesRead) || 0) - (Number(entry.pages) || 0), 0);
-  const updated = { ...book, pagesRead };
+// One step: the page after this entry. finish: "Mark as read" of a book without a page count.
+function playBookEntry(read, entry, total) {
+  const after = entry.mode === 'to' ? Number(entry.page) || 0 : read + (Number(entry.pages) || 0);
+  return Math.max(total !== null ? Math.min(after, total) : after, 0);
+}
+
+// Pure: { book, entries } after playing the book's entries. Other entries of the list stay as they are.
+// No entries: nothing read, back to "want to read".
+function replayBook(book, entries) {
   const total = bookPagesTotal(book);
-  const unfinished = Number(entry.value) > 0 || (total !== null && pagesRead < total);
-  if (updated.status === 'done' && unfinished) Object.assign(updated, { status: 'reading', finishedAt: null });
-  if (left.length === 0 && pagesRead === 0 && updated.status === 'reading') Object.assign(updated, { status: 'planned', startedAt: null });
-  return updated;
+  const order = bookEntriesInOrder(book.id, entries);
+  const list = [...entries];
+  if (order.length === 0) return { book: { ...book, pagesRead: 0, status: 'planned', startedAt: null, finishedAt: null }, entries: list };
+  let read = 0;
+  let done = false;
+  let finishedAt = null;
+  let finishIndex = -1;
+  order.forEach(({ entry, index }) => {
+    const before = read;
+    read = playBookEntry(read, entry, total);
+    const nowDone = total !== null ? read >= total : done || entry.finish === true;
+    if (nowDone && !done) {
+      finishIndex = index;
+      finishedAt = entry.date;
+    }
+    done = nowDone;
+    list[index] = { ...entry, added: read - before, value: 0 };
+  });
+  if (done) list[finishIndex] = { ...list[finishIndex], value: 1 };
+  const status = done ? 'done' : 'reading';
+  return { book: { ...book, pagesRead: read, status, startedAt: order[0].entry.date, finishedAt: done ? finishedAt : null }, entries: list };
+}
+
+// Pure: the pages read just before an entry with this date (entryId: the entry being edited keeps its
+// place among entries of the same day; a new entry comes after all entries of its day).
+function pagesBeforeEntry(book, entries, { date, entryId = null }) {
+  const ownIndex = entryId ? entries.findIndex((entry) => entry.id === entryId) : Infinity;
+  const earlier = entries.filter((entry, index) => entry.bookId === book.id && entry.id !== entryId
+    && (String(entry.date) < String(date) || (String(entry.date) === String(date) && index < ownIndex)));
+  return earlier.length ? replayBook(book, earlier).book.pagesRead : 0;
+}
+
+// Pure: what is wrong with the pages typed for a book (null = fine). The same checks for the live line
+// and for saving. toPage: "Stopped at page N". from: the pages read before this entry; editing an entry
+// allows the same page ("not less than before"), a new one must go further.
+function bookPagesError(book, number, toPage, from = Number(book?.pagesRead) || 0, { allowSame = false } = {}) {
+  let error = numberError(number, { positive: true });
+  if (!error && !Number.isInteger(number)) error = 'books.error.wholePages';
+  const total = book ? bookPagesTotal(book) : null;
+  if (!error && book && toPage && (allowSame ? number < from : number <= from)) error = 'books.error.toPageLow';
+  if (!error && toPage && total !== null && number > total) error = 'books.error.toPageHigh';
+  return error;
+}
+
+// Pure: the live line "40 → 60 of 158" under the pages field. reading = { pages } or { toPage } (a number
+// or NaN while the field is empty). Returns null (nothing typed), { error } or { from, to, total, finishes }.
+function bookReadingPreview(book, { pages = null, toPage = null }, from = Number(book?.pagesRead) || 0, options = {}) {
+  const isTo = toPage !== null;
+  const number = isTo ? toPage : pages;
+  if (!book || number === null || Number.isNaN(number)) return null;
+  const error = bookPagesError(book, number, isTo, from, options);
+  if (error) return { error };
+  const total = bookPagesTotal(book);
+  const to = playBookEntry(from, isTo ? { mode: 'to', page: number } : { mode: 'add', pages: number }, total);
+  return { from, to, total, finishes: total !== null && to >= total && from < total };
 }
 
 // Pure: the numbers above the book list. perDay = null when there is no pace (no deadline, overdue, done).
@@ -1984,37 +2036,50 @@ function replaceBook(goal, book) {
 }
 
 // Saves pages of a book as an entry. reading = { pages } | { toPage } | { finish: true }, plus { date, note }.
-// Returns { goal, book, entry } (book.status "done" + entry.value 1 = this entry finished it) or null.
+// "Mark as read": "stopped at the last page" (no page count: a finish mark). Then the book is played again.
+// Returns { goal, book, entry } (entry.value 1 = this entry finished the book) or null.
 function recordBookReading(goalId, bookId, reading) {
   const goals = getGoals();
   const found = findBook(goals, goalId, bookId);
   if (!found) return null;
-  const result = reading.finish ? finishBook(found.book, reading.date) : readBookPages(found.book, reading, reading.date);
-  const entry = { id: createId('entry'), date: reading.date, goalId, bookId, value: result.finished ? 1 : 0, note: reading.note ?? '' };
-  if (result.added > 0) entry.pages = result.added;
+  const entry = { id: createId('entry'), date: reading.date, goalId, bookId, note: reading.note ?? '', ...bookEntryMode(found.book, reading) };
+  const result = replayBook(found.book, [...getProgressEntries(), entry]);
   replaceBook(found.goal, result.book);
-  const entries = getProgressEntries();
-  entries.push(entry);
-  if (!saveProgressEntries(entries) || !saveGoals(goals)) return null;
-  return { goal: found.goal, book: result.book, entry };
+  if (!saveProgressEntries(result.entries) || !saveGoals(goals)) return null;
+  return { goal: found.goal, book: result.book, entry: result.entries[result.entries.length - 1] };
 }
 
-// Pure: the opposite of undoBookEntry (the "Undo" after a delete). The pages come back;
-// the status and its dates are what they were before the delete (`before` = the book then).
-function redoBookEntry(book, entry, before) {
-  return {
-    ...book,
-    pagesRead: (Number(book.pagesRead) || 0) + (Number(entry.pages) || 0),
-    status: before.status,
-    startedAt: before.startedAt ?? null,
-    finishedAt: before.finishedAt ?? null
-  };
+// { mode: "to", page } / { mode: "add", pages } (/ + finish) from what the form or a menu gives.
+function bookEntryMode(book, { pages = 0, toPage = null, finish = false }) {
+  if (finish) {
+    const total = bookPagesTotal(book);
+    return total !== null ? { mode: 'to', page: total } : { mode: 'add', pages: 0, finish: true };
+  }
+  return toPage !== null && toPage !== undefined ? { mode: 'to', page: Math.round(toPage) } : { mode: 'add', pages: Math.round(Number(pages) || 0) };
+}
+
+// Pure: an old reading entry (before 1.5.8) gets its mode. Old entries kept only the pages they added,
+// so they become "add" with the same pages: playing them gives the same pages as before. An old
+// "Mark as read" of a book without a page count keeps its finish mark.
+function migrateBookEntry(entry, book) {
+  if (!entry.bookId || entry.mode) return entry;
+  const finish = Number(entry.value) > 0 && bookPagesTotal(book ?? {}) === null;
+  return { ...entry, mode: 'add', pages: Number(entry.pages) || 0, added: Number(entry.pages) || 0, ...(finish ? { finish: true } : {}) };
+}
+
+// Runs on every page start and after an import (with migrateBookGoals). The books keep their saved
+// pages and status: only the entries get the new form (the next change of a book plays it again).
+function migrateBookEntries() {
+  const entries = getProgressEntries();
+  if (!entries.some((entry) => entry.bookId && !entry.mode)) return;
+  const books = new Map(getGoals().flatMap((goal) => goalBooks(goal)).map((book) => [book.id, book]));
+  saveProgressEntries(entries.map((entry) => migrateBookEntry(entry, books.get(entry.bookId))));
 }
 
 // What deleting a book also deletes: { count, pages } of its entries.
 function bookEntriesSummary(bookId, entries = getProgressEntries()) {
   const list = entries.filter((entry) => entry.bookId === bookId);
-  return { count: list.length, pages: list.reduce((sum, entry) => sum + (Number(entry.pages) || 0), 0) };
+  return { count: list.length, pages: list.reduce((sum, entry) => sum + bookEntryPages(entry), 0) };
 }
 
 // Deletes a book and its reading entries; the goal counter is counted again.
@@ -2299,7 +2364,7 @@ function recordWorkoutInGoals(dateValue) {
    11c. Changing the history of a goal (Goal Details): delete with "Undo", edit an entry
    The pure functions take (goal, entries) and return new copies; nothing is saved there.
    - delete: money/number take the change back, other types count again from the entries left,
-     a book entry gives the pages back to its book (undoBookEntry);
+     a book entry: its book is played again from the entries left (replayBook);
    - undo: the entry goes back to the same place in the list, the goal is counted again;
    - edit = delete + add as one operation: the entry keeps its id and its place.
    ========================================================= */
@@ -2323,33 +2388,37 @@ function countedGoal(goal, list, change) {
   return { ...goal, currentValue: recalculateCurrentValue(goal, getGoalEntries(goal.id, list), delta) };
 }
 
-// Pure: delete. Returns { goal, entries, removed: { entry, index, book } } or null.
+// Pure: the goal and the list after the book of `bookId` was played again from `list`. null: no such book.
+function withBookReplayed(goal, list, bookId) {
+  const book = goalBooks(goal).find((item) => item.id === bookId);
+  if (!book) return null;
+  const result = replayBook(book, list);
+  const updated = { ...goal };
+  replaceBook(updated, result.book);
+  return { goal: updated, entries: result.entries };
+}
+
+// Pure: delete. Returns { goal, entries, removed: { entry, index, bookId } } or null.
 function withoutEntry(goal, entries, entryId) {
   const index = entries.findIndex((item) => item.id === entryId);
   if (index === -1) return null;
   const entry = entries[index];
   const rest = entries.filter((item) => item.id !== entryId);
-  const updated = countedGoal(goal, rest, -(Number(entry.value) || 0));
-  let book = null;
+  const removed = { entry, index, bookId: entry.bookId ?? null };
   if (entryChangesBook(goal, entry)) {
-    book = goalBooks(goal).find((item) => item.id === entry.bookId) ?? null;
-    const left = rest.filter((item) => item.bookId === entry.bookId);
-    if (book) replaceBook(updated, undoBookEntry(book, entry, left));
+    const played = withBookReplayed(goal, rest, entry.bookId);
+    if (played) return { ...played, removed };
   }
-  return { goal: updated, entries: rest, removed: { entry, index, book } };
+  return { goal: countedGoal(goal, rest, -(Number(entry.value) || 0)), entries: rest, removed };
 }
 
-// Pure: "Undo" of a delete. Returns { goal, entries } or null (the book was deleted meanwhile).
+// Pure: "Undo" of a delete: the entry goes back to its place, the book is played again.
+// Returns { goal, entries } or null (the book was deleted meanwhile).
 function withEntryRestored(goal, entries, removed) {
-  const { entry, index, book } = removed;
+  const { entry, index } = removed;
   const list = insertedAt(entries, index, entry);
-  const updated = countedGoal(goal, list, Number(entry.value) || 0);
-  if (book) {
-    const now = goalBooks(goal).find((item) => item.id === book.id);
-    if (!now) return null;
-    replaceBook(updated, redoBookEntry(now, entry, book));
-  }
-  return { goal: updated, entries: list };
+  if (entryChangesBook(goal, entry)) return withBookReplayed(goal, list, entry.bookId);
+  return { goal: countedGoal(goal, list, Number(entry.value) || 0), entries: list };
 }
 
 // pages: a number > 0 is kept, 0 / none removes the field (as in a new entry).
@@ -2358,8 +2427,8 @@ function withPages(entry, pages) {
   return pages > 0 ? { ...rest, pages: Math.round(pages) } : rest;
 }
 
-// Pure: edit. fields = { date, note, value?, pages? }. A book list entry gets its pages again
-// with readBookPages (it may finish the book now). Returns { goal, entries, entry } or null.
+// Pure: edit. fields = { date, note, value?, pages? } (a book entry: { pages } or { toPage }, its mode
+// stays). A book entry: the book is played again (it may finish now). Returns { goal, entries, entry } or null.
 function withEntryChanged(goal, entries, entryId, fields) {
   const without = withoutEntry(goal, entries, entryId);
   if (!without) return null;
@@ -2367,12 +2436,13 @@ function withEntryChanged(goal, entries, entryId, fields) {
   let changed = { ...old, date: fields.date, note: fields.note ?? '' };
   let updated;
   if (entryChangesBook(goal, old)) {
-    const book = goalBooks(without.goal).find((item) => item.id === old.bookId);
+    const book = goalBooks(goal).find((item) => item.id === old.bookId);
     if (!book) return null;
-    const result = readBookPages(book, { pages: Number(fields.pages) || 0 }, fields.date);
-    changed = withPages({ ...changed, value: result.finished ? 1 : 0 }, result.added);
-    updated = { ...without.goal };
-    replaceBook(updated, result.book);
+    const { pages, page, finish, ...base } = changed;
+    const mode = old.mode === 'to' ? { toPage: fields.toPage ?? fields.page ?? page } : { pages: fields.pages ?? pages };
+    changed = { ...base, ...bookEntryMode(book, mode), ...(finish ? { finish } : {}) };
+    const played = withBookReplayed(goal, insertedAt(without.entries, index, changed), old.bookId);
+    return played ? { ...played, entry: played.entries[index] } : null;
   } else {
     changed = withPages({ ...changed, value: fields.value ?? old.value }, Number(fields.pages) || 0);
     updated = countedGoal(without.goal, insertedAt(without.entries, index, changed), Number(changed.value) || 0);
@@ -2966,6 +3036,7 @@ const FocusDays = {
 Theme.init();
 migrateSportData(); // old workouts / measurements from lifeos_progress -> lifeos_sport (once)
 migrateBookGoals(); // old "books" goals get a book list: N finished books without a title (once)
+migrateBookEntries(); // old reading entries get their mode ("add" / "to"), see section 11a (once)
 I18n.lang = savedLanguage();
 document.documentElement.lang = I18n.lang;
 
@@ -3027,17 +3098,29 @@ function runHistorySelfTest(check, book) {
   const streakDeleted = withoutEntry(streak, [entry('a', day(-2), 1), entry('b', day(-1), 1), entry('c', day(0), 1)], 'b');
   check('undo: streak 1 -> 3', `${streakDeleted.goal.currentValue}->${withEntryRestored(streakDeleted.goal, streakDeleted.entries, streakDeleted.removed).goal.currentValue}`, '1->3');
 
-  // Book list: 60 + 40 pages finished a 100-page book
-  const finished = book({ totalPages: 100, pagesRead: 100, status: 'done', startedAt: day(-6), finishedAt: day(-1) });
-  const books = { id: 'g', category: 'books', progressType: 'number', bookList: true, books: [finished], currentValue: 1 };
-  const bookEntries = [entry('a', day(-6), 0, { bookId: 'b1', pages: 60 }), entry('b', day(-1), 1, { bookId: 'b1', pages: 40 })];
-  const bookDeleted = withoutEntry(books, bookEntries, 'b');
-  check('delete: the finishing entry -> reading, 60 pages, 0 books', `${bookDeleted.goal.books[0].status} ${bookDeleted.goal.books[0].pagesRead} ${bookDeleted.goal.currentValue}`, 'reading 60 0');
-  const bookBack = withEntryRestored(bookDeleted.goal, bookDeleted.entries, bookDeleted.removed).goal;
-  check('undo: book done again, 100 pages, same date, 1 book', `${bookBack.books[0].status} ${bookBack.books[0].pagesRead} ${bookBack.books[0].finishedAt === day(-1)} ${bookBack.currentValue}`, 'done 100 true 1');
-  const reading = { ...books, books: [book({ status: 'reading', pagesRead: 50, startedAt: day(-3) })], currentValue: 0 };
-  const pagesEdit = withEntryChanged(reading, [entry('a', day(-3), 0, { bookId: 'b1', pages: 50 })], 'a', { date: day(-3), pages: 80 });
+  // Book list (1.5.8): the book is played from its entries, "stopped at page N" keeps N
+  const shelfGoal = (fields = {}) => ({ id: 'g', category: 'books', progressType: 'number', bookList: true, currentValue: 0,
+    books: [book({ totalPages: 300, status: 'reading', ...fields })] });
+  const addE = (id, date, pages) => entry(id, date, 0, { bookId: 'b1', mode: 'add', pages });
+  const toE = (id, date, page) => entry(id, date, 0, { bookId: 'b1', mode: 'to', page });
+  const pagesAfterDelete = (list, id) => withoutEntry(shelfGoal(), list, id).goal.books[0].pagesRead;
+  check('book: +85, stopped at 95, delete +85 = 95', pagesAfterDelete([addE('a', day(-3), 85), toE('b', day(-2), 95)], 'a'), 95);
+  check('book: stopped at 50, +20, delete "at 50" = 20', pagesAfterDelete([toE('a', day(-3), 50), addE('b', day(-2), 20)], 'a'), 20);
+  check('book: stopped at 95, +10, delete "at 95" = 10', pagesAfterDelete([toE('a', day(-3), 95), addE('b', day(-2), 10)], 'a'), 10);
+  // An entry made later but dated between two others: "+20" (d-5), "at 60" (d-1), then "+10" dated d-3
+  const between = replayBook(shelfGoal().books[0], [addE('a', day(-5), 20), toE('c', day(-1), 60), addE('b', day(-3), 10)]);
+  check('book: a back-dated entry between two others', `${between.book.pagesRead} +${between.entries[1].added} +${between.entries[2].added}`, '60 +30 +10');
+  // A 100-page book closed by "stopped at 100", the entry deleted and brought back with "Undo"
+  const closing = { ...shelfGoal(), books: [book({ totalPages: 100, status: 'done', pagesRead: 100 })] };
+  const closingEntries = [addE('a', day(-6), 60), toE('b', day(-1), 100)];
+  const closeDeleted = withoutEntry(closing, closingEntries, 'b');
+  check('book: deleting the closing entry -> reading 60, 0 books', `${closeDeleted.goal.books[0].status} ${closeDeleted.goal.books[0].pagesRead} ${closeDeleted.goal.currentValue}`, 'reading 60 0');
+  const closeBack = withEntryRestored(closeDeleted.goal, closeDeleted.entries, closeDeleted.removed);
+  check('book: Undo -> done again, 100 pages, its date, 1 book', `${closeBack.goal.books[0].status} ${closeBack.goal.books[0].pagesRead} ${closeBack.goal.books[0].finishedAt === day(-1)} ${closeBack.goal.currentValue} ${closeBack.entries[1].value}`, 'done 100 true 1 1');
+  const pagesEdit = withEntryChanged(shelfGoal(), [addE('a', day(-3), 50)], 'a', { date: day(-3), pages: 80 });
   check('edit: book pages 50 -> 80', `${pagesEdit.goal.books[0].pagesRead} ${pagesEdit.entry.pages}`, '80 80');
+  const pageEdit = withEntryChanged(shelfGoal(), [addE('a', day(-3), 85), toE('b', day(-2), 95)], 'b', { date: day(-2), toPage: 120 });
+  check('edit: "stopped at 95" -> 120 keeps the mode, +35', `${pageEdit.goal.books[0].pagesRead} ${pageEdit.entry.mode} +${pageEdit.entry.added}`, '120 to +35');
 
   // "Goal reached! 🎉" (section 11d): only the first time the goal gets to 100 %
   const count = (current, more = {}) => ({ id: 'g', progressType: 'number', status: 'active', startValue: 0, targetValue: 10, currentValue: current, ...more });
@@ -3120,16 +3203,32 @@ function runDateSelfTest() {
   check('recalc: weight, no entries = start', recalculateCurrentValue(goal({ progressType: 'measurements', startValue: 92 }), []), 92);
   // Book shelf
   const book = (fields) => ({ id: 'b1', title: 'A', author: '', totalPages: 300, pagesRead: 0, status: 'planned', startedAt: null, finishedAt: null, ...fields });
-  const read1 = readBookPages(book(), { pages: 120 }, '2026-11-10');
+  const add = (id, date, pages) => ({ id, date, bookId: 'b1', mode: 'add', pages });
+  const to = (id, date, page) => ({ id, date, bookId: 'b1', mode: 'to', page });
+  const read1 = replayBook(book(), [add('a', '2026-11-10', 120)]);
   check('books: first pages -> reading', `${read1.book.status} ${read1.book.pagesRead} ${read1.book.startedAt}`, 'reading 120 2026-11-10');
-  const read2 = readBookPages(book({ status: 'reading', pagesRead: 250 }), { pages: 100 }, '2026-11-12');
-  check('books: pages stop at the page count, the book is done', `${read2.book.status} ${read2.book.pagesRead} +${read2.added} ${read2.finished}`, 'done 300 +50 true');
-  check('books: "up to page 200"', readBookPages(book({ status: 'reading', pagesRead: 120 }), { toPage: 200 }, '2026-11-12').added, 80);
-  check('books: no page count -> never done by pages', readBookPages(book({ totalPages: null }), { pages: 999 }, '2026-11-12').book.status, 'reading');
-  check('books: "mark as read" adds the rest', finishBook(book({ status: 'reading', pagesRead: 100 }), '2026-11-12').added, 200);
-  const undone = undoBookEntry(book({ status: 'done', pagesRead: 300 }), { pages: 50, value: 1 }, [{}]);
-  check('books: deleting the finishing entry -> reading', `${undone.status} ${undone.pagesRead}`, 'reading 250');
-  check('books: deleting the only entry -> want to read', undoBookEntry(book({ status: 'reading', pagesRead: 40 }), { pages: 40, value: 0 }, []).status, 'planned');
+  const read2 = replayBook(book(), [add('a', '2026-11-10', 250), add('b', '2026-11-12', 100)]);
+  check('books: pages stop at the page count, the book is done', `${read2.book.status} ${read2.book.pagesRead} +${read2.entries[1].added} ${read2.entries[1].value} ${read2.book.finishedAt}`, 'done 300 +50 1 2026-11-12');
+  check('books: "stopped at page 200" after 120 adds 80', replayBook(book(), [add('a', '2026-11-10', 120), to('b', '2026-11-12', 200)]).entries[1].added, 80);
+  check('books: no page count -> never done by pages', replayBook(book({ totalPages: null }), [add('a', '2026-11-12', 999)]).book.status, 'reading');
+  check('books: "mark as read" = stopped at the last page', JSON.stringify(bookEntryMode(book(), { finish: true })), '{"mode":"to","page":300}');
+  check('books: no entries left -> want to read', replayBook(book({ status: 'reading', pagesRead: 40 }), []).book.status, 'planned');
+  check('books: an entry of another book is not played', replayBook(book(), [{ ...add('x', '2026-11-10', 50), bookId: 'other' }]).book.pagesRead, 0);
+  check('books: migration: an old entry = "add" with its pages', JSON.stringify(migrateBookEntry({ bookId: 'b1', pages: 40, value: 0 }, book())), '{"bookId":"b1","pages":40,"value":0,"mode":"add","added":40}');
+  check('books: migration keeps "Mark as read" of a book without a page count', migrateBookEntry({ bookId: 'b1', value: 1 }, book({ totalPages: null })).finish, true);
+  check('books: before an entry of the same day (edit keeps its place)', pagesBeforeEntry(book(), [add('a', '2026-11-10', 30), add('b', '2026-11-10', 20), add('c', '2026-11-10', 10)], { date: '2026-11-10', entryId: 'b' }), 30);
+  // Reading diary (1.5.7): the live line "was → will be" and no milestones for a book list goal
+  const reading40 = book({ status: 'reading', pagesRead: 40, totalPages: 158 });
+  const line = (preview) => (preview ? (preview.error ?? `${preview.from}→${preview.to}/${preview.total}${preview.finishes ? ' done' : ''}`) : 'none');
+  check('preview: "+20 pages" 40 → 60 of 158', line(bookReadingPreview(reading40, { pages: 20 })), '40→60/158');
+  check('preview: "stopped at page 60" 40 → 60 of 158', line(bookReadingPreview(reading40, { toPage: 60 })), '40→60/158');
+  check('preview: page 30 is behind -> the error', line(bookReadingPreview(reading40, { toPage: 30 })), 'books.error.toPageLow');
+  check('preview: +200 stops at 158 and finishes', line(bookReadingPreview(reading40, { pages: 200 })), '40→158/158 done');
+  check('preview: a book without a page count', line(bookReadingPreview(book({ status: 'reading', pagesRead: 40, totalPages: null }), { pages: 20 })), '40→60/null');
+  check('preview: an empty field shows nothing', line(bookReadingPreview(reading40, { pages: NaN })), 'none');
+  const oldMilestones = [{ id: 'm', title: 'Half', dueDate: '2026-12-01', done: false }];
+  check('book list goal: old milestones are not shown', goalMilestones({ category: 'books', progressType: 'number', bookList: true, milestones: oldMilestones }).length, 0);
+  check('other goals keep their milestones', goalMilestones({ category: 'finance', progressType: 'money', milestones: oldMilestones }).length, 1);
   runHistorySelfTest(check, book);
   const old = migrateBookGoal(goal({ category: 'books', progressType: 'number', currentValue: 3, targetValue: 13 }));
   check('books: an old goal of 3 books -> 3 finished untitled books', `${old.bookList} ${old.books.length} ${countDoneBooks(old.books)} ${old.currentValue} "${old.books[0].title}"`, 'true 3 3 3 ""');

@@ -181,7 +181,7 @@ function renderYear(period) {
 function getCheckpoints(start, end) {
   const points = [];
   getGoals().filter((goal) => goal.status !== 'archived').forEach((goal) => {
-    asArray(goal.milestones).forEach((milestone) => {
+    goalMilestones(goal).forEach((milestone) => { // a book list goal has none (app.js)
       if (isBetween(Dates.parse(milestone.dueDate), start, end)) {
         points.push({ date: milestone.dueDate, text: milestone.title, goal, done: Boolean(milestone.done), kind: 'milestone' });
       }
@@ -234,7 +234,7 @@ function deadlineCounts() {
   const add = (date) => counts.set(date, (counts.get(date) ?? 0) + 1);
   getGoals().filter((goal) => goal.status === 'active').forEach((goal) => {
     if (Dates.parse(goal.deadline)) add(goal.deadline);
-    asArray(goal.milestones).filter((milestone) => !milestone.done).forEach((milestone) => add(milestone.dueDate));
+    goalMilestones(goal).filter((milestone) => !milestone.done).forEach((milestone) => add(milestone.dueDate));
   });
   return counts;
 }
