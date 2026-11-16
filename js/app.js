@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.5';
+const APP_VERSION = '1.5.6';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -1673,7 +1673,18 @@ function formatGoalValue(goal, value) {
   if (goal.progressType === 'levels') return String(asArray(goal.levels)[number] ?? '—');
   const text = Format.number(number, { maximumFractionDigits: 2 });
   if (hasBookList(goal)) return bookCountText(number, text);
+  if (goal.progressType === 'streak') return streakDaysText(number, text);
   return goal.unit ? `${text} ${goal.unit}` : text;
+}
+
+// A streak always counts days: "1 день", "2 дня", "5 дней" (the plural form, not the unit typed in the wizard).
+function streakDaysText(number, text = Format.number(number)) {
+  return tPlural('progress.days', number, { count: text });
+}
+
+// A measurement that should go down (92 -> 80 kg): its target is lower than its start.
+function goesDown(goal) {
+  return goal.progressType === 'measurements' && Number(goal.targetValue) < Number(goal.startValue);
 }
 
 // A goal with a book list counts books: "1 книга", "2 книги", "5 книг" (Intl.PluralRules in tPlural);
@@ -1702,8 +1713,18 @@ function formatGoalProgress(goal) {
   }
   const format = (value) => Format.number(Number(value) || 0, { maximumFractionDigits: 2 });
   if (hasBookList(goal)) return `${format(goal.currentValue)} / ${bookCountText(Number(goal.targetValue) || 0)}`; // "3 / 13 книг"
+  if (goal.progressType === 'streak') return `${format(goal.currentValue)} / ${streakDaysText(Number(goal.targetValue) || 0)}`; // "2 / 30 дней"
   const unit = goal.unit ? ` ${goal.unit}` : '';
-  return `${format(goal.currentValue)} / ${format(goal.targetValue)}${unit}`;
+  // "90 → 80 kg" for a weight that goes down ("90 / 80" read like "90 of 80")
+  const separator = goesDown(goal) ? ' → ' : ' / ';
+  return `${format(goal.currentValue)}${separator}${format(goal.targetValue)}${unit}`;
+}
+
+// Cards show the values only when they say something the big percent does not: a percent goal
+// from 0 to 100 shows "45 %" once (not "45 % … 45 %").
+function cardValuesText(goal, percentText) {
+  const values = formatGoalProgress(goal);
+  return values === percentText ? '' : values;
 }
 
 function goalCategoryName(category) {
@@ -3121,6 +3142,15 @@ function runDateSelfTest() {
   const listGoal = goal({ category: 'books', progressType: 'number', bookList: true, unit: 'книг', currentValue: 1, targetValue: 13 });
   check('books: a list goal counts books with plurals', formatGoalValue(listGoal, 2), tPlural('books.count', 2));
   check('books: "1 / 13 books" with the plural of 13', formatGoalProgress(listGoal), `${Format.number(1)} / ${tPlural('books.count', 13)}`);
+  // Cards (1.5.6): days of a streak with plurals, a weight that goes down, a percent shown once
+  const streakGoal = { progressType: 'streak', unit: 'дней', startValue: 0, currentValue: 2, targetValue: 30 };
+  check('streak: "2 / 30 days" with the plural, not the typed unit', formatGoalProgress(streakGoal), `${Format.number(2)} / ${tPlural('progress.days', 30)}`);
+  check('streak: one day is the singular form', formatGoalValue(streakGoal, 1), tPlural('progress.days', 1));
+  check('weight going down: "90 → 80 кг"', formatGoalProgress({ progressType: 'measurements', unit: 'кг', startValue: 92, currentValue: 90, targetValue: 80 }), `${Format.number(90)} → ${Format.number(80)} кг`);
+  check('weight going up keeps "/"', formatGoalProgress({ progressType: 'measurements', unit: 'кг', startValue: 50, currentValue: 55, targetValue: 60 }).includes(' / '), true);
+  const percentGoal = { progressType: 'percent', startValue: 0, currentValue: 45, targetValue: 100, status: 'active' };
+  check('percent 0 -> 100: the card shows "45 %" once', cardValuesText(percentGoal, Format.number(0.45, { style: 'percent' })), '');
+  check('percent 20 -> 80: the values stay', cardValuesText({ ...percentGoal, startValue: 20, targetValue: 80 }, Format.number(0.41, { style: 'percent' })) !== '', true);
   check('books: the number after "of" has its own forms', bookCountOfText(21), tPlural('books.countOf', 21, { count: Format.number(21) }));
   check('books: other goals keep their own unit', formatGoalValue(goal({ progressType: 'number', unit: 'km' }), 5), `${Format.number(5)} km`);
   check('books: old entries without a book add their pages', bookShelfStats(shelf, new Date(2026, 10, 21), [{ pages: 80 }, { pages: 40, bookId: 'b1' }]).pages, 1000);

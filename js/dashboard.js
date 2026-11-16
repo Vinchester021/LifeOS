@@ -256,6 +256,8 @@ function readingLineText(goal) {
 
 function dashGoalCardHtml(goal, index) {
   const percent = getGoalPercent(goal);
+  const percentText = Format.number(percent / 100, { style: 'percent' });
+  const values = cardValuesText(goal, percentText); // "" when it would repeat the percent
   const titleId = `dash-goal-${index}`;
   return `
     <article class="dash-goal" data-color="${goalColor(goal)}">
@@ -264,10 +266,10 @@ function dashGoalCardHtml(goal, index) {
         <h3 class="goal-title" id="${titleId}">
           <a class="stretched-link" href="goal-details.html?id=${escapeHtml(encodeURIComponent(goal.id))}">${escapeHtml(goal.title)}</a>
         </h3>
-        <p class="goal-values">${escapeHtml(formatGoalProgress(goal))}</p>
+        ${values ? `<p class="goal-values">${escapeHtml(values)}</p>` : ''}
         ${readingLineText(goal) ? `<p class="dash-goal-reading"><i class="bi bi-book" aria-hidden="true"></i>${escapeHtml(readingLineText(goal))}</p>` : ''}
       </div>
-      <span class="dash-goal-percent">${escapeHtml(Format.number(percent / 100, { style: 'percent' }))}</span>
+      <span class="dash-goal-percent">${escapeHtml(percentText)}</span>
       <div class="progress" role="progressbar" aria-labelledby="${titleId}" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">
         <div class="progress-bar" style="width: ${percent}%"></div>
       </div>

@@ -150,6 +150,16 @@ function entryEditBlock(goal, entry) {
   return finished ? 'details.history.editBook' : null;
 }
 
+// The example in the "Note" field fits the goal: money — "bonus, side job", a weight — "after a workout"…
+const NOTE_EXAMPLES = {
+  money: 'money', number: 'number', books: 'books', booklist: 'books', measurements: 'measurements',
+  percent: 'percent', levels: 'percent', streak: 'streak', checklist: 'number'
+};
+
+function noteExampleText(goal) {
+  return t(`details.entry.noteExample.${NOTE_EXAMPLES[entryMode(goal)] ?? 'number'}`);
+}
+
 function entryDateError(value, mode, goalEntries) {
   const date = Dates.parse(value);
   if (!date) return 'profile.error.dateInvalid';
@@ -188,6 +198,7 @@ function createEntryForm(prefix) {
     // A checklist item has no date and no note
     form.querySelectorAll('[data-entry-common]').forEach((block) => { block.hidden = mode === 'checklist'; });
     el('example').textContent = entryExampleText(goal);
+    el('note').placeholder = noteExampleText(goal); // drawn again on a language change (render)
 
     const amountLabel = el('amount-label');
     amountLabel.dataset.i18n = goal.progressType === 'money' ? 'details.entry.amount' : 'details.entry.count';
@@ -577,7 +588,7 @@ const QUICK_ENTRY_HTML = `
 
             <div class="col-12" data-entry-common>
               <label class="form-label" for="quick-entry-note" data-i18n="details.entry.noteOptional"></label>
-              <input class="form-control" type="text" id="quick-entry-note" maxlength="200" autocomplete="off" data-i18n-placeholder="details.entry.notePlaceholder">
+              <input class="form-control" type="text" id="quick-entry-note" maxlength="200" autocomplete="off">
               <p class="field-error" id="quick-entry-note-error"></p>
             </div>
           </div>

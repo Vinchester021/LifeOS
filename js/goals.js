@@ -123,6 +123,8 @@ function goalMenu(goal) {
 // Card: [icon]   [status] [⋯] / title / category / value ...... % / bar / "until 31 March 2027"
 function renderGoalCard(goal, index) {
   const percent = getGoalPercent(goal);
+  const percentText = Format.number(percent / 100, { style: 'percent' });
+  const values = cardValuesText(goal, percentText); // "" when it would repeat the percent
   const titleId = `goal-title-${index}`;
   const link = `goal-details.html?id=${encodeURIComponent(String(goal.id ?? ''))}`;
 
@@ -142,8 +144,8 @@ function renderGoalCard(goal, index) {
           <p class="goal-category">${escapeHtml(goalCategoryName(goal.category))}</p>
         </div>
         <div class="goal-numbers">
-          <span class="goal-values">${escapeHtml(formatGoalProgress(goal))}</span>
-          <span class="goal-percent">${escapeHtml(Format.number(percent / 100, { style: 'percent' }))}</span>
+          <span class="goal-values">${escapeHtml(values)}</span>
+          <span class="goal-percent">${escapeHtml(percentText)}</span>
         </div>
         <div class="progress" role="progressbar" aria-labelledby="${titleId}"
              aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">

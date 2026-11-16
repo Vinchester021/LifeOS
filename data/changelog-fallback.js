@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.5.6",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "type": "fixed",
+        "text": {
+          "en": "Small fixes: day plurals in streaks, own hints for notes, neater goal cards.",
+          "ru": "Мелкие исправления: склонение дней в сериях, свои подсказки к заметкам, аккуратный вид карточек целей.",
+          "kk": "Ұсақ түзетулер: ескертпелер үшін өз кеңестері, мақсат карталары ұқыптырақ."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.5",
     "date": "2026-11-16",
     "items": [
