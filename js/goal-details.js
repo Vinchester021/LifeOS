@@ -146,6 +146,11 @@ function paceShort(goal, percent) {
   if (percent >= 100) return { value: '—', note: t('details.pace.done') };
   if (days === null) return { value: '—', note: t('details.pace.noDeadline') };
   if (days < 0) return { value: '—', note: t('details.pace.overdue') };
+  // A book list: one pace for the whole page, in pages ("~77 pages a day"), not "0.3 books a week"
+  if (hasBookList(goal)) {
+    const { perDay } = bookShelfStats(goal, Dates.today(), getGoalEntries(goal.id));
+    return { value: perDay ? t('details.pace.bookPages', { pages: Format.number(perDay) }) : '—', note: '' };
+  }
   if (!NUMERIC_PACE_TYPES.includes(goal.progressType)) {
     const { lines } = paceTexts(goal, percent);
     return { value: lines[0] ?? '—', note: lines[1] ?? '' };
@@ -628,5 +633,7 @@ onAppReady(() => {
   document.addEventListener('lifeos:languagechange', renderDetailsPage);
   // The "Quick result" dialog (offered after a done task) and the finish dialog change the goal too
   document.addEventListener('lifeos:progresschange', renderDetailsPage);
+  // A book added on the shelf is chosen in "Add an entry" (js/books.js)
+  document.addEventListener('lifeos:bookadded', (event) => entryForm.preferBook(event.detail.bookId));
   document.addEventListener('lifeos:goalschange', renderDetailsPage);
 });

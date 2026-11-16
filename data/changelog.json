@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.5.5",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "Editing a money goal is clearer; a new book is ready for recording pages at once.",
+          "ru": "Редактирование денежной цели понятнее; новая книга сразу готова к записи страниц.",
+          "kk": "Ақша мақсатын өзгерту түсініктірек; жаңа кітапқа бірден бет жазуға болады."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.4",
     "date": "2026-11-16",
     "items": [

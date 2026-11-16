@@ -184,14 +184,13 @@ const BookShelf = {
     this.scrollOnce(panel);
   },
 
-  // "Read 4 of 13" · "Pages in all: 1,280" · "Pace: ~25 pages a day to finish on time"
+  // "Read 4 of 13" · "Pages in all: 1,280". The pace ("~25 pages a day") is in the goal header only.
   renderStats(goal) {
     const stats = bookShelfStats(goal, Dates.today(), getGoalEntries(goal.id)); // + pages of old entries without a book
     const lines = [
       ['bi-journal-check', t('books.stats.done', { done: Format.number(stats.done), target: Format.number(stats.target) })],
       ['bi-file-earmark-text', t('books.stats.pages', { pages: Format.number(stats.pages) })]
     ];
-    if (stats.perDay) lines.push(['bi-speedometer2', t('books.stats.pace', { pages: Format.number(stats.perDay) })]);
     byId('books-stats').innerHTML = lines
       .map(([icon, text]) => `<li><i class="bi ${icon}" aria-hidden="true"></i>${escapeHtml(text)}</li>`).join('');
   },
@@ -272,7 +271,7 @@ const BookShelf = {
     const locked = book?.status === 'done' && bookHasFinishEntry(book.id);
     const choices = bookStatusChoices(book, locked);
     select.replaceChildren(...choices.map((status) => createEl('option', { value: status }, t(`books.status.${status}`))));
-    select.value = book?.status ?? 'planned';
+    select.value = book?.status ?? 'reading'; // a new book: usually the one being read now
     select.disabled = choices.length === 1;
     const hint = byId('book-status-hint');
     hint.hidden = !locked;
@@ -306,7 +305,11 @@ const BookShelf = {
     if (!result) return;
     bootstrap.Modal.getInstance(byId('book-modal')).hide();
     showToast(this.editingId ? 'books.toast.saved' : 'books.toast.added', 'success', { title: bookTitle(result.book) });
-    if (!this.editingId) this.filter = 'all'; // the new book is visible at once
+    if (!this.editingId) {
+      this.filter = 'all'; // the new book is visible at once
+      // "Add an entry" chooses this book by itself (js/entry-form.js, preferBook)
+      document.dispatchEvent(new CustomEvent('lifeos:bookadded', { detail: { bookId: result.book.id } }));
+    }
     renderDetailsPage();
   },
 

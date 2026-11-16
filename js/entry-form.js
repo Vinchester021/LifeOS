@@ -170,7 +170,8 @@ function createEntryForm(prefix) {
   I18n.apply(amountBlock.parentElement);
   // finishedTitle: the title of the book the last save finished (for the toast);
   // edit: the history entry shown in the form ("Edit the entry"), null = a new entry.
-  const state = { finishedTitle: null, edit: null };
+  // preferBookId: a book just added on the shelf — "Add an entry" chooses it once.
+  const state = { finishedTitle: null, edit: null, preferBookId: null };
   form.addEventListener('change', (event) => {
     if (event.target === el('book') || event.target.name === `${prefix}-pagesmode`) renderBookHint();
     if (event.target === el('sign-minus')) hideMinusNote(el('amount')); // the user did what the note asked
@@ -303,9 +304,25 @@ function createEntryForm(prefix) {
     const reading = books.filter((book) => book.status === 'reading');
     const options = books.map((book) => createEl('option', { value: book.id }, `${bookTitle(book)} — ${t(`books.status.${book.status}`)}`));
     select.replaceChildren(createEl('option', { value: '' }, t('books.entry.choose')), ...options);
-    if (books.some((book) => book.id === previous)) select.value = previous;
-    else select.value = reading.length === 1 ? reading[0].id : '';
+    select.value = chosenBookId(books, previous, reading);
     renderBookHint();
+  }
+
+  // A book just added comes first; then the one the user chose; one book (or one "reading") — it.
+  function chosenBookId(books, previous, reading) {
+    const has = (id) => books.some((book) => book.id === id);
+    if (has(state.preferBookId)) {
+      const id = state.preferBookId;
+      state.preferBookId = null;
+      return id;
+    }
+    if (has(previous)) return previous;
+    if (books.length === 1) return books[0].id;
+    return reading.length === 1 ? reading[0].id : '';
+  }
+
+  function preferBook(bookId) {
+    state.preferBookId = bookId;
   }
 
   // "Pages read" or "Up to page" and the line under the field: "Read: 120 of 320 pages".
@@ -458,7 +475,7 @@ function createEntryForm(prefix) {
     else showToast(fallbackKey, 'success', params);
   }
 
-  return { form, render, reset, save, toastAfterSave, startEdit, stopEdit, isEditing, editedId };
+  return { form, render, reset, save, toastAfterSave, startEdit, stopEdit, isEditing, editedId, preferBook };
 }
 
 /* ---------- The "Quick result" dialog (Dashboard: header button and First steps; any page: the toast
