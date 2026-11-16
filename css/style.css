@@ -4494,37 +4494,38 @@ small,
   }
 }
 
-/* ---------- The head of a goal with a book list (docs/design/book-goal-hero.png) ----------
-   "Progress [=====] 0 %", then 4 tiles with icons: Now, Target, Deadline, Pace. Other goals keep their head. */
+/* ---------- The tile head: a goal with a book list (docs/design/book-goal-hero.png) and a money goal
+   (docs/design/money-goal-hero.png). "Progress [=====] 0 %", then 4 tiles with icons: Now, Target,
+   Deadline, Pace / Needed a month. js/goal-details.js sets .has-tiles and data-tiles. Other goals keep their head. */
 .gd-progress-label {
   display: none;
 }
 
-.is-reading .gd-progress-label {
+.has-tiles .gd-progress-label {
   display: block;
   order: 0;
   color: var(--lifeos-text-muted);
   font-weight: 600;
 }
 
-.is-reading .gd-progress .progress {
+.has-tiles .gd-progress .progress {
   order: 1;
 }
 
-.is-reading .gd-progress .details-percent {
+.has-tiles .gd-progress .details-percent {
   order: 2;
   min-width: 3rem;
   text-align: right;
 }
 
-.is-reading .gd-stats {
+.has-tiles .gd-stats {
   gap: var(--space-3);
 }
 
-.is-reading .gd-stats > div,
-.is-reading .gd-stats > div:nth-child(odd),
-.is-reading .gd-stats > div:nth-child(even),
-.is-reading .gd-stats > div:nth-child(odd):not(:first-child) {
+.has-tiles .gd-stats > div,
+.has-tiles .gd-stats > div:nth-child(odd),
+.has-tiles .gd-stats > div:nth-child(even),
+.has-tiles .gd-stats > div:nth-child(odd):not(:first-child) {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-content: start;
@@ -4536,7 +4537,7 @@ small,
 }
 
 /* The icons come from the icon font (a <dl> may hold only dt / dd) */
-.is-reading .gd-stats > div::before {
+.has-tiles .gd-stats > div::before {
   grid-row: 1 / span 3;
   font-family: "bootstrap-icons";
   font-size: 1.75rem;
@@ -4544,61 +4545,67 @@ small,
   color: var(--lifeos-primary-text);
 }
 
-.is-reading .gd-stats > div:nth-child(1)::before { content: "\f194"; } /* bi-book */
-.is-reading .gd-stats > div:nth-child(2)::before { content: "\f1de"; } /* bi-bullseye */
-.is-reading .gd-stats > div:nth-child(3)::before { content: "\f1f6"; } /* bi-calendar */
-.is-reading .gd-stats > div:nth-child(4)::before { content: "\f580"; } /* bi-speedometer2 */
+[data-tiles="books"] .gd-stats > div:nth-child(1)::before { content: "\f194"; } /* bi-book */
+[data-tiles="books"] .gd-stats > div:nth-child(2)::before { content: "\f1de"; } /* bi-bullseye */
+[data-tiles="books"] .gd-stats > div:nth-child(3)::before { content: "\f1f6"; } /* bi-calendar */
+[data-tiles="books"] .gd-stats > div:nth-child(4)::before { content: "\f580"; } /* bi-speedometer2 */
 
-.is-reading .gd-stats dt,
-.is-reading .gd-stats dd {
+/* A money goal (docs/design/money-goal-hero.png): wallet, target, calendar, piggy bank */
+[data-tiles="money"] .gd-stats > div:nth-child(1)::before { content: "\f615"; } /* bi-wallet2 */
+[data-tiles="money"] .gd-stats > div:nth-child(2)::before { content: "\f1de"; } /* bi-bullseye */
+[data-tiles="money"] .gd-stats > div:nth-child(3)::before { content: "\f1f6"; } /* bi-calendar */
+[data-tiles="money"] .gd-stats > div:nth-child(4)::before { content: "\f64a"; } /* bi-piggy-bank */
+
+.has-tiles .gd-stats dt,
+.has-tiles .gd-stats dd {
   grid-column: 2;
 }
 
-.is-reading .gd-stats dd {
+.has-tiles .gd-stats dd {
   font-size: 1.35rem;
   overflow-wrap: break-word; /* "31.03.2027" stays whole */
 }
 
-.is-reading .gd-stats dd.gd-stat-note {
+.has-tiles .gd-stats dd.gd-stat-note {
   font-size: var(--fs-small);
   font-weight: 400;
 }
 
 /* Phone: the tiles 2 × 2, "Edit" and "Mark as completed" under the title, half and half */
 @media (max-width: 575.98px) {
-  .is-reading .gd-stats > div,
-  .is-reading .gd-stats > div:nth-child(odd),
-  .is-reading .gd-stats > div:nth-child(even) {
+  .has-tiles .gd-stats > div,
+  .has-tiles .gd-stats > div:nth-child(odd),
+  .has-tiles .gd-stats > div:nth-child(even) {
     grid-template-columns: minmax(0, 1fr);
     padding: var(--space-3);
   }
 
-  .is-reading .gd-stats > div::before {
+  .has-tiles .gd-stats > div::before {
     grid-row: auto;
     font-size: 1.4rem;
   }
 
-  .is-reading .gd-stats dt,
-  .is-reading .gd-stats dd {
+  .has-tiles .gd-stats dt,
+  .has-tiles .gd-stats dd {
     grid-column: 1;
   }
 
-  .is-reading .gd-stats dd {
+  .has-tiles .gd-stats dd {
     font-size: 1rem;
   }
 
-  .is-reading .gd-stats dd.gd-stat-note {
+  .has-tiles .gd-stats dd.gd-stat-note {
     font-size: var(--fs-small);
   }
 
-  .is-reading .gd-actions {
+  .has-tiles .gd-actions {
     display: grid;
     flex-basis: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-left: 0;
   }
 
-  .is-reading .gd-actions .btn {
+  .has-tiles .gd-actions .btn {
     justify-content: center;
     min-width: 0;
     padding-inline: var(--space-2);
@@ -5077,6 +5084,84 @@ small,
 
   .gd-history.is-reading li > .gd-history-actions {
     grid-area: actions;
+  }
+}
+
+/* A long "Reading history" (js/goal-details.js: applyHistoryLimit, updateHistoryFade).
+   Phone and tablet: 5 entries, the rest hidden until "Show all (N)". */
+.gd-history li[hidden] {
+  display: none;
+}
+
+.gd-history li:has(+ li[hidden]) {
+  border-bottom: 0;
+}
+
+.gd-history-more {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.gd-history-more[hidden] {
+  display: none;
+}
+
+/* Computer: the block is as tall as "Log reading" (from 420 to 560px) and does not stretch the page:
+   the list is placed absolutely inside .gd-history-box, so its length does not count in the row height.
+   The title stays, the list scrolls with a thin bar, a fade at the bottom while more is below. */
+@media (min-width: 992px) {
+  .is-reading #history-panel {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    min-height: 420px;
+    max-height: 560px;
+  }
+
+  .is-reading .gd-history-box {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-inline: calc(-1 * var(--space-2)); /* room for the marked row, the text stays in line with the title */
+  }
+
+  .is-reading .gd-history-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-inline: var(--space-2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--lifeos-border-strong) transparent;
+  }
+
+  .is-reading .gd-history-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .is-reading .gd-history-scroll::-webkit-scrollbar-thumb {
+    border-radius: var(--radius-pill);
+    background-color: var(--lifeos-border-strong);
+  }
+
+  .is-reading .gd-history-box::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 3.5rem;
+    background: linear-gradient(to bottom, transparent, var(--lifeos-surface));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .is-reading .gd-history-box.has-more-below::after {
+    opacity: 1;
+  }
+
+  .is-reading .gd-history-more {
+    display: none;
   }
 }
 

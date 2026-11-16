@@ -34,9 +34,19 @@ const DETAILS_STATUS = {
   archived: ['', 'goal.badge.archived']
 };
 
+// The tile head (one look, style.css "The tile head"): a goal with a book list and a money goal.
+// Other goals keep the head with dividers. The value is also data-tiles: it picks the tile icons.
+function heroTiles(goal) {
+  if (hasBookList(goal)) return 'books';
+  return goal.progressType === 'money' ? 'money' : '';
+}
+
 function renderOverview(goal) {
   const percent = getGoalPercent(goal);
-  byId('details-hero').dataset.color = goalColor(goal);
+  const hero = byId('details-hero');
+  hero.dataset.color = goalColor(goal);
+  hero.dataset.tiles = heroTiles(goal);
+  hero.classList.toggle('has-tiles', heroTiles(goal) !== '');
   byId('details-icon').className = `bi ${goalIcon(goal)}`;
   byId('details-title').textContent = goal.title;
   document.title = `${goal.title} · ${t('app.name')}`;
@@ -162,8 +172,24 @@ function paceShort(goal, percent) {
   return { value: t('details.pace.day', { value: paceValue(goal, perDay) }), note: '' };
 }
 
+// The 4th tile of a money goal (app.js: moneyPerMonth): "Needed a month ≈ 2 108 000 ₸",
+// "The deadline has passed", "The target is reached"; no deadline — "Average a month" of the last 3 months.
+function moneyPace(goal) {
+  const { kind, amount } = moneyPerMonth(goal, Dates.today(), getGoalEntries(goal.id));
+  const money = amount === null ? '—' : t('details.money.approx', { value: Format.money(amount, goal.unit || DEFAULT_CURRENCY) });
+  if (kind === 'reached') return { titleKey: 'details.money.perMonth', value: t('details.money.reached'), note: '' };
+  if (kind === 'overdue') return { titleKey: 'details.money.perMonth', value: t('details.money.overdue'), note: '' };
+  if (kind === 'average') return { titleKey: 'details.money.average', value: money, note: t('details.money.averageNote') };
+  return { titleKey: 'details.money.perMonth', value: money, note: '' };
+}
+
 function renderPace(goal, percent) {
-  const { value, note } = paceShort(goal, percent);
+  const { titleKey, value, note } = heroTiles(goal) === 'money'
+    ? moneyPace(goal)
+    : { titleKey: 'details.pace.title', ...paceShort(goal, percent) };
+  const title = byId('details-pace-title');
+  title.dataset.i18n = titleKey;
+  title.textContent = t(titleKey);
   byId('details-pace').textContent = value;
   byId('details-pace-note').textContent = note;
 }
@@ -205,6 +231,7 @@ function submitEntry(event) {
   entryForm.toastAfterSave('toast.entryAdded'); // or "Book finished: «…»"
   entryForm.reset();
   renderDetailsPage();
+  scrollHistoryToTop();
   offerFinish(goal);
 }
 
@@ -222,6 +249,7 @@ function editEntry(entryId) {
   }
   entryForm.startEdit(goal, entry);
   renderHistory(goal); // marks the row being edited
+  revealHistoryRow(entryId);
   byId('entry-panel').scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   byId('entry-title').focus({ preventScroll: true });
 }
@@ -235,6 +263,7 @@ function cancelEdit() {
 
 // Back to the row's ✎ after saving or cancelling (or to the title if the row is gone).
 function focusHistoryEntry(entryId) {
+  revealHistoryRow(entryId);
   const button = byId('history-list').querySelector(`[data-edit-entry="${CSS.escape(entryId ?? '')}"]`);
   (button ?? byId('history-title')).focus();
 }
@@ -268,6 +297,61 @@ function renderHistory(goal) {
   byId('history-list').innerHTML = entries
     .map((entry) => (isReading ? bookHistoryItemHtml(goal, entry, editedId) : historyItemHtml(goal, entry, editedId)))
     .join('');
+  applyHistoryLimit(isReading);
+  updateHistoryFade();
+}
+
+/* ----- A long "Reading history": on a computer (≥ 992px) the list scrolls inside the block
+   (style.css, its height follows "Log reading"); on a phone — 5 entries and "Show all (N)" / "Show less". ----- */
+const HISTORY_PHONE_LIMIT = 5;
+const historyView = { expanded: false };
+const wideScreen = window.matchMedia('(min-width: 992px)');
+
+function applyHistoryLimit(isReading) {
+  const rows = [...byId('history-list').children];
+  const limited = isReading && !wideScreen.matches;
+  rows.forEach((row, index) => { row.hidden = limited && !historyView.expanded && index >= HISTORY_PHONE_LIMIT; });
+  const more = byId('history-more');
+  more.hidden = !limited || rows.length <= HISTORY_PHONE_LIMIT;
+  more.setAttribute('aria-expanded', String(historyView.expanded));
+  more.querySelector('span').textContent = historyView.expanded
+    ? t('books.shelf.less') : t('books.shelf.more', { count: Format.number(rows.length) });
+  more.querySelector('i').className = `bi ${historyView.expanded ? 'bi-chevron-up' : 'bi-chevron-down'} me-2`;
+}
+
+function toggleHistoryLimit() {
+  historyView.expanded = !historyView.expanded;
+  applyHistoryLimit(hasBookList(loadGoal() ?? {}));
+}
+
+// The fade at the bottom: only while more entries are below (a list that does not scroll has none).
+function updateHistoryFade() {
+  const scroller = byId('history-scroll');
+  const moreBelow = scroller.scrollTop + scroller.clientHeight < scroller.scrollHeight - 2;
+  byId('history-box').classList.toggle('has-more-below', moreBelow);
+}
+
+// A new entry is on top: the list goes back to its start.
+function scrollHistoryToTop() {
+  byId('history-scroll').scrollTop = 0;
+  updateHistoryFade();
+}
+
+// The row being edited (or just saved) is shown: a hidden row opens the full list (phone),
+// a row outside the scrolling block brings the block to it (computer). The page itself does not jump.
+function revealHistoryRow(entryId) {
+  const row = byId('history-list').querySelector(`[data-entry-row="${CSS.escape(entryId ?? '')}"]`);
+  if (!row) return;
+  if (row.hidden) {
+    historyView.expanded = true;
+    applyHistoryLimit(true);
+  }
+  const scroller = byId('history-scroll');
+  const box = scroller.getBoundingClientRect();
+  const place = row.getBoundingClientRect();
+  if (place.top < box.top) scroller.scrollTop -= box.top - place.top;
+  else if (place.bottom > box.bottom) scroller.scrollTop += place.bottom - box.bottom;
+  updateHistoryFade();
 }
 
 function historyItemHtml(goal, entry, editedId) {
@@ -676,6 +760,14 @@ function onHistoryClick(event) {
 function bindDetailsEvents() {
   byId('entry-form').addEventListener('submit', submitOnce(submitEntry));
   byId('history-list').addEventListener('click', onHistoryClick);
+  byId('history-more').addEventListener('click', toggleHistoryLimit);
+  byId('history-scroll').addEventListener('scroll', updateHistoryFade, { passive: true });
+  // The block follows the height of "Log reading" (an error or the edit note changes it)
+  new ResizeObserver(updateHistoryFade).observe(byId('history-scroll'));
+  wideScreen.addEventListener('change', () => {
+    const goal = loadGoal();
+    if (goal) renderHistory(goal);
+  });
   byId('entry-cancel').addEventListener('click', cancelEdit);
   byId('milestone-list').addEventListener('change', (event) => {
     const box = event.target.closest('[data-milestone-index]');

@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.5.9">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.5.9">
-  <link rel="stylesheet" href="./css/style.css?v=1.5.9">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.0">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.0">
+  <link rel="stylesheet" href="./css/style.css?v=1.6.0">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.5.9">
+  <link rel="manifest" href="./manifest.json?v=1.6.0">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,21 +19,21 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.5.9" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.5.9" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.0" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.0" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.5.9"></script>
-  <script src="./data/quotes-fallback.js?v=1.5.9"></script>
-  <script src="./data/changelog-fallback.js?v=1.5.9"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.5.9"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.5.9" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.5.9" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.5.9" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.5.9" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
-  <script src="./js/tasks.js?v=1.5.9" defer></script>
-  <script src="./js/entry-form.js?v=1.5.9" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
-  <script src="./js/books.js?v=1.5.9" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
-  <script src="./js/goal-details.js?v=1.5.9" defer></script>
+  <script src="./data/translations-fallback.js?v=1.6.0"></script>
+  <script src="./data/quotes-fallback.js?v=1.6.0"></script>
+  <script src="./data/changelog-fallback.js?v=1.6.0"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.6.0"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.6.0" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.6.0" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.6.0" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.6.0" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./js/tasks.js?v=1.6.0" defer></script>
+  <script src="./js/entry-form.js?v=1.6.0" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
+  <script src="./js/books.js?v=1.6.0" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
+  <script src="./js/goal-details.js?v=1.6.0" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -167,7 +167,7 @@
           </div>
           <p class="details-description" id="details-description" hidden></p>
 
-          <!-- A goal with a book list: "Progress [=====] 0 %" (the label and the order come from style.css) -->
+          <!-- The tile head (a book list, money): "Progress [=====] 0 %" (the label and the order come from style.css) -->
           <div class="gd-progress">
             <span class="gd-progress-label" data-i18n="details.progress">Progress</span>
             <span class="details-percent" id="details-percent">0%</span>
@@ -192,7 +192,7 @@
               <dd class="gd-stat-note" id="details-days"></dd>
             </div>
             <div>
-              <dt data-i18n="details.pace.title">Pace</dt>
+              <dt id="details-pace-title" data-i18n="details.pace.title">Pace</dt>
               <dd id="details-pace"></dd>
               <dd class="gd-stat-note" id="details-pace-note"></dd>
             </div>
@@ -325,11 +325,20 @@
 
           <section class="panel" id="history-panel" aria-labelledby="history-title">
             <h2 class="panel-title" id="history-title" tabindex="-1" data-i18n="details.history.titleLong">History of entries</h2>
-            <div class="gd-empty" id="history-empty">
-              <i class="bi bi-clock-history" aria-hidden="true"></i>
-              <span data-i18n="details.history.empty">No entries yet.</span>
+            <!-- A reading goal on a computer: the list scrolls inside the block (as tall as "Log reading"),
+                 a fade at the bottom while more entries are below. On a phone: 5 entries and "Show all (N)". -->
+            <div class="gd-history-box" id="history-box">
+              <div class="gd-history-scroll" id="history-scroll">
+                <div class="gd-empty" id="history-empty">
+                  <i class="bi bi-clock-history" aria-hidden="true"></i>
+                  <span data-i18n="details.history.empty">No entries yet.</span>
+                </div>
+                <ul class="gd-history" id="history-list"></ul>
+              </div>
             </div>
-            <ul class="gd-history" id="history-list"></ul>
+            <button type="button" class="btn btn-tool gd-history-more" id="history-more" aria-controls="history-list" aria-expanded="false" hidden>
+              <i class="bi bi-chevron-down me-2" aria-hidden="true"></i><span></span>
+            </button>
           </section>
         </div>
 

@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.9';
+const APP_VERSION = '1.6.0';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -2013,6 +2013,42 @@ function bookShelfStats(goal, today = Dates.today(), looseEntries = []) {
   return { done, target, pages, perDay };
 }
 
+/* ----- The money goal head (docs/design/money-goal-hero.png): "Needed a month" ----- */
+
+const MONTH_DAYS = 30.44; // an average month
+
+// Rounded UP: to thousands from 10 000 ("≈ 2 108 000 ₸"), small sums ($ 250) to whole units.
+function roundUpMoney(amount) {
+  return amount >= 10000 ? Math.ceil(amount / 1000) * 1000 : Math.ceil(amount);
+}
+
+// Pure: the 4th tile of a money goal. kind = reached | overdue | perMonth | average; amount may be null.
+// perMonth = what is left ÷ the months left (less than a month left = all of it this month).
+function moneyPerMonth(goal, today = Dates.today(), entries = []) {
+  if (getGoalPercent(goal) >= 100) return { kind: 'reached', amount: null };
+  const days = Dates.daysUntil(goal.deadline, today);
+  if (days === null) return { kind: 'average', amount: moneyAverage(entries, today) };
+  if (days < 0) return { kind: 'overdue', amount: null };
+  const left = Math.abs((Number(goal.targetValue) || 0) - (Number(goal.currentValue) || 0));
+  const monthsLeft = Math.max((days + 1) / MONTH_DAYS, 1); // today counts too
+  return { kind: 'perMonth', amount: roundUpMoney(left / monthsLeft) };
+}
+
+// No deadline: the average month of the last 3 months (deposits minus withdrawals), counted from
+// the first entry of that time, so one deposit last week is not divided by 3. null = nothing to show.
+function moneyAverage(entries, today) {
+  const from = Dates.addMonths(today, -3);
+  const recent = entries.filter((entry) => {
+    const date = Dates.parse(entry.date);
+    return date && date > from && date <= today;
+  });
+  if (recent.length === 0) return null;
+  const first = recent.map((entry) => Dates.parse(entry.date)).reduce((min, date) => (date < min ? date : min));
+  const months = Math.min(Math.max((Dates.daysBetween(first, today) + 1) / MONTH_DAYS, 1), 3);
+  const sum = recent.reduce((total, entry) => total + (Number(entry.value) || 0), 0);
+  return sum > 0 ? Math.round(sum / months) : null;
+}
+
 // Pure: an old book goal (no bookList yet) gets a list: N finished books without a title,
 // N = its current value. Nothing else changes; a goal that already has bookList is returned as it is.
 function migrateBookGoal(goal) {
@@ -3244,6 +3280,21 @@ function runDateSelfTest() {
   const stats = bookShelfStats(shelf, new Date(2026, 10, 21));
   check('books: shelf 2 of 13, 920 pages, 11 × 400 pages / 10 days', `${stats.done}/${stats.target} ${stats.pages} ${stats.perDay}`, '2/13 920 440');
   check('books: no deadline -> no pace', bookShelfStats({ ...shelf, deadline: null }).perDay, null);
+  // Money goal head (1.6.0): "Needed a month"
+  const money = (fields) => goal({ category: 'finance', progressType: 'money', unit: 'KZT', startValue: 0, currentValue: 1000000, targetValue: 10000000, deadline: '2027-03-25', ...fields });
+  const perMonth = (fields, entries) => {
+    const result = moneyPerMonth(money(fields), new Date(2026, 10, 16), entries);
+    return `${result.kind} ${result.amount}`;
+  };
+  check('money: 9 000 000 left, 130 days -> ≈ 2 108 000 a month (up to thousands)', perMonth({}), 'perMonth 2108000');
+  check('money: small sums are rounded up to whole units ($ 3 000 in a year -> 250)', perMonth({ unit: 'USD', currentValue: 0, targetValue: 3000, deadline: '2027-11-16' }), 'perMonth 250');
+  check('money: less than a month left -> all of it this month', perMonth({ deadline: '2026-11-25' }), 'perMonth 9000000');
+  check('money: the deadline has passed', perMonth({ deadline: '2026-11-01' }), 'overdue null');
+  check('money: the target is reached', perMonth({ currentValue: 10000000 }), 'reached null');
+  const deposits = [{ date: '2026-10-20', value: 300000 }, { date: '2026-11-10', value: -50000 }, { date: '2026-05-01', value: 999999 }];
+  check('money: no deadline -> the average month of the last 3 months', perMonth({ deadline: null }, deposits), 'average 250000');
+  check('money: no deadline, 3 months of deposits -> ÷ 3', perMonth({ deadline: null }, [{ date: '2026-08-17', value: 300000 }, { date: '2026-11-01', value: 300000 }]), 'average 200000');
+  check('money: no deadline and no entries -> "—"', perMonth({ deadline: null }, []), 'average null');
   const listGoal = goal({ category: 'books', progressType: 'number', bookList: true, unit: 'книг', currentValue: 1, targetValue: 13 });
   check('books: a list goal counts books with plurals', formatGoalValue(listGoal, 2), tPlural('books.count', 2));
   check('books: "1 / 13 books" with the plural of 13', formatGoalProgress(listGoal), `${Format.number(1)} / ${tPlural('books.count', 13)}`);

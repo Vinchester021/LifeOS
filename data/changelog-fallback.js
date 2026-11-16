@@ -2,6 +2,28 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.6.0",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "Money goals get a new header with tiles: see how much to put aside each month to make the deadline.",
+          "ru": "У денежной цели новая шапка с плитками: видно, сколько нужно откладывать в месяц, чтобы успеть к сроку.",
+          "kk": "Ақша мақсатының карточкалары бар жаңа жоғарғы бөлігі: мерзімге үлгеру үшін айына қанша жинау керегі көрінеді."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "A long reading history no longer stretches the page: on a computer it scrolls inside its block, on a phone the last 5 entries are shown.",
+          "ru": "Длинная история чтения больше не растягивает страницу: на компьютере она листается внутри блока, на телефоне видны последние 5 записей.",
+          "kk": "Ұзын оқу тарихы енді бетті созбайды: компьютерде блок ішінде жылжиды, телефонда соңғы 5 жазба көрінеді."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.9",
     "date": "2026-11-16",
     "items": [
