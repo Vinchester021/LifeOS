@@ -4730,8 +4730,9 @@ small,
   --bs-btn-border-color: currentColor;
   --bs-btn-hover-border-color: currentColor;
   --bs-btn-hover-bg: rgb(255 255 255 / 0.15);
+  flex-shrink: 0;
   align-self: center;
-  margin-left: auto;
+  margin: 0 var(--space-2) 0 auto; /* a gap before the close button */
   min-height: 36px;
   font-weight: 700;
   white-space: nowrap;

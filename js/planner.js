@@ -637,6 +637,9 @@ function bindPlannerEvents() {
   byId('quick-goal').addEventListener('change', updateQuickRecordLabel);
   byId('quick-record-form').addEventListener('submit', submitOnce(saveQuickRecord));
   document.addEventListener('lifeos:languagechange', renderPlanner);
+  // A quick result after a done task (js/tasks.js → js/entry-form.js), a goal completed from its dialog
+  document.addEventListener('lifeos:progresschange', renderPlanner);
+  document.addEventListener('lifeos:goalschange', renderPlanner);
   document.addEventListener('lifeos:profilechange', renderPlanner); // a new personal year start
 }
 

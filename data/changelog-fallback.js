@@ -2,6 +2,20 @@
 // Keep it the same as changelog.json: through a server app.js warns in the Console if they differ.
 window.LIFEOS_CHANGELOG = [
   {
+    "version": "1.5.4",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "After you finish a linked task, you can record a result for its goal right away; the quick result remembers the last goal.",
+          "ru": "После выполнения связанной задачи можно сразу записать результат по цели; быстрая запись помнит последнюю цель.",
+          "kk": "Байланысты тапсырма орындалған соң мақсат бойынша нәтижені бірден жазуға болады; жылдам жазу соңғы мақсатты есте сақтайды."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.3",
     "date": "2026-11-16",
     "items": [

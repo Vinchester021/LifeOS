@@ -5,6 +5,23 @@
 // The dialog markup is created here once, so it is not copied into every page.
 'use strict';
 
+/* ---------- A done task of a goal: "Record a result for the goal?" ---------- */
+
+// A tick does not change the goal's progress, so a quiet toast offers the "Quick result" dialog
+// (js/entry-form.js) with this goal. Not for a checklist goal (its items are ticked on the goal page)
+// and not on a page without the dialog.
+const RECORD_OFFER_DELAY = 7000;
+
+function offerGoalEntry(taskId, openerId) {
+  const task = getTasks().find((item) => item.id === taskId);
+  const goal = task?.goalId ? getGoalById(task.goalId) : null;
+  if (!goal || goal.status !== 'active' || goal.progressType === 'checklist' || typeof QuickEntry === 'undefined') return;
+  showToast('task.toast.recordGoal', 'info', { title: goal.title }, {
+    delay: RECORD_OFFER_DELAY,
+    action: { labelKey: 'task.toast.record', onClick: () => QuickEntry.open(byId(openerId), goal.id) }
+  });
+}
+
 /* ---------- Task list ---------- */
 
 // Task ids and dates come from storage (or an imported file): keep only safe characters for HTML ids.
@@ -151,8 +168,10 @@ const TaskList = {
     container.addEventListener('change', (event) => {
       const box = event.target.closest('[data-task-toggle]');
       if (!box) return;
+      const isDone = box.checked; // the new state
       toggleTask(box.dataset.taskToggle, box.dataset.taskDate);
       onChange({ focusId: box.id });
+      if (isDone) offerGoalEntry(box.dataset.taskToggle, box.id);
     });
     container.addEventListener('click', (event) => {
       // Week view: a priority from the dot menu; focus goes back to the dot.
@@ -216,7 +235,8 @@ const TASK_FORM_HTML = `
             </div>
             <div class="col-sm-6">
               <label class="form-label" for="task-goal" data-i18n="task.form.goal"></label>
-              <select class="form-select" id="task-goal"></select>
+              <select class="form-select" id="task-goal" aria-describedby="task-goal-hint"></select>
+              <div class="form-text" id="task-goal-hint" data-i18n="task.form.goalHint"></div>
               <p class="field-error" id="task-goal-error"></p>
             </div>
           </div>

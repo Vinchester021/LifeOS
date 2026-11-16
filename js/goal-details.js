@@ -626,4 +626,7 @@ onAppReady(() => {
   byId('goal-notes').value = loadGoal()?.notes ?? '';
   byId('details-title').setAttribute('tabindex', '-1');
   document.addEventListener('lifeos:languagechange', renderDetailsPage);
+  // The "Quick result" dialog (offered after a done task) and the finish dialog change the goal too
+  document.addEventListener('lifeos:progresschange', renderDetailsPage);
+  document.addEventListener('lifeos:goalschange', renderDetailsPage);
 });

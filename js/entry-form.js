@@ -461,7 +461,19 @@ function createEntryForm(prefix) {
   return { form, render, reset, save, toastAfterSave, startEdit, stopEdit, isEditing, editedId };
 }
 
-/* ---------- The "Quick result" dialog (Dashboard: header button and First steps) ---------- */
+/* ---------- The "Quick result" dialog (Dashboard: header button and First steps; any page: the toast
+   after a done task of a goal, js/tasks.js) ---------- */
+
+// The goal chosen when the dialog opens: the goal of the newest entry if it is still active,
+// else the active goal with the nearest deadline (goals without a deadline last, then by title).
+function quickEntryDefaultGoal(goals, entries) {
+  const activeIds = new Set(goals.map((goal) => goal.id));
+  const last = [...entries].reverse().find((entry) => activeIds.has(entry.goalId));
+  if (last) return last.goalId;
+  const byDeadline = [...goals].sort((a, b) => String(a.deadline || '9999').localeCompare(String(b.deadline || '9999'))
+    || String(a.title).localeCompare(String(b.title), I18n.locale()));
+  return byDeadline[0]?.id ?? '';
+}
 
 const QUICK_ENTRY_HTML = `
   <div class="modal fade" id="quick-entry-modal" tabindex="-1" aria-labelledby="quick-entry-title">
@@ -474,7 +486,7 @@ const QUICK_ENTRY_HTML = `
         <div class="modal-body">
           <div class="quick-entry-empty" id="quick-entry-empty" hidden>
             <i class="bi bi-bullseye" aria-hidden="true"></i>
-            <p class="mb-0" data-i18n="quickEntry.noGoals"></p>
+            <p class="mb-0" id="quick-entry-empty-text" data-i18n="quickEntry.noGoals"></p>
           </div>
           <div class="row g-3" id="quick-entry-fields">
             <div class="col-12">
@@ -556,7 +568,7 @@ const QUICK_ENTRY_HTML = `
         <div class="modal-footer">
           <button type="button" class="btn btn-tool" data-bs-dismiss="modal" data-i18n="delete.cancel"></button>
           <a class="btn btn-primary" id="quick-entry-create" href="goals.html#new" hidden>
-            <i class="bi bi-bullseye me-2" aria-hidden="true"></i><span data-i18n="quickEntry.createGoal"></span>
+            <i class="bi bi-bullseye me-2" aria-hidden="true"></i><span data-i18n="goals.new"></span>
           </a>
           <button type="submit" class="btn btn-primary" id="quick-entry-submit">
             <i class="bi bi-check2 me-2" aria-hidden="true"></i><span id="quick-entry-submit-label"></span>
@@ -600,7 +612,9 @@ const QuickEntry = {
       .sort((a, b) => String(a.title).localeCompare(String(b.title), I18n.locale()));
   },
 
-  open(opener) {
+  // open(opener) — the goal of the last entry is chosen; open(opener, goalId) — this goal
+  // ("Record" in the toast after a done task). Only active goals are in the list.
+  open(opener, goalId = null) {
     if (!window.bootstrap) return;
     this.ensureModal();
     this.opener = opener;
@@ -609,11 +623,14 @@ const QuickEntry = {
     byId('quick-entry-fields').hidden = goals.length === 0;
     byId('quick-entry-create').hidden = goals.length > 0;
     byId('quick-entry-submit').hidden = goals.length === 0;
+    // No goal at all: "Create a goal first"; only completed or archived ones: "No goals in progress".
+    const emptyText = byId('quick-entry-empty-text');
+    emptyText.dataset.i18n = getGoals().length ? 'quickEntry.noActive' : 'quickEntry.noGoals';
+    emptyText.textContent = t(emptyText.dataset.i18n);
     if (goals.length) {
       const select = byId('quick-entry-goal');
-      const previous = select.value;
       select.replaceChildren(...goals.map((goal) => createEl('option', { value: goal.id }, goal.title)));
-      if (goals.some((goal) => goal.id === previous)) select.value = previous; // one goal: chosen at once
+      select.value = goals.some((goal) => goal.id === goalId) ? goalId : quickEntryDefaultGoal(goals, getProgressEntries());
       this.entryForm.reset();
       this.showGoal();
     }
