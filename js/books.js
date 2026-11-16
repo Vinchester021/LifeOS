@@ -1,4 +1,5 @@
-// LifeOS — "My books" on Goal Details: the book shelf of a "Books" goal with a book list.
+// LifeOS — "My books" on Goal Details: the book shelf of a "Books" goal with a book list
+// (docs/design/bookshelf.png: every book is a cover with a coloured spine and a stack of pages).
 // The data and the rules (pages, statuses, the counter of the goal, undo) are in app.js, section 11a;
 // pages are recorded with the "Add an entry" form (js/entry-form.js). Here: the list, the filter,
 // the "Add / Edit a book" dialog, "Mark as read" and deleting a book (with its reading entries).
@@ -8,16 +9,30 @@
 const BOOK_FILTERS = ['all', 'reading', 'done', 'planned'];
 const BOOK_STATUS_TONE = { planned: '', reading: 'is-accent', done: 'is-success' };
 const BOOK_ORDER = { reading: 0, planned: 1, done: 2 };
+const SHELF_PHONE_LIMIT = 6; // a phone shows 6 books, then "Show all"; a computer — 2 rows
+const SHELF_FLASH_MS = 1600; // a finished book only lights up when its cover is pressed
 
 /* ---------- Pure ---------- */
 
-// The books of one filter: reading -> want to read -> finished (the last finished first).
-function filteredBooks(books, filter) {
+// When the book last changed: its newest entry, the day it was finished or started, or created.
+// (Books keep no "updated" date; the data is not changed for the order.)
+function bookChangedAt(book, entries = []) {
+  const dates = [book.finishedAt, book.startedAt, book.createdAt,
+    ...entries.filter((entry) => entry.bookId === book.id).map((entry) => entry.date)];
+  return dates.filter(Boolean).map(String).sort().pop() ?? '';
+}
+
+// The books of one filter: reading -> want to read -> finished; inside each — the last changed first.
+function filteredBooks(books, filter, entries = []) {
   return books
     .filter((book) => filter === 'all' || book.status === filter)
     .sort((a, b) => BOOK_ORDER[a.status] - BOOK_ORDER[b.status]
-      || String(b.finishedAt ?? b.startedAt ?? '').localeCompare(String(a.finishedAt ?? a.startedAt ?? ''))
-      || String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
+      || bookChangedAt(b, entries).localeCompare(bookChangedAt(a, entries)));
+}
+
+// How many covers are shown before "Show all": 6 on a phone, 2 rows on bigger screens.
+function shelfLimit(columns, isPhone) {
+  return isPhone ? SHELF_PHONE_LIMIT : Math.max(columns, 1) * 2;
 }
 
 // Titles and authors already typed in any goal, for the hints of the dialog (no empty, no repeats).
@@ -101,22 +116,31 @@ const BOOK_DIALOG_HTML = `
     </div>
   </div>`;
 
-// "120 / 320 pages" with a bar; no page count: "Read 120 pages" (nothing while no page is read).
+// The pages on the cover: a thin bar (only with a page count) and "120 / 320 pages" or "Read 120 pages";
+// a finished book: a full bar and, under it, the day it was finished.
 function bookPagesHtml(book) {
   const read = Number(book.pagesRead) || 0;
   const total = bookPagesTotal(book);
-  if (total === null) {
-    return read > 0 ? `<p class="book-card-pages">${escapeHtml(t('books.card.read', { read: Format.number(read) }))}</p>` : '';
-  }
-  const percent = Math.min(Math.round((read / total) * 100), 100);
-  const text = t('books.card.readOf', { read: Format.number(read), total: Format.number(total) });
+  const percent = total !== null ? Math.min(Math.round((read / total) * 100), 100) : 0;
+  const text = total !== null
+    ? t('books.card.readOf', { read: Format.number(read), total: Format.number(total) })
+    : t('books.card.read', { read: Format.number(read) });
+  const finished = book.status === 'done' && book.finishedAt
+    ? `<span class="book-card-date">${escapeHtml(t('books.card.finishedOn', { date: Format.shortDate(book.finishedAt) }))}</span>` : '';
   return `
-    <div class="book-card-progress">
-      <div class="progress" role="progressbar" aria-label="${escapeHtml(text)}" aria-valuenow="${percent}" aria-valuemin="0" aria-valuemax="100">
-        <div class="progress-bar" style="width: ${percent}%"></div>
-      </div>
-      <span class="book-card-pages">${escapeHtml(text)}</span>
-    </div>`;
+          ${total !== null ? `<span class="book-card-bar" aria-hidden="true"><span style="width: ${percent}%"></span></span>` : ''}
+          <span class="book-card-pages">${escapeHtml(text)}</span>
+          ${finished}`;
+}
+
+// "Shantaram, Reading, 120 of 864 pages" — what a screen reader says for the cover.
+function bookCardLabel(book) {
+  const read = Number(book.pagesRead) || 0;
+  const total = bookPagesTotal(book);
+  const pages = total !== null
+    ? tPlural('books.card.pagesOf', total, { read: Format.number(read), total: Format.number(total) })
+    : t('books.card.read', { read: Format.number(read) });
+  return t('books.card.label', { title: bookTitle(book), status: t(`books.status.${book.status}`), pages });
 }
 
 function bookMenuHtml(book) {
@@ -140,20 +164,34 @@ function bookMenuHtml(book) {
     </div>`;
 }
 
+// A cover: the whole cover is a button (it chooses the book in "Log reading"); the ⋯ menu lies over it.
 function bookCardHtml(book) {
+  const id = escapeHtml(book.id);
+  const title = bookTitle(book);
   const author = String(book.author ?? '').trim();
+  const status = book.status === 'done' ? t('books.history.finishedBadge') : t(`books.status.${book.status}`);
   return `
-    <li class="book-card" data-status="${escapeHtml(book.status)}">
-      <div class="book-card-top">
-        <span class="book-card-icon" aria-hidden="true"><i class="bi ${book.status === 'done' ? 'bi-journal-check' : 'bi-book'}"></i></span>
-        <div class="book-card-text">
-          <h3 class="book-card-title">${escapeHtml(bookTitle(book))}</h3>
-          ${author ? `<p class="book-card-author">${escapeHtml(author)}</p>` : ''}
-        </div>
-        <span class="badge-status ${BOOK_STATUS_TONE[book.status] ?? ''}">${escapeHtml(t(`books.status.${book.status}`))}</span>
-        ${bookMenuHtml(book)}
-      </div>
-      ${bookPagesHtml(book)}
+    <li class="book-card" data-status="${escapeHtml(book.status)}" data-book-card="${id}">
+      <button type="button" class="book-card-main" data-book-pick="${id}" aria-label="${escapeHtml(bookCardLabel(book))}">
+        <span class="book-card-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
+        ${author ? `<span class="book-card-author">${escapeHtml(author)}</span>` : ''}
+        <span class="book-card-foot">
+          <span class="badge-status ${BOOK_STATUS_TONE[book.status] ?? ''}">${escapeHtml(status)}</span>
+          ${bookPagesHtml(book)}
+        </span>
+      </button>
+      ${bookMenuHtml(book)}
+    </li>`;
+}
+
+// An empty shelf: a dashed cover "+ Add your first book".
+function emptyShelfHtml() {
+  return `
+    <li class="book-card is-placeholder">
+      <button type="button" class="book-card-main" data-book-add-first>
+        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+        <span>${escapeHtml(t('books.shelf.addFirst'))}</span>
+      </button>
     </li>`;
 }
 
@@ -166,6 +204,7 @@ const BookShelf = {
   deletingId: null,
   opener: null, // the focus goes back here when a dialog closes
   scrolled: false,
+  expanded: false, // "Show all" was pressed
 
   goal() {
     return getGoalById(this.goalId);
@@ -204,11 +243,40 @@ const BookShelf = {
   },
 
   renderList(books) {
-    const shown = filteredBooks(books, this.filter);
-    byId('books-list').innerHTML = shown.map(bookCardHtml).join('');
-    const empty = byId('books-empty');
-    empty.hidden = shown.length > 0;
-    empty.querySelector('span').textContent = t(books.length ? 'books.empty.filter' : 'books.empty.none');
+    const shown = filteredBooks(books, this.filter, getGoalEntries(this.goalId));
+    byId('books-list').innerHTML = books.length ? shown.map(bookCardHtml).join('') : emptyShelfHtml();
+    const empty = byId('books-empty'); // "No books here" for a filter without books
+    empty.hidden = !books.length || shown.length > 0;
+    empty.querySelector('span').textContent = t('books.empty.filter');
+    this.applyLimit();
+  },
+
+  // 2 rows on a computer (the columns come from the grid), 6 covers on a phone; then "Show all (N)".
+  applyLimit() {
+    const covers = [...byId('books-list').querySelectorAll('.book-card:not(.is-placeholder)')];
+    const columns = getComputedStyle(byId('books-list')).gridTemplateColumns.split(' ').filter(Boolean).length;
+    const limit = shelfLimit(columns, window.matchMedia('(max-width: 575.98px)').matches);
+    covers.forEach((cover, index) => { cover.hidden = !this.expanded && index >= limit; });
+    const more = byId('books-more');
+    more.hidden = covers.length <= limit;
+    more.setAttribute('aria-expanded', String(this.expanded));
+    more.querySelector('span').textContent = this.expanded
+      ? t('books.shelf.less') : t('books.shelf.more', { count: Format.number(covers.length) });
+    more.querySelector('i').className = `bi ${this.expanded ? 'bi-chevron-up' : 'bi-chevron-down'} me-2`;
+  },
+
+  // A cover is pressed: the book is chosen in "Log reading" (goal-details.js scrolls there);
+  // a finished book cannot get pages — its cover only lights up.
+  pick(bookId) {
+    const book = goalBooks(this.goal()).find((item) => item.id === bookId);
+    if (!book) return;
+    if (book.status === 'done') {
+      const cover = byId('books-list').querySelector(`[data-book-card="${CSS.escape(bookId)}"]`);
+      cover?.classList.add('is-flash');
+      setTimeout(() => cover?.classList.remove('is-flash'), SHELF_FLASH_MS);
+      return;
+    }
+    document.dispatchEvent(new CustomEvent('lifeos:bookpick', { detail: { bookId } }));
   },
 
   // Coming from the Dashboard dialog ("Add a book" link: goal-details.html?id=…#books-panel).
@@ -361,7 +429,25 @@ const BookShelf = {
       this.render(this.goal());
       byId('books-filter').querySelector(`[data-book-filter="${this.filter}"]`)?.focus();
     });
+    byId('books-more').addEventListener('click', () => {
+      this.expanded = !this.expanded;
+      this.applyLimit();
+    });
+    let resizeFrame = 0; // the columns change with the width: 2 rows stay 2 rows
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => { if (!byId('books-panel').hidden) this.applyLimit(); });
+    });
     byId('books-list').addEventListener('click', (event) => {
+      if (event.target.closest('[data-book-add-first]')) {
+        this.openDialog(null, event.target.closest('button'));
+        return;
+      }
+      const cover = event.target.closest('[data-book-pick]');
+      if (cover) {
+        this.pick(cover.dataset.bookPick);
+        return;
+      }
       const button = event.target.closest('[data-book-action]');
       if (!button) return;
       const { bookAction, bookId } = button.dataset;
@@ -388,6 +474,10 @@ function runBooksSelfTest() {
     { id: 'c', status: 'reading', startedAt: '2026-11-01' }, { id: 'd', status: 'done', finishedAt: '2026-11-05' }
   ];
   check('order: reading, want to read, the last finished first', filteredBooks(books, 'all').map((book) => book.id).join(), 'c,b,d,a');
+  const planned = [{ id: 'p1', status: 'planned', createdAt: '2026-11-01T10:00:00Z' }, { id: 'p2', status: 'planned', createdAt: '2026-11-03T10:00:00Z' }];
+  check('order: inside a status the last changed first', filteredBooks(planned, 'all').map((book) => book.id).join(), 'p2,p1');
+  check('order: a newer entry makes a book "changed"', filteredBooks(planned, 'all', [{ bookId: 'p1', date: '2026-11-10' }]).map((book) => book.id).join(), 'p1,p2');
+  check('shelf: a phone shows 6, a computer 2 rows', `${shelfLimit(2, true)} ${shelfLimit(7, false)} ${shelfLimit(4, false)}`, '6 14 8');
   check('filter: finished', filteredBooks(books, 'done').length, 2);
   check('hints: no empty titles, no repeats', knownBookTexts([{ books: [{ title: 'B' }, { title: ' ' }] }, { books: [{ title: 'B' }, { title: 'A' }] }], 'title').join(), 'A,B');
   check('status: a new book — any', bookStatusChoices(null, false).length, 3);

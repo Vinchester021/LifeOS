@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.5.8",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "type": "improved",
+        "text": {
+          "en": "The “My books” shelf: books look like covers, and pressing one opens the reading entry at once.",
+          "ru": "Полка «Мои книги»: книги в виде обложек, нажатие на книгу сразу открывает запись чтения.",
+          "kk": "Кітап сөресі: кітаптар мұқаба түрінде, кітапты бассаңыз — оқуды жазу бірден ашылады."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.5.7",
     "date": "2026-11-16",
     "items": [

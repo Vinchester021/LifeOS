@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.5.7';
+const APP_VERSION = '1.5.8';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 

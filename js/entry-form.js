@@ -387,6 +387,14 @@ function createEntryForm(prefix) {
     state.preferBookId = bookId;
   }
 
+  // A cover on the shelf was pressed: choose this book now (false: it cannot get pages).
+  function selectBook(bookId) {
+    if (![...el('book').options].some((option) => option.value === bookId)) return false;
+    el('book').value = bookId;
+    renderBookState(true);
+    return true;
+  }
+
   // The chosen book as it is before this entry (editing: without the entry being edited).
   function stateBook() {
     let goal = getGoalById(form.dataset.goalId);
@@ -572,7 +580,7 @@ function createEntryForm(prefix) {
     else showToast(fallbackKey, 'success', params);
   }
 
-  return { form, render, reset, save, toastAfterSave, startEdit, stopEdit, isEditing, editedId, preferBook };
+  return { form, render, reset, save, toastAfterSave, startEdit, stopEdit, isEditing, editedId, preferBook, selectBook };
 }
 
 /* ---------- The "Quick result" dialog (Dashboard: header button and First steps; any page: the toast

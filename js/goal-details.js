@@ -640,6 +640,19 @@ function renderDetailsPage() {
   renderGoalTasks(goal);
 }
 
+// The shelf (js/books.js) chose a book: an entry being edited is closed, the book is chosen,
+// the page scrolls smoothly to the form and the pages field gets the focus.
+function pickBookForReading(bookId) {
+  if (entryForm.isEditing()) {
+    entryForm.stopEdit();
+    renderDetailsPage();
+  }
+  if (!entryForm.selectBook(bookId)) return;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  byId('entry-panel').scrollIntoView({ block: 'start', behavior: smooth ? 'smooth' : 'auto' });
+  byId('entry-bookpages').focus({ preventScroll: true });
+}
+
 // A goal with a book list is a reading diary (docs/design/reading-diary.png): no milestones and no notes
 // on the page (they stay in the data), the related tasks take the whole row.
 function renderReadingLayout(goal) {
@@ -695,5 +708,7 @@ onAppReady(() => {
   document.addEventListener('lifeos:progresschange', renderDetailsPage);
   // A book added on the shelf is chosen in "Add an entry" (js/books.js)
   document.addEventListener('lifeos:bookadded', (event) => entryForm.preferBook(event.detail.bookId));
+  // A cover pressed on the shelf: this book in "Log reading", the page goes to the form
+  document.addEventListener('lifeos:bookpick', (event) => pickBookForReading(event.detail.bookId));
   document.addEventListener('lifeos:goalschange', renderDetailsPage);
 });

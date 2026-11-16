@@ -351,6 +351,10 @@ a:hover {
   --bs-btn-active-bg: var(--lifeos-primary-hover);
   --bs-btn-active-border-color: var(--lifeos-primary-hover);
   --bs-btn-active-color: var(--lifeos-on-primary);
+  /* Disabled: the same green, paler (Bootstrap would show its own blue) */
+  --bs-btn-disabled-bg: var(--lifeos-primary);
+  --bs-btn-disabled-border-color: var(--lifeos-primary);
+  --bs-btn-disabled-color: var(--lifeos-on-primary);
   font-weight: 600;
 }
 
@@ -8096,12 +8100,24 @@ small,
   margin-bottom: var(--space-3);
 }
 
-/* "Read 4 of 13" · "Pages in all: 1 280" · "Pace: ~25 pages a day" */
+/* The head: "My books" | "Read 0 of 14" · "Pages in all: 0" | "+ Add a book" (docs/design/bookshelf.png) */
+.books-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.books-head .panel-title {
+  margin: 0 auto 0 0;
+}
+
 .books-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  margin: 0 0 var(--space-3);
+  align-items: center;
+  margin: 0;
   padding: 0;
   list-style: none;
   font-weight: 600;
@@ -8113,13 +8129,19 @@ small,
   gap: var(--space-2);
 }
 
+.books-stats li + li {
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--lifeos-border-strong);
+}
+
 .books-stats .bi {
   color: var(--lifeos-primary-text);
   font-size: 1.1rem;
 }
 
 .books-filter {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .books-filter .segmented-btn {
@@ -8133,86 +8155,261 @@ small,
   color: inherit;
 }
 
-/* Cards: one column on a phone, then as many ~18rem columns as fit */
+/* The shelf: covers ~190px wide (7 in a row on 1920), 4 on a tablet, 2 on a phone */
 .books-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* 7 in a row on 1920, no empty strip */
+  gap: var(--space-4) var(--space-3);
   margin: 0;
-  padding: 0;
+  padding: 0 0 6px; /* room for the stack of pages under the last row */
   list-style: none;
 }
 
+@media (max-width: 991.98px) {
+  .books-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .books-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A cover (2:3): a coloured spine on the left, a stack of pages under it. The colours by status:
+   reading — the accent; finished — green; want to read — neutral. */
 .book-card {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
+  --book-spine: var(--lifeos-border-strong);
+  --book-bar: var(--lifeos-border-strong);
+  position: relative;
+  aspect-ratio: 2 / 3;
   border: 1px solid var(--lifeos-border);
-  border-radius: var(--radius);
+  border-radius: 4px var(--radius-sm) var(--radius-sm) 4px;
   background-color: var(--lifeos-surface);
+  box-shadow:
+    0 3px 0 -1px var(--lifeos-surface), 0 3px 0 0 var(--lifeos-border),
+    0 6px 0 -2px var(--lifeos-surface), 0 6px 0 -1px var(--lifeos-border),
+    0 8px 16px -8px rgb(0 0 0 / 0.18);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, outline-color 0.3s ease;
 }
 
-/* [icon] [title, author] [⋯]; the status badge under the title (a long title keeps the whole width) */
-.book-card-top {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: var(--space-1) var(--space-2);
+.book-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px auto -1px -1px;
+  width: 9px;
+  border-radius: 4px 0 0 4px;
+  background-color: var(--book-spine);
+  pointer-events: none;
 }
 
-.book-card-icon {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--radius-sm);
-  background-color: var(--lifeos-primary-soft);
-  color: var(--lifeos-primary-text);
+.book-card[data-status="reading"] {
+  --book-spine: var(--lifeos-primary);
+  --book-bar: var(--lifeos-primary);
+}
+
+.book-card[data-status="done"] {
+  --book-spine: var(--tone-success-fg);
+  --book-bar: var(--tone-success-fg);
+}
+
+.book-card:hover {
+  transform: translateY(-2px);
+}
+
+/* The whole cover is a button: title (4 lines max), author, then at the bottom the status and the pages */
+.book-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-3) var(--space-3) var(--space-3) calc(9px + var(--space-3));
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--lifeos-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.book-card-main:focus-visible {
+  outline: 3px solid var(--lifeos-focus, var(--lifeos-primary));
+  outline-offset: 2px;
 }
 
 .book-card-title {
-  margin: 0;
+  display: -webkit-box;
+  padding-right: 1.75rem; /* the ⋯ button */
+  overflow: hidden;
   font-size: var(--fs-card);
   font-weight: 700;
-  overflow-wrap: anywhere;
+  line-height: 1.25;
+  overflow-wrap: break-word; /* a word breaks only if it does not fit at all */
+  hyphens: auto; /* "Оско-лков", not "Осколко/в" (the page language is set on <html>) */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
 }
 
 .book-card-author {
-  margin: 0.1rem 0 0;
+  overflow: hidden;
   color: var(--lifeos-text-muted);
   font-size: var(--fs-small);
-  overflow-wrap: anywhere;
-}
-
-.book-card .badge-status {
-  grid-row: 2;
-  grid-column: 2;
-  justify-self: start;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.book-card-menu .btn-icon {
-  margin: -0.25rem -0.4rem 0 0;
-}
-
-.book-card-progress {
+.book-card-foot {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  margin-top: auto;
 }
 
-.book-card-progress .progress {
-  height: 0.5rem;
+.book-card-foot .badge-status {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-card-bar {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
   background-color: var(--lifeos-border);
 }
 
-.book-card-progress .progress-bar {
-  background-color: var(--lifeos-primary);
+.book-card-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--book-bar);
 }
 
-.book-card-pages {
-  margin: 0;
+.book-card-pages,
+.book-card-date {
   color: var(--lifeos-text-muted);
   font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.book-card-date {
+  margin-top: calc(-1 * var(--space-1));
+}
+
+/* ⋯ on the top right, over the cover */
+.book-card-menu {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+}
+
+.book-card-menu .btn-icon {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+}
+
+/* A finished cover pressed: it lights up (it cannot get pages) */
+.book-card.is-flash {
+  outline: 3px solid var(--tone-success-fg);
+  outline-offset: 3px;
+}
+
+/* An empty shelf: a dashed cover "+ Add your first book" */
+.book-card.is-placeholder {
+  border: 2px dashed var(--lifeos-border-strong);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.book-card.is-placeholder::before {
+  display: none;
+}
+
+.book-card.is-placeholder .book-card-main {
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  color: var(--lifeos-primary-text);
+  font-weight: 700;
+  text-align: center;
+}
+
+.book-card.is-placeholder .bi {
+  font-size: 1.75rem;
+}
+
+.books-more {
+  margin-top: var(--space-3);
+}
+
+/* Tablet and phone: the covers are narrow (~150px), so the ⋯ gets its own row on top and the title
+   keeps the whole width of the cover (a word is not cut in the middle) */
+@media (max-width: 991.98px) {
+  .book-card-main {
+    padding: 2.5rem var(--space-2) var(--space-3) calc(9px + var(--space-3));
+  }
+
+  .book-card-title {
+    padding-right: 0;
+    font-size: var(--fs-body);
+  }
+}
+
+/* Phone: the numbers under the title, "+ Add a book" full width, lower covers, ⋯ 44px */
+@media (max-width: 575.98px) {
+  .books-head .panel-title {
+    flex-basis: 100%;
+  }
+
+  .books-head .btn {
+    width: 100%;
+  }
+
+  .books-stats {
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .books-stats li + li {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .book-card {
+    aspect-ratio: auto;
+    min-height: 200px;
+  }
+
+  .book-card-title {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .book-card-menu {
+    top: 0;
+    right: 0;
+  }
+
+  .book-card-menu .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .books-more {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-card:hover {
+    transform: none;
+  }
 }
 
 /* Dashboard goal card: "Reading now: «…» — 120/320" */
