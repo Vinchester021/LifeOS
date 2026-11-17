@@ -910,7 +910,7 @@ const QuickEntry = {
   // Active goals by title (titles are user data: set with textContent).
   goals() {
     return getGoals()
-      .filter((goal) => goal.status === 'active')
+      .filter((goal) => goal.status === 'active' && !hasProjectList(goal)) // a project list counts its projects, no entries
       .sort((a, b) => String(a.title).localeCompare(String(b.title), I18n.locale()));
   },
 

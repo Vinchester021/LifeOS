@@ -536,7 +536,7 @@ function addQuickTask(event) {
 // Quick result: money/number add an amount, percent/measurements set a new value.
 // A goal with a book list is not here: its pages go to a book (Goal Details, the Dashboard dialog).
 function renderQuickRecord() {
-  const goals = getGoals().filter((goal) => goal.status === 'active' && QUICK_RECORD_TYPES.includes(goal.progressType) && !hasBookList(goal));
+  const goals = getGoals().filter((goal) => goal.status === 'active' && QUICK_RECORD_TYPES.includes(goal.progressType) && !hasBookList(goal) && !hasProjectList(goal));
   byId('quick-record-none').hidden = goals.length > 0;
   byId('quick-record-form').hidden = goals.length === 0;
   const select = byId('quick-goal');

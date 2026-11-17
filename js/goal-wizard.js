@@ -10,15 +10,7 @@ const TITLE_MIN_LENGTH = 2;
 const TITLE_MAX_LENGTH = 80;
 const DESCRIPTION_MAX_LENGTH = 300;
 
-// Icons offered on step 3. Their names are translated as "icon.<name without bi->".
-const GOAL_ICONS = [
-  'bi-piggy-bank', 'bi-wallet2', 'bi-book', 'bi-heart-pulse',
-  'bi-activity', 'bi-translate', 'bi-mortarboard', 'bi-laptop',
-  'bi-kanban', 'bi-briefcase', 'bi-person-heart', 'bi-sunrise',
-  'bi-trophy', 'bi-bicycle', 'bi-music-note-beamed', 'bi-stars',
-  'bi-airplane', 'bi-house', 'bi-car-front', 'bi-code-slash', 'bi-palette',
-  'bi-camera', 'bi-moon-stars', 'bi-droplet', 'bi-tree', 'bi-people'
-];
+// The icons of step 3: GOAL_ICONS in app.js (a project uses the same set). Their names: "icon.<name without bi->".
 
 // Choosing a category suggests a progress type (until the user picks one).
 const CATEGORY_DEFAULT_TYPE = {
@@ -27,7 +19,7 @@ const CATEGORY_DEFAULT_TYPE = {
   health: 'measurements',
   languages: 'levels',
   education: 'percent',
-  projects: 'checklist',
+  projects: 'number', // with "Keep a list of projects" (1.6.4)
   career: 'checklist',
   personal: 'streak',
   custom: 'number'
@@ -233,6 +225,14 @@ const GOAL_WIZARD_HTML = `
                   <label class="form-check-label" for="wiz-book-list" data-i18n="wizard.books.toggle">Keep a list of books</label>
                 </div>
                 <div class="form-text" id="wiz-book-list-hint" data-i18n="wizard.books.hint">Add books on the goal page and record pages: the goal counts finished books by itself.</div>
+              </div>
+              <!-- "Projects" + "Number": keep a list of projects (Goal Details → My projects); then "What do you count" = projects -->
+              <div class="col-12" data-field="projectList">
+                <div class="form-check form-switch wiz-book-switch">
+                  <input class="form-check-input" type="checkbox" role="switch" id="wiz-project-list" checked aria-describedby="wiz-project-list-hint">
+                  <label class="form-check-label" for="wiz-project-list" data-i18n="wizard.projects.toggle">Keep a list of projects</label>
+                </div>
+                <div class="form-text" id="wiz-project-list-hint" data-i18n="wizard.projects.hint">Add projects with stages on the goal page: the goal counts finished projects by itself.</div>
               </div>
               <!-- First: what is counted (books, km…). Not for money (the currency) and percent (%). -->
               <div class="col-12 wiz-unit-field" data-field="unit">
@@ -573,7 +573,7 @@ const GoalWizard = {
     }
     if (name === 'icon' || name === 'color') this.renderPreview();
     if (id === 'wiz-currency') this.updateValueUnits();
-    if (id === 'wiz-book-list') this.updateValueFields();
+    if (id === 'wiz-book-list' || id === 'wiz-project-list') this.updateValueFields();
     if (id === 'wiz-deadline') this.updateDateLimits();
     if (this.step === 5) this.renderSummary();
   },
@@ -657,6 +657,7 @@ const GoalWizard = {
     setNumberValue(byId('wiz-start'), goal.currentValue);
     setNumberValue(byId('wiz-target'), goal.targetValue);
     byId('wiz-book-list').checked = goal.bookList !== false; // on by default (also for an old book goal)
+    byId('wiz-project-list').checked = goal.projectList !== false; // the same for a project list
     if (type === 'money') byId('wiz-currency').value = goal.unit || DEFAULT_CURRENCY;
     else byId('wiz-unit').value = goal.unit ?? '';
 
@@ -788,7 +789,7 @@ const GoalWizard = {
   // A goal with a book list (its progress is the books) and a money goal (its progress is the operations,
   // 1.6.3) have no milestones: step 6 is skipped both ways. Old milestones stay in the goal (saved as they are).
   skipsMilestones() {
-    return this.bookListOn() || this.selected('progressType') === 'money';
+    return this.bookListOn() || this.projectListOn() || this.selected('progressType') === 'money';
   },
 
   stepAfter(step, direction) {
@@ -849,10 +850,24 @@ const GoalWizard = {
     const type = this.selected('progressType') || 'number';
     // The same fields as when the goal was created: the current value is changed by entries only.
     const fields = [...VALUE_FIELDS[type]];
-    if (!this.isBookGoalChoice()) return fields;
-    // A book list counts the goal by itself: editing shows no "Already done".
-    const hidden = this.bookListOn() && this.mode === 'edit' ? ['start'] : [];
-    return ['bookList', ...fields.filter((field) => !hidden.includes(field))];
+    const list = this.isBookGoalChoice() ? 'bookList' : this.isProjectGoalChoice() ? 'projectList' : null;
+    if (!list) return fields;
+    // A book / project list counts the goal by itself: editing shows no "Already done".
+    const hidden = this.listOn() && this.mode === 'edit' ? ['start'] : [];
+    return [list, ...fields.filter((field) => !hidden.includes(field))];
+  },
+
+  // "Projects" + "Number": the goal may keep a project list (app.js, section "My projects").
+  isProjectGoalChoice() {
+    return this.selected('category') === 'projects' && this.selected('progressType') === 'number';
+  },
+
+  projectListOn() {
+    return this.isProjectGoalChoice() && byId('wiz-project-list').checked;
+  },
+
+  listOn() {
+    return this.bookListOn() || this.projectListOn();
   },
 
   // "Books" + "Number": the goal may keep a book list (app.js, section 11a).
@@ -864,11 +879,12 @@ const GoalWizard = {
     return this.isBookGoalChoice() && byId('wiz-book-list').checked;
   },
 
-  // With a book list "What do you count" is "books" and cannot be changed.
+  // With a book / project list "What do you count" is "books" / "projects" and cannot be changed.
   updateBookUnit() {
     const unit = byId('wiz-unit');
-    unit.readOnly = this.bookListOn();
-    if (unit.readOnly) unit.value = t('demo.books.unit');
+    unit.readOnly = this.listOn();
+    if (this.bookListOn()) unit.value = t('demo.books.unit');
+    if (this.projectListOn()) unit.value = t('projects.unit');
   },
 
   // Editing: is "Already done" only shown (the goal has entries)?
@@ -1034,6 +1050,7 @@ const GoalWizard = {
     if (summary.hidden) return;
     const goal = { progressType: type, unit: type === 'money' ? byId('wiz-currency').value : this.valueUnit(type) };
     if (this.bookListOn()) Object.assign(goal, { category: 'books', bookList: true }); // "Goal: 13 books. Now 1 book" with plurals
+    if (this.projectListOn()) Object.assign(goal, { category: 'projects', projectList: true }); // "4 проекта"
     const values = { target: formatGoalValue(goal, target), current: formatGoalValue(goal, current), left: formatGoalValue(goal, Math.abs(target - current)) };
     const deadline = dateTextToIso(byId('wiz-deadline').value);
     let key = deadline ? 'wizard.summary.until' : 'wizard.summary.plain';
@@ -1269,6 +1286,8 @@ const GoalWizard = {
       color: this.selected('color'),
       progressType: type,
       ...this.readValues(type),
+      // Any "Projects" goal that is not a project list says so: it is never migrated (app.js migrateProjectGoal)
+      ...(this.selected('category') === 'projects' && !this.isProjectGoalChoice() ? { projectList: false } : {}),
       deadline: getDateValue(byId('wiz-deadline')) || null,
       milestones: this.milestones.map((milestone) => ({ ...milestone })),
       status: base.status ?? 'active',
@@ -1308,7 +1327,21 @@ const GoalWizard = {
     else if (fields.includes('unit')) unit = byId('wiz-unit').value.trim();
     // A new "Money" goal starts at 0: "Already saved" is its current amount, so 1.5 M of 7 M is 21 %.
     const values = { ...empty, unit, ...this.formNumbers(type), targetValue: readNumber(byId('wiz-target')) };
-    return this.isBookGoalChoice() ? this.withBookList(values) : values;
+    if (this.isBookGoalChoice()) return this.withBookList(values);
+    if (this.selected('category') === 'projects') return this.withProjectList(values);
+    return values;
+  },
+
+  // A "Projects" goal always gets projectList (true / false): a goal made after 1.6.4 is never migrated
+  // (app.js migrateProjectGoal). On: "Already done: N" of a new goal (or the old counter) becomes N finished
+  // projects without a title; the counter = the finished projects. Off / another type: the projects stay saved.
+  withProjectList(values) {
+    if (!this.projectListOn()) return { ...values, projectList: false };
+    const base = this.mode === 'edit' ? this.original : {};
+    let projects = goalProjects(base);
+    if (projects.length === 0 && base.projectList !== true) projects = untitledDoneProjects(this.mode === 'edit' ? base.currentValue : values.currentValue);
+    // The old checklist of a migrated goal stays in the data (it is not shown)
+    return { ...values, checklist: asArray(base.checklist), projectList: true, projects, startValue: 0, currentValue: countDoneProjects(projects) };
   },
 
   // The book list of a "Books" goal. On: "Already done: N" of a new goal (or the old counter of a goal

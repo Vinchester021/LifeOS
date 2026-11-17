@@ -14,7 +14,7 @@
 // The version of LifeOS (semantic: fixes 1.3.4, new features 1.4.0; only forward). The logo badge shows it;
 // "What's new" (js/whats-new.js) compares it with lifeos_meta.lastSeenVersion. Every release on GitHub:
 // raise it and add the version to data/changelog.json (+ changelog-fallback.js) in en / ru / kk.
-const APP_VERSION = '1.6.3';
+const APP_VERSION = '1.6.5';
 // The last published version WITHOUT the "What's new" window: a user without lastSeenVersion had it.
 const LEGACY_VERSION = '1.3.0';
 
@@ -1610,6 +1610,15 @@ const GOAL_CATEGORIES = {
 const GOAL_COLORS = ['teal', 'blue', 'green', 'plum', 'clay', 'rose', 'coral', 'mustard', 'indigo', 'pink', 'turquoise', 'olive', 'graphite']; // palette in style.css
 const PROGRESS_TYPES = ['number', 'money', 'percent', 'levels', 'checklist', 'streak', 'measurements'];
 const GOAL_STATUSES = ['active', 'completed', 'archived'];
+// The icons of the goal wizard (step 2) and of a project (js/projects.js): one set for both.
+const GOAL_ICONS = [
+  'bi-piggy-bank', 'bi-wallet2', 'bi-book', 'bi-heart-pulse',
+  'bi-activity', 'bi-translate', 'bi-mortarboard', 'bi-laptop',
+  'bi-kanban', 'bi-briefcase', 'bi-person-heart', 'bi-sunrise',
+  'bi-trophy', 'bi-bicycle', 'bi-music-note-beamed', 'bi-stars',
+  'bi-airplane', 'bi-house', 'bi-car-front', 'bi-code-slash', 'bi-palette',
+  'bi-camera', 'bi-moon-stars', 'bi-droplet', 'bi-tree', 'bi-people'
+];
 
 // Always an array of objects, even if the saved data is missing or broken.
 function getGoals() {
@@ -1679,6 +1688,7 @@ function formatGoalValue(goal, value) {
   if (goal.progressType === 'levels') return String(asArray(goal.levels)[number] ?? '—');
   const text = Format.number(number, { maximumFractionDigits: 2 });
   if (hasBookList(goal)) return bookCountText(number, text);
+  if (hasProjectList(goal)) return projectCountText(number, text); // "2 проекта"
   if (goal.progressType === 'streak') return streakDaysText(number, text);
   return goal.unit ? `${text} ${goal.unit}` : text;
 }
@@ -1719,6 +1729,7 @@ function formatGoalProgress(goal) {
   }
   const format = (value) => Format.number(Number(value) || 0, { maximumFractionDigits: 2 });
   if (hasBookList(goal)) return `${format(goal.currentValue)} / ${bookCountText(Number(goal.targetValue) || 0)}`; // "3 / 13 книг"
+  if (hasProjectList(goal)) return `${format(goal.currentValue)} / ${projectCountText(Number(goal.targetValue) || 0)}`; // "1 / 4 проекта"
   if (goal.progressType === 'streak') return `${format(goal.currentValue)} / ${streakDaysText(Number(goal.targetValue) || 0)}`; // "2 / 30 дней"
   const unit = goal.unit ? ` ${goal.unit}` : '';
   // "90 → 80 kg" for a weight that goes down ("90 / 80" read like "90 of 80")
@@ -1869,10 +1880,10 @@ function hasBookList(goal) {
 }
 
 // Milestones that the pages show and count. A goal with a book list has none (its progress is the books),
-// a money goal neither (its progress is the operations, 1.6.3). The data stays in storage, the export and
-// the import; only the pages ignore it.
+// a money goal neither (its progress is the operations, 1.6.3), a goal with a project list neither (its
+// projects have stages, 1.6.4). The data stays in storage, the export and the import; only the pages ignore it.
 function goalMilestones(goal) {
-  return hasBookList(goal) || goal?.progressType === 'money' ? [] : asArray(goal?.milestones);
+  return hasBookList(goal) || hasProjectList(goal) || goal?.progressType === 'money' ? [] : asArray(goal?.milestones);
 }
 
 function goalBooks(goal) {
@@ -2353,16 +2364,33 @@ function bookEntriesSummary(bookId, entries = getProgressEntries()) {
 }
 
 // Deletes a book and its reading entries; the goal counter is counted again.
+// Returns { goal, removed: { book, index, entries } } for "Undo" (restoreBook), or null.
 function deleteBook(goalId, bookId) {
   const goals = getGoals();
   const goal = goals.find((item) => item.id === goalId);
-  if (!goal) return null;
-  goal.books = goalBooks(goal).filter((book) => book.id !== bookId);
+  const books = goalBooks(goal);
+  const index = books.findIndex((book) => book.id === bookId);
+  if (index === -1) return null;
+  const allEntries = getProgressEntries();
+  const removed = { book: books[index], index, entries: allEntries.filter((entry) => entry.bookId === bookId) };
+  goal.books = books.filter((book) => book.id !== bookId);
   goal.currentValue = countDoneBooks(goal.books);
   goal.updatedAt = new Date().toISOString();
-  const entries = getProgressEntries().filter((entry) => entry.bookId !== bookId);
-  if (!saveProgressEntries(entries) || !saveGoals(goals)) return null;
-  return goal;
+  if (!saveProgressEntries(allEntries.filter((entry) => entry.bookId !== bookId)) || !saveGoals(goals)) return null;
+  return { goal, removed };
+}
+
+// "Undo" of deleteBook: the book goes back to its place with its reading entries (as they were).
+function restoreBook(goalId, removed) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  if (!goal) return null;
+  goal.books = insertedAt(goalBooks(goal), removed.index, removed.book);
+  goal.currentValue = countDoneBooks(goal.books);
+  goal.updatedAt = new Date().toISOString();
+  const entries = getProgressEntries();
+  const back = removed.entries.filter((entry) => !entries.some((item) => item.id === entry.id));
+  return saveProgressEntries([...entries, ...back]) && saveGoals(goals) ? goal : null;
 }
 
 // Does the book have the entry that finished it? Then "done" is undone only by deleting that entry.
@@ -2399,6 +2427,420 @@ function saveBook(goalId, fields, bookId = null) {
 // The title of a book on the page: "" (an old book) -> "Untitled".
 function bookTitle(book) {
   return String(book?.title ?? '').trim() || t('books.untitled');
+}
+
+/* =========================================================
+   11a+. My projects — a "Projects" goal with a project list (js/projects.js; docs/design/projects-*.png)
+   goal: { category: "projects", progressType: "number", projectList: true, projects: [...] };
+         currentValue = finished projects, targetValue = the projects the user wants to finish.
+   project: { id, title, icon, result, status: "planned" | "active" | "done", deadline,
+              stages: [{ id, title, done, doneAt }], notes, links: [{ title, url }], createdAt, doneAt, history: [] }
+   The tasks of a stage are usual tasks (lifeos_tasks) with goalId, projectId, stageId (from 1.6.5).
+   ========================================================= */
+
+const PROJECT_STATUSES = ['planned', 'active', 'done'];
+const PROJECT_ORDER = { active: 0, planned: 1, done: 2 };
+const PROJECT_TEXT_MAX = 120; // title
+const PROJECT_RESULT_MAX = 200; // "the room is ready to use"
+const PROJECT_STAGE_MAX = 80; // the title of a stage
+const PROJECT_STAGES_LIMIT = 30;
+const PROJECT_DEFAULT_ICON = 'bi-folder';
+const PROJECT_UNDO_DELAY = 7000; // "Undo" after deleting a project / a stage, after a stage got ready by itself
+
+// The icons of a project (Bootstrap Icons), one grid: the folder (by default), study and IT, creativity,
+// work, home and life, general. Not the goal icons: a project is a piece of work, so no piggy bank.
+// An icon chosen before (one of GOAL_ICONS) is kept as it is.
+const PROJECT_ICONS = [
+  PROJECT_DEFAULT_ICON,
+  'bi-code-slash', 'bi-laptop', 'bi-terminal', 'bi-globe', 'bi-phone', 'bi-database', 'bi-cpu', 'bi-bug',
+  'bi-git', 'bi-robot', 'bi-mortarboard', 'bi-book', 'bi-journal-text', 'bi-translate', 'bi-lightbulb', 'bi-puzzle',
+  'bi-palette', 'bi-brush', 'bi-easel', 'bi-vector-pen', 'bi-camera', 'bi-camera-reels', 'bi-film', 'bi-music-note-beamed', 'bi-mic', 'bi-pen',
+  'bi-briefcase', 'bi-kanban', 'bi-graph-up-arrow', 'bi-megaphone', 'bi-shop', 'bi-people', 'bi-box-seam', 'bi-clipboard-check',
+  'bi-house', 'bi-hammer', 'bi-tools', 'bi-paint-bucket', 'bi-scissors', 'bi-flower1', 'bi-tree', 'bi-car-front', 'bi-airplane',
+  'bi-bicycle', 'bi-backpack', 'bi-map', 'bi-compass', 'bi-cup-hot', 'bi-headphones', 'bi-gift', 'bi-balloon', 'bi-heart',
+  'bi-rocket', 'bi-trophy', 'bi-award', 'bi-flag', 'bi-star', 'bi-controller'
+];
+
+// A saved icon is kept if it is a project icon or an old goal icon chosen before 1.6.5; anything else -> the folder.
+function projectIcon(icon) {
+  return PROJECT_ICONS.includes(icon) || GOAL_ICONS.includes(icon) ? icon : PROJECT_DEFAULT_ICON;
+}
+const PROJECT_MIGRATION_LIMIT = 500; // like books: an old goal "1 000 000 projects" must not freeze the page
+
+// A goal that can keep a project list: "Projects" category + "Number" progress type.
+function isProjectGoal(goal) {
+  return goal?.category === 'projects' && goal.progressType === 'number';
+}
+
+function hasProjectList(goal) {
+  return isProjectGoal(goal) && goal.projectList === true;
+}
+
+function goalProjects(goal) {
+  return asArray(goal?.projects).filter(isPlainObject);
+}
+
+function countDoneProjects(projects) {
+  return projects.filter((project) => project.status === 'done').length;
+}
+
+// The title on the page: "" (made from an old counter) -> "Untitled".
+function projectTitle(project) {
+  return String(project?.title ?? '').trim() || t('projects.untitled');
+}
+
+function projectStages(project) {
+  return asArray(project?.stages).filter(isPlainObject);
+}
+
+// A new project. Added as "done" right away: it is finished today.
+function createProject({ title = '', icon = PROJECT_DEFAULT_ICON, result = '', status = 'planned', deadline = null, stages = [] } = {}, now = new Date()) {
+  const safeStatus = PROJECT_STATUSES.includes(status) ? status : 'planned';
+  return {
+    id: createId('project'),
+    title,
+    icon,
+    result,
+    status: safeStatus,
+    deadline: isIsoDate(deadline) ? deadline : null,
+    stages,
+    notes: '',
+    links: [],
+    createdAt: now.toISOString(),
+    doneAt: safeStatus === 'done' ? Dates.toISO(Dates.startOfDay(now)) : null,
+    history: []
+  };
+}
+
+// Old counters: N finished projects without a title (the day they were finished is not known).
+function untitledDoneProjects(count) {
+  const safe = Math.min(Math.max(Math.floor(Number(count) || 0), 0), PROJECT_MIGRATION_LIMIT);
+  return Array.from({ length: safe }, (_, index) => ({ ...createProject(), id: `${createId('project')}-${index + 1}`, status: 'done' }));
+}
+
+// Pure: a "Projects" goal made before 1.6.4 (no projectList yet) gets a project list:
+//   a checklist — every item becomes a project (a ticked one is finished), the goal = the number of items;
+//   a number — N finished projects without a title, N = its current value, the goal stays.
+// The old checklist stays in the data as it is. Other types and goals that have projectList are not changed.
+function migrateProjectGoal(goal) {
+  if (goal?.category !== 'projects' || 'projectList' in goal) return goal;
+  if (goal.progressType === 'checklist') {
+    const items = asArray(goal.checklist).filter(isPlainObject).slice(0, PROJECT_MIGRATION_LIMIT);
+    const projects = items.map((item, index) => ({
+      ...createProject({ title: String(item.text ?? '').trim().slice(0, PROJECT_TEXT_MAX) }),
+      id: `${createId('project')}-${index + 1}`,
+      status: item.done ? 'done' : 'planned'
+    }));
+    return { ...goal, progressType: 'number', projectList: true, projects, startValue: 0,
+      targetValue: Math.max(projects.length, 1), currentValue: countDoneProjects(projects) };
+  }
+  if (goal.progressType === 'number') {
+    const projects = goalProjects(goal).length ? goalProjects(goal) : untitledDoneProjects(goal.currentValue);
+    return { ...goal, projectList: true, projects, startValue: 0, currentValue: countDoneProjects(projects) };
+  }
+  return goal;
+}
+
+// Runs on every page start (like migrateBookGoals) and moves an old backup after an import the same way.
+function migrateProjectGoals() {
+  const goals = getGoals();
+  if (!goals.some((goal) => migrateProjectGoal(goal) !== goal)) return;
+  saveGoals(goals.map(migrateProjectGoal));
+}
+
+// "1 проект", "2 проекта", "5 проектов"
+function projectCountText(number, text = Format.number(number)) {
+  return tPlural('projects.count', number, { count: text });
+}
+
+// Pure: { done, total } of the stages ("Stages: 2 of 5").
+function projectStageCount(project) {
+  const stages = projectStages(project);
+  return { done: stages.filter((stage) => stage.done).length, total: stages.length };
+}
+
+// The stage being done now: the first one that is not done (null: all done or none).
+function projectCurrentStage(project) {
+  return projectStages(project).find((stage) => !stage.done) ?? null;
+}
+
+// Pure: the order of the tasks of a stage — open ones first; the nearest date first, tasks without a date
+// after the dated ones in the order they were added.
+function orderStageTasks(tasks) {
+  return tasks
+    .map((task, index) => ({ task, index }))
+    .sort((a, b) => Number(Boolean(a.task.completed)) - Number(Boolean(b.task.completed))
+      || String(a.task.date ?? '9999').localeCompare(String(b.task.date ?? '9999'))
+      || a.index - b.index)
+    .map((item) => item.task);
+}
+
+// Pure: "Next step" is a TASK. { kind, text, task, stage, number, total, tasksDone, tasksTotal }:
+//   done — the project is finished; noStages — no stages yet; finish — all stages are done;
+//   task — the first open task of the current stage (the first stage that is not done);
+//   noTasks — that stage has no open task ("Add a task to the stage «…»").
+// number / total: "Stage 2 of 4"; tasksDone / tasksTotal: "2 of 5 tasks of the stage".
+function projectNextStep(project, tasks = []) {
+  if (project.status === 'done') return { kind: 'done', text: '' };
+  const stages = projectStages(project);
+  if (stages.length === 0) return { kind: 'noStages', text: '' };
+  const stage = projectCurrentStage(project);
+  if (!stage) return { kind: 'finish', text: '' };
+  const stageTasks = tasks.filter((task) => task.projectId === project.id && task.stageId === stage.id);
+  const open = orderStageTasks(stageTasks.filter((task) => !task.completed));
+  const base = { stage, number: stages.indexOf(stage) + 1, total: stages.length,
+    tasksDone: stageTasks.length - open.length, tasksTotal: stageTasks.length };
+  return open.length ? { ...base, kind: 'task', task: open[0], text: open[0].title } : { ...base, kind: 'noTasks', text: stage.title };
+}
+
+// Pure: the numbers of the goal head — finished, the goal, in progress, the nearest deadline of an open project.
+function projectGoalStats(goal) {
+  const projects = goalProjects(goal);
+  const deadlines = projects.filter((project) => project.status !== 'done' && isIsoDate(project.deadline))
+    .map((project) => project.deadline).sort();
+  return {
+    done: countDoneProjects(projects),
+    target: Number(goal.targetValue) || 0,
+    active: projects.filter((project) => project.status === 'active').length,
+    nearest: deadlines[0] ?? null
+  };
+}
+
+// Pure: the cards of one filter — in progress → planned → finished; inside: the nearest deadline first
+// (no deadline last), then the newest.
+function filteredProjects(projects, filter = 'all') {
+  return projects
+    .filter((project) => filter === 'all' || project.status === filter)
+    .sort((a, b) => PROJECT_ORDER[a.status] - PROJECT_ORDER[b.status]
+      || String(a.deadline ?? '9999').localeCompare(String(b.deadline ?? '9999'))
+      || String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+}
+
+function replaceProjects(goal, projects) {
+  goal.projects = projects;
+  goal.currentValue = countDoneProjects(projects);
+  goal.updatedAt = new Date().toISOString();
+}
+
+// Adds (projectId = null) or edits a project. fields: { title, icon, result, status, deadline, stages }.
+// Becoming "done" keeps the day it was finished; leaving "done" forgets it. Returns { goal, project } or null.
+function saveProject(goalId, fields, projectId = null) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  if (!goal) return null;
+  let project;
+  if (projectId === null) {
+    project = { ...createProject(fields), history: [projectHistoryItem('created')] };
+    replaceProjects(goal, [...goalProjects(goal), project]);
+  } else {
+    const old = goalProjects(goal).find((item) => item.id === projectId);
+    if (!old) return null;
+    project = { ...old, ...fields };
+    if (old.status !== 'done' && project.status === 'done') project.doneAt = Dates.toISO(Dates.today());
+    if (project.status !== 'done') project.doneAt = null;
+    if (old.status !== project.status) project.history = [...asArray(old.history), projectHistoryItem('status', { from: old.status, to: project.status })];
+    replaceProjects(goal, goalProjects(goal).map((item) => (item.id === projectId ? project : item)));
+  }
+  return saveGoals(goals) ? { goal, project } : null;
+}
+
+// The tasks of a project (deleted together with it).
+function projectTaskCount(projectId, tasks = getTasks()) {
+  return tasks.filter((task) => task.projectId === projectId).length;
+}
+
+// Deletes a project and its tasks. Returns { goal, removed: { project, index, tasks } } for "Undo", or null.
+function deleteProject(goalId, projectId) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  const projects = goalProjects(goal);
+  const index = projects.findIndex((item) => item.id === projectId);
+  if (index === -1) return null;
+  const allTasks = getTasks();
+  const removed = { project: projects[index], index, tasks: allTasks.filter((task) => task.projectId === projectId) };
+  replaceProjects(goal, projects.filter((item) => item.id !== projectId));
+  if (!saveTasks(allTasks.filter((task) => task.projectId !== projectId)) || !saveGoals(goals)) return null;
+  return { goal, removed };
+}
+
+// "Undo" of deleteProject: the project goes back to its place, its tasks come back.
+function restoreProject(goalId, removed) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  if (!goal) return null;
+  replaceProjects(goal, insertedAt(goalProjects(goal), removed.index, removed.project));
+  const tasks = [...getTasks(), ...removed.tasks.filter((task) => !getTasks().some((item) => item.id === task.id))];
+  return saveTasks(tasks) && saveGoals(goals) ? goal : null;
+}
+
+// A project from a file or the dialog: texts are strings of fixed length (shown with textContent / escapeHtml),
+// the status is one of three, the dates are "YYYY-MM-DD" or null, a link is only http(s) (never "javascript:").
+function cleanProject(project) {
+  const text = (value, max) => String(value ?? '').trim().slice(0, max);
+  const status = PROJECT_STATUSES.includes(project.status) ? project.status : 'planned';
+  const createdAt = typeof project.createdAt === 'string' && !Number.isNaN(Date.parse(project.createdAt)) ? project.createdAt : new Date().toISOString();
+  return {
+    id: cleanId(project.id) ?? createId('project'),
+    title: text(project.title, PROJECT_TEXT_MAX),
+    icon: projectIcon(project.icon),
+    result: text(project.result, PROJECT_RESULT_MAX),
+    status,
+    deadline: isIsoDate(project.deadline) ? project.deadline : null,
+    stages: asArray(project.stages).filter(isPlainObject).slice(0, PROJECT_STAGES_LIMIT).map((stage) => ({
+      id: cleanId(stage.id) ?? createId('stage'),
+      title: text(stage.title, PROJECT_STAGE_MAX),
+      done: Boolean(stage.done),
+      doneAt: isIsoDate(stage.doneAt) ? stage.doneAt : null
+    })),
+    notes: text(project.notes, 2000),
+    links: asArray(project.links).filter(isPlainObject).map((link) => ({ title: text(link.title, PROJECT_TEXT_MAX), url: safeLinkUrl(link.url) }))
+      .filter((link) => link.url),
+    createdAt,
+    doneAt: status === 'done' && isIsoDate(project.doneAt) ? project.doneAt : null,
+    history: asArray(project.history).filter(isPlainObject)
+  };
+}
+
+/* ----- The details of a project (1.6.5): the status, the deadline, the stages and their tasks ----- */
+
+// A short note in the history of a project (shown in 1.6.6): no user text, only what happened.
+function projectHistoryItem(kind, extra = {}) {
+  return { id: createId('event'), at: new Date().toISOString(), kind, ...extra };
+}
+
+// Reads the goals, changes one project with `change(project)` and saves; the counter is counted again.
+// Returns { goal, before, project } (before = the goal as it was, for "Goal reached!") or null.
+function changeProject(goalId, projectId, change) {
+  const goals = getGoals();
+  const goal = goals.find((item) => item.id === goalId);
+  const project = goalProjects(goal).find((item) => item.id === projectId);
+  if (!project) return null;
+  const before = { ...goal };
+  const changed = change({ ...project, stages: projectStages(project).map((stage) => ({ ...stage })), history: asArray(project.history) });
+  if (!changed) return null;
+  replaceProjects(goal, goalProjects(goal).map((item) => (item.id === projectId ? changed : item)));
+  return saveGoals(goals) ? { goal, before, project: changed } : null;
+}
+
+// The status from the list of the details (saved at once). "done" keeps the day, other statuses forget it.
+function setProjectStatus(goalId, projectId, status) {
+  if (!PROJECT_STATUSES.includes(status)) return null;
+  return changeProject(goalId, projectId, (project) => {
+    if (project.status === status) return project;
+    const doneAt = status === 'done' ? Dates.toISO(Dates.today()) : null;
+    return { ...project, status, doneAt, history: [...project.history, projectHistoryItem('status', { from: project.status, to: status })] };
+  });
+}
+
+function setProjectDeadline(goalId, projectId, deadline) {
+  return changeProject(goalId, projectId, (project) => ({ ...project, deadline: isIsoDate(deadline) ? deadline : null }));
+}
+
+function addProjectStage(goalId, projectId, title) {
+  const clean = String(title ?? '').trim().slice(0, PROJECT_STAGE_MAX);
+  if (!clean) return null;
+  return changeProject(goalId, projectId, (project) => (project.stages.length >= PROJECT_STAGES_LIMIT ? null
+    : { ...project, stages: [...project.stages, { id: createId('stage'), title: clean, done: false, doneAt: null }] }));
+}
+
+// "Ready" of a stage: on — the day is kept; off — forgotten.
+function setStageDone(goalId, projectId, stageId, done) {
+  return changeProject(goalId, projectId, (project) => {
+    const stage = project.stages.find((item) => item.id === stageId);
+    if (!stage) return null;
+    Object.assign(stage, { done: Boolean(done), doneAt: done ? Dates.toISO(Dates.today()) : null });
+    return { ...project, history: [...project.history, projectHistoryItem(done ? 'stageDone' : 'stageReopened', { stageId })] };
+  });
+}
+
+// Deletes a stage and its tasks. Returns { goal, removed: { projectId, stage, index, tasks } } for "Undo".
+function deleteProjectStage(goalId, projectId, stageId) {
+  const goal = getGoalById(goalId);
+  const stages = projectStages(goalProjects(goal).find((item) => item.id === projectId));
+  const index = stages.findIndex((stage) => stage.id === stageId);
+  if (index === -1) return null;
+  const allTasks = getTasks();
+  const removed = { projectId, stage: stages[index], index, tasks: allTasks.filter((task) => task.projectId === projectId && task.stageId === stageId) };
+  const result = changeProject(goalId, projectId, (project) => ({ ...project, stages: project.stages.filter((stage) => stage.id !== stageId) }));
+  if (!result || !saveTasks(allTasks.filter((task) => !(task.projectId === projectId && task.stageId === stageId)))) return null;
+  return { goal: result.goal, removed };
+}
+
+function restoreProjectStage(goalId, removed) {
+  const result = changeProject(goalId, removed.projectId, (project) => ({ ...project, stages: insertedAt(project.stages, removed.index, removed.stage) }));
+  if (!result) return null;
+  const tasks = getTasks();
+  const back = removed.tasks.filter((task) => !tasks.some((item) => item.id === task.id));
+  return saveTasks([...tasks, ...back]) ? result.goal : null;
+}
+
+// The tasks of one stage, in the order of "Next step" (orderStageTasks).
+function projectStageTasks(projectId, stageId, tasks = getTasks()) {
+  return orderStageTasks(tasks.filter((task) => task.projectId === projectId && task.stageId === stageId));
+}
+
+// A task of a stage: a usual task of the goal (it shows in the Planner on its date).
+// A new task in a ready stage puts the stage back to work.
+function addProjectTask(goalId, projectId, stageId, { title, date = null }) {
+  const task = addTask({ title, date: isIsoDate(date) ? date : null, goalId, projectId, stageId, priority: 'medium', period: 'day' });
+  if (task) syncProjectStage(task);
+  return task;
+}
+
+function renameProjectStage(goalId, projectId, stageId, title) {
+  const clean = String(title ?? '').trim().slice(0, PROJECT_STAGE_MAX);
+  if (!clean) return null;
+  return changeProject(goalId, projectId, (project) => {
+    const stage = project.stages.find((item) => item.id === stageId);
+    if (!stage) return null;
+    stage.title = clean;
+    return project;
+  });
+}
+
+// After a task of a stage was ticked, unticked or added:
+//   the last open task is done -> the stage gets ready by itself;
+//   a task is open again (unticked or new) and the stage was ready -> back to work.
+// Ticking a task while other tasks are open never changes a stage marked ready by hand.
+// Returns { goalId, projectId, stage, done } when the stage changed, otherwise null.
+function syncProjectStage(task) {
+  if (!task?.projectId || !task.stageId) return null;
+  const project = goalProjects(getGoalById(task.goalId)).find((item) => item.id === task.projectId);
+  const stage = projectStages(project).find((item) => item.id === task.stageId);
+  if (!stage) return null;
+  const tasks = projectStageTasks(project.id, stage.id);
+  let done = null;
+  if (task.completed && !stage.done && tasks.every((item) => item.completed)) done = true;
+  if (!task.completed && stage.done) done = false;
+  if (done === null || !setStageDone(task.goalId, project.id, stage.id, done)) return null;
+  return { goalId: task.goalId, projectId: project.id, stage, done };
+}
+
+// "Stage «…» is ready" with "Undo" (7 s) — after the last task of a stage was ticked (any page).
+// onUndo: the page draws itself again.
+function announceStageChange(change, onUndo = () => {}) {
+  if (!change?.done) return;
+  showToast('projects.toast.stageReady', 'success', { title: change.stage.title }, {
+    delay: PROJECT_UNDO_DELAY,
+    action: { labelKey: 'toast.undo', onClick: () => {
+      setStageDone(change.goalId, change.projectId, change.stage.id, false);
+      onUndo();
+    } }
+  });
+}
+
+// The project the task belongs to: { goal, project } or null (for "Project «…»" next to a task).
+function taskProject(task, goals = getGoals()) {
+  if (!task?.projectId) return null;
+  const goal = goals.find((item) => item.id === task.goalId);
+  const project = goalProjects(goal).find((item) => item.id === task.projectId);
+  return project ? { goal, project } : null;
+}
+
+// Only http:// and https:// addresses are kept ("javascript:" and others become "").
+function safeLinkUrl(value) {
+  const url = String(value ?? '').trim();
+  return /^https?:\/\/[^\s]+$/i.test(url) ? url.slice(0, 500) : '';
 }
 
 /* =========================================================
@@ -2935,7 +3377,8 @@ function compareTaskOccurrences(a, b) {
   if (a.done !== b.done) return a.done ? 1 : -1;
   const priority = TASK_PRIORITIES.indexOf(b.task.priority) - TASK_PRIORITIES.indexOf(a.task.priority);
   if (priority !== 0) return priority;
-  return a.date.localeCompare(b.date) || String(a.task.title).localeCompare(String(b.task.title));
+  // A task of a project stage may have no date: it goes after the dated ones
+  return String(a.date ?? '9999').localeCompare(String(b.date ?? '9999')) || String(a.task.title).localeCompare(String(b.task.title));
 }
 
 // Pure: the tasks of "Today" on the Dashboard: open ones first, done ones at the end (compareTaskOccurrences);
@@ -2995,7 +3438,10 @@ function normalizeTask(fields) {
     completedAt: typeof fields.completedAt === 'string' && !Number.isNaN(Date.parse(fields.completedAt)) ? fields.completedAt : null,
     recurrence: TASK_RECURRENCES.includes(fields.recurrence) ? fields.recurrence : 'none',
     period: TASK_PERIODS.includes(fields.period) ? fields.period : 'day',
-    completions: asArray(fields.completions).filter(isIsoDate)
+    completions: asArray(fields.completions).filter(isIsoDate),
+    // A task of a project stage (1.6.5): it belongs to the goal, the project and the stage
+    projectId: cleanId(fields.projectId),
+    stageId: cleanId(fields.stageId)
   };
 }
 
@@ -3031,9 +3477,12 @@ function changeTask(id, change) {
   return saveTasks(tasks) ? tasks[index] : null;
 }
 
+// A one-time task without a date (a task of a project stage) is ticked too: its date does not matter.
 function toggleTask(id, date) {
-  const day = Dates.parse(date);
-  return day ? changeTask(id, (task) => toggledTask(task, Dates.toISO(day))) : null;
+  const day = Dates.parse(date) ?? Dates.today();
+  const task = getTasks().find((item) => item.id === id);
+  if (!task || (isRecurringTask(task) && !Dates.parse(date))) return null;
+  return changeTask(id, (item) => toggledTask(item, Dates.toISO(day)));
 }
 
 function addTask(fields) {
@@ -3043,8 +3492,12 @@ function addTask(fields) {
   return saveTasks(tasks) ? task : null;
 }
 
+// A task moved to another goal leaves its project and stage.
 function updateTask(id, changes) {
-  return changeTask(id, (task) => normalizeTask({ ...task, ...changes, id }));
+  return changeTask(id, (task) => {
+    const leaves = 'goalId' in changes && changes.goalId !== task.goalId;
+    return normalizeTask({ ...task, ...changes, id, ...(leaves ? { projectId: null, stageId: null } : {}) });
+  });
 }
 
 function deleteTask(id) {
@@ -3317,6 +3770,7 @@ Theme.init();
 migrateSportData(); // old workouts / measurements from lifeos_progress -> lifeos_sport (once)
 migrateBookGoals(); // old "books" goals get a book list: N finished books without a title (once)
 migrateBookEntries(); // old reading entries get their mode ("add" / "to"), see section 11a (once)
+migrateProjectGoals(); // old "projects" goals get a project list: checklist items / N finished projects (once)
 I18n.lang = savedLanguage();
 document.documentElement.lang = I18n.lang;
 

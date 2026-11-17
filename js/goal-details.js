@@ -34,11 +34,28 @@ const DETAILS_STATUS = {
   archived: ['', 'goal.badge.archived']
 };
 
-// The tile head (one look, style.css "The tile head"): a goal with a book list and a money goal.
-// Other goals keep the head with dividers. The value is also data-tiles: it picks the tile icons.
+// The tile head (one look, style.css "The tile head"): a goal with a book list, a money goal and a goal with
+// a project list. Other goals keep the head with dividers. The value is also data-tiles: it picks the tile icons.
 function heroTiles(goal) {
   if (hasBookList(goal)) return 'books';
+  if (hasProjectList(goal)) return 'projects';
   return goal.progressType === 'money' ? 'money' : '';
+}
+
+// The title of a tile: a project list has its own ("Finished", "In progress", "Nearest deadline").
+function setTileTitle(id, key) {
+  const title = byId(id);
+  title.dataset.i18n = key;
+  title.textContent = t(key);
+}
+
+// docs/design/projects-hero.png: Finished "1 of 4" · In progress "2 projects" · Deadline · Nearest deadline.
+function renderProjectTiles(goal) {
+  const stats = projectGoalStats(goal);
+  setTileTitle('details-current-title', 'projects.hero.done');
+  setTileTitle('details-target-title', 'projects.hero.active');
+  byId('details-current').textContent = t('projects.hero.doneOf', { done: Format.number(stats.done), target: Format.number(stats.target) });
+  byId('details-target').textContent = projectCountText(stats.active);
 }
 
 function renderOverview(goal) {
@@ -64,8 +81,11 @@ function renderOverview(goal) {
   byId('details-percent').textContent = Format.number(percent / 100, { style: 'percent' });
   byId('details-progress').setAttribute('aria-valuenow', String(percent));
   byId('details-progress-bar').style.width = `${percent}%`;
+  setTileTitle('details-current-title', 'details.current');
+  setTileTitle('details-target-title', 'details.target');
   byId('details-current').textContent = currentText(goal);
   byId('details-target').textContent = targetText(goal);
+  if (hasProjectList(goal)) renderProjectTiles(goal);
   byId('details-deadline').textContent = goal.deadline ? Format.shortDate(goal.deadline) : t('goals.deadline.none');
   byId('details-days').textContent = goal.deadline && goal.status === 'active' ? goalDeadlineText(goal) : '';
 
@@ -187,10 +207,17 @@ function moneyPace(goal) {
   return { titleKey: NEED_TITLES[unit], value: money, note: '' };
 }
 
+// A project list: "Nearest deadline" — the earliest deadline of a project that is not finished, or "—".
+function projectPace(goal) {
+  const { nearest } = projectGoalStats(goal);
+  return { titleKey: 'projects.hero.nearest', value: nearest ? Format.shortDate(nearest) : '—', note: '' };
+}
+
 function renderPace(goal, percent) {
-  const { titleKey, value, note } = heroTiles(goal) === 'money'
-    ? moneyPace(goal)
-    : { titleKey: 'details.pace.title', ...paceShort(goal, percent) };
+  let pace = { titleKey: 'details.pace.title', ...paceShort(goal, percent) };
+  if (heroTiles(goal) === 'money') pace = moneyPace(goal);
+  if (heroTiles(goal) === 'projects') pace = projectPace(goal);
+  const { titleKey, value, note } = pace;
   const title = byId('details-pace-title');
   title.dataset.i18n = titleKey;
   title.textContent = t(titleKey);
@@ -205,8 +232,9 @@ const entryForm = createEntryForm('entry');
 
 // A checklist has no form here: its progress comes from ticking items in the list.
 // Every progress type records entries except a checklist: its progress comes from the ticked items.
+// A project list neither: its progress is the finished projects (1.6.4).
 function usesEntries(goal) {
-  return goal.progressType !== 'checklist';
+  return goal.progressType !== 'checklist' && !hasProjectList(goal);
 }
 
 // A checklist goal: no "Add an entry" and no history (unless old entries exist, e.g. the type was changed);
@@ -303,7 +331,8 @@ function renderHistory(goal) {
   const entries = getGoalEntries(goal.id);
   const isReading = hasBookList(goal);
   const isMoney = goal.progressType === 'money';
-  byId('history-panel').hidden = !usesEntries(goal) && entries.length === 0;
+  // No history without entries; a project list never shows one (its old entries stay in the data)
+  byId('history-panel').hidden = (!usesEntries(goal) && entries.length === 0) || hasProjectList(goal);
   byId('history-panel').classList.toggle('is-money', isMoney);
   byId('history-empty').hidden = entries.length > 0;
   const title = byId('history-title-text');
@@ -750,9 +779,13 @@ function toggleChecklistItem(index, done) {
 /* ---------- Related tasks (TaskList and TaskForm come from tasks.js) ---------- */
 
 // A book list goal and a money goal: a compact block on the whole width — "Add task" in the head, ⋯ on a task.
+// A goal with a project list: its tasks live in the projects, so the block shows only old tasks
+// without a project and is hidden when there are none.
 function renderGoalTasks(goal) {
-  const compact = hasBookList(goal) || goal.progressType === 'money';
-  TaskList.render(byId('goal-tasks'), getTasksForGoal(goal.id), { showDate: true, emptyKey: 'details.tasks.empty', menu: compact });
+  const compact = hasBookList(goal) || hasProjectList(goal) || goal.progressType === 'money';
+  const items = getTasksForGoal(goal.id).filter((item) => !hasProjectList(goal) || !item.task.projectId);
+  byId('tasks-panel').hidden = hasProjectList(goal) && items.length === 0;
+  TaskList.render(byId('goal-tasks'), items, { showDate: true, emptyKey: 'details.tasks.empty', menu: compact });
   byId('goal-task-add-head').hidden = !compact;
   byId('goal-task-add').hidden = compact;
 }
@@ -825,6 +858,7 @@ function renderDetailsPage() {
   renderOverview(goal);
   renderReadingLayout(goal);
   BookShelf.render(goal); // "My books" (js/books.js): only for a goal with a book list
+  ProjectList.render(goal); // "My projects" (js/projects.js): only for a goal with a project list
   renderEntryForm(goal);
   renderHistory(goal);
   renderMilestones(goal);
@@ -851,10 +885,13 @@ function pickBookForReading(bookId) {
 function renderReadingLayout(goal) {
   const isReading = hasBookList(goal);
   const isMoney = goal.progressType === 'money';
+  const isProjects = hasProjectList(goal); // "My projects" instead of the form and the history (1.6.4)
   byId('details-content').classList.toggle('is-reading', isReading);
   byId('details-content').classList.toggle('is-money-goal', isMoney);
-  byId('milestones-panel').hidden = isReading || isMoney;
-  byId('notes-panel').hidden = isReading || isMoney;
+  byId('details-content').classList.toggle('is-project-goal', isProjects);
+  byId('milestones-panel').hidden = isReading || isMoney || isProjects;
+  byId('notes-panel').hidden = isReading || isMoney || isProjects;
+  byId('details-main-row').hidden = isProjects;
   byId('forecast-panel').hidden = !isMoney;
   if (isMoney) renderForecast(goal);
 }

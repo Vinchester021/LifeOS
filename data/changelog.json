@@ -1,5 +1,65 @@
 [
   {
+    "version": "1.6.5",
+    "date": "2026-11-17",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "Projects now expand right on the goal page: stages, stage tasks with dates, the status, the deadline and a “Finish the project” button. On a phone the project opens full screen.",
+          "ru": "Проект можно развернуть прямо на странице цели: этапы, задачи этапа с датами, статус, срок и кнопка «Завершить проект». На телефоне проект открывается на весь экран.",
+          "kk": "Жобаны енді мақсат бетінде ашуға болады: кезеңдер, күндері бар кезең тапсырмалары, мәртебесі, мерзімі және «Жобаны аяқтау» батырмасы. Телефонда жоба толық экранға ашылады."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "Stage tasks show up in the Planner and on the Dashboard with the project name.",
+          "ru": "Задачи этапов видны в Планировщике и на Главной с названием проекта.",
+          "kk": "Кезең тапсырмалары Жоспарлаушыда және Басты бетте жоба атауымен көрінеді."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "A new set of 59 project icons.",
+          "ru": "Для проектов — новый набор из 59 иконок.",
+          "kk": "Жобаларға арналған 59 жаңа белгіше."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "“Next step” on a project card shows the nearest task of the current stage, and a stage is marked done automatically after its last task.",
+          "ru": "«Следующий шаг» на карточке проекта показывает ближайшую задачу текущего этапа, а этап сам отмечается готовым после последней задачи.",
+          "kk": "Жоба карточкасындағы «Келесі қадам» ағымдағы кезеңнің ең жақын тапсырмасын көрсетеді, ал соңғы тапсырма орындалғанда кезең өзі дайын болып белгіленеді."
+        }
+      }
+    ]
+  },
+  {
+    "version": "1.6.4",
+    "date": "2026-11-17",
+    "items": [
+      {
+        "type": "new",
+        "text": {
+          "en": "My projects: “Projects” goals now keep a list of projects with stages, a status and a deadline — the goal counts finished projects.",
+          "ru": "Мои проекты: цели «Проекты» теперь ведут список проектов с этапами, статусом и сроком — прогресс цели считается по завершённым проектам.",
+          "kk": "Менің жобаларым: «Жобалар» мақсаттары енді кезеңдері, мәртебесі және мерзімі бар жобалар тізімін жүргізеді — мақсат аяқталған жобалар бойынша есептеледі."
+        }
+      },
+      {
+        "type": "improved",
+        "text": {
+          "en": "A deleted book can be restored with “Undo” within 7 seconds.",
+          "ru": "Удалённую книгу можно вернуть кнопкой «Отменить» в течение 7 секунд.",
+          "kk": "Жойылған кітапты 7 секунд ішінде «Қайтару» батырмасымен қалпына келтіруге болады."
+        }
+      }
+    ]
+  },
+  {
     "version": "1.6.3",
     "date": "2026-11-17",
     "items": [

@@ -8,14 +8,14 @@
 /* ---------- A done task of a goal: "Record a result for the goal?" ---------- */
 
 // A tick does not change the goal's progress, so a quiet toast offers the "Quick result" dialog
-// (js/entry-form.js) with this goal. Not for a checklist goal (its items are ticked on the goal page)
-// and not on a page without the dialog.
+// (js/entry-form.js) with this goal. Not for a checklist goal (its items are ticked on the goal page),
+// not for a goal with a project list (it counts finished projects, 1.6.5) and not on a page without the dialog.
 const RECORD_OFFER_DELAY = 7000;
 
 function offerGoalEntry(taskId, openerId) {
   const task = getTasks().find((item) => item.id === taskId);
   const goal = task?.goalId ? getGoalById(task.goalId) : null;
-  if (!goal || goal.status !== 'active' || goal.progressType === 'checklist' || typeof QuickEntry === 'undefined') return;
+  if (!goal || goal.status !== 'active' || goal.progressType === 'checklist' || hasProjectList(goal) || typeof QuickEntry === 'undefined') return;
   showToast('task.toast.recordGoal', 'info', { title: goal.title }, {
     delay: RECORD_OFFER_DELAY,
     action: { labelKey: 'task.toast.record', onClick: () => QuickEntry.open(byId(openerId), goal.id) }
@@ -59,6 +59,7 @@ const TaskList = {
         <span class="task-meta">
           ${showDate ? `<span class="task-date">${escapeHtml(Format.shortDate(date))}</span>` : ''}
           ${isRecurringTask(task) ? this.repeatHtml(task) : ''}
+          ${this.projectHtml(task, goals)}
           ${goal ? this.goalHtml(goal) : ''}
           ${this.priorityBadgeHtml(priority)}
           ${this.editButtonHtml(task, date)}
@@ -77,6 +78,7 @@ const TaskList = {
         <input class="form-check-input" type="checkbox" id="${checkboxId}"
                data-task-toggle="${id}" data-task-date="${escapeHtml(date)}"${done ? ' checked' : ''}>
         <label class="task-title" for="${checkboxId}">${escapeHtml(task.title)}</label>
+        ${this.projectHtml(task)}
         <span class="task-date"><i class="bi bi-calendar3" aria-hidden="true"></i>${escapeHtml(Format.shortDate(date))}${isRecurringTask(task) ? this.repeatHtml(task) : ''}</span>
         <div class="dropdown">
           <button type="button" class="btn btn-icon" id="${taskDomId(task, date, 'task-menu')}" data-bs-toggle="dropdown" aria-expanded="false"
@@ -127,6 +129,7 @@ const TaskList = {
         <label class="task-title" for="${checkboxId}" title="${escapeHtml(task.title)}">${repeat}${escapeHtml(task.title)}</label>
         ${this.priorityDotHtml(task, date)}
         <span class="task-actions">
+          ${this.projectHtml(task, goals, true)}
           ${goal ? this.goalHtml(goal) : ''}
           ${this.weekActionsHtml(task, date)}
           ${this.editButtonHtml(task, date)}
@@ -200,6 +203,20 @@ const TaskList = {
       </span>`;
   },
 
+  // A task of a project stage (1.6.5): "▤ Room repair" next to it (in the compact week card — the icon only,
+  // the name in its hint). The name is user data: escaped.
+  projectHtml(task, goals = null, iconOnly = false) {
+    const found = taskProject(task, goals ? [...goals.values()] : getGoals());
+    if (!found) return '';
+    const label = t('task.project', { title: projectTitle(found.project) });
+    return `
+          <span class="task-project${iconOnly ? ' is-icon' : ''}" title="${escapeHtml(label)}">
+            <i class="bi bi-layers" aria-hidden="true"></i>${iconOnly
+              ? `<span class="visually-hidden">${escapeHtml(label)}</span>`
+              : `<span class="visually-hidden">${escapeHtml(t('task.projectPrefix'))}</span>${escapeHtml(projectTitle(found.project))}`}
+          </span>`;
+  },
+
   // A small colored icon of the linked goal; it links to the goal page.
   goalHtml(goal) {
     const label = t('task.goalLink', { title: goal.title });
@@ -216,9 +233,11 @@ const TaskList = {
       const box = event.target.closest('[data-task-toggle]');
       if (!box) return;
       const isDone = box.checked; // the new state
-      toggleTask(box.dataset.taskToggle, box.dataset.taskDate);
+      const task = toggleTask(box.dataset.taskToggle, box.dataset.taskDate);
+      const stageChange = syncProjectStage(task); // a task of a project stage: the stage may get ready / reopen
       onChange({ focusId: box.id });
       if (isDone) offerGoalEntry(box.dataset.taskToggle, box.id);
+      announceStageChange(stageChange, () => onChange({ focusId: box.id }));
     });
     container.addEventListener('click', (event) => {
       // Week view: a priority from the dot menu; focus goes back to the dot.

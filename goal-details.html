@@ -7,11 +7,11 @@
   <meta name="description" content="LifeOS (Life Operating System): plan, track and improve your personal goals.">
 
   <!-- Libraries are local copies in vendor/ (the site also works without internet) -->
-  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.3">
-  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.3">
-  <link rel="stylesheet" href="./css/style.css?v=1.6.3">
+  <link rel="stylesheet" href="./vendor/bootstrap/bootstrap.min.css?v=1.6.5">
+  <link rel="stylesheet" href="./vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.6.5">
+  <link rel="stylesheet" href="./css/style.css?v=1.6.5">
   <!-- App icons and the install manifest (manifest.json, images/icons/). Relative paths: the site lives in a subfolder on GitHub Pages. -->
-  <link rel="manifest" href="./manifest.json?v=1.6.3">
+  <link rel="manifest" href="./manifest.json?v=1.6.5">
   <link rel="icon" href="./images/icons/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="./images/icons/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="./images/icons/apple-touch-icon.png">
@@ -19,22 +19,23 @@
   <meta name="theme-color" content="#111816" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-title" content="LifeOS">
 
-  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.3" defer></script>
-  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.3" defer></script>
+  <script src="./vendor/jquery/jquery-3.7.1.min.js?v=1.6.5" defer></script>
+  <script src="./vendor/bootstrap/bootstrap.bundle.min.js?v=1.6.5" defer></script>
   <!-- Copies of data/*.json for file:// (no fetch there). Loaded before app.js. -->
-  <script src="./data/translations-fallback.js?v=1.6.3"></script>
-  <script src="./data/quotes-fallback.js?v=1.6.3"></script>
-  <script src="./data/changelog-fallback.js?v=1.6.3"></script> <!-- copy of changelog.json for file:// -->
-  <script src="./js/app.js?v=1.6.3"></script> <!-- no defer: sets the theme before the page is drawn -->
-  <script src="./js/quote-widget.js?v=1.6.3" defer></script> <!-- quote of the day in the side menu -->
-  <script src="./js/onboarding.js?v=1.6.3" defer></script> <!-- example data, first steps, tour, help tips -->
-  <script src="./js/whats-new.js?v=1.6.3" defer></script> <!-- the "What's new" window after an update -->
-  <script src="./js/feedback.js?v=1.6.3" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
-  <script src="./js/tasks.js?v=1.6.3" defer></script>
-  <script src="./js/entry-form.js?v=1.6.3" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
-  <script src="./js/books.js?v=1.6.3" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
-  <script src="./js/money-history.js?v=1.6.3" defer></script> <!-- "Operations history" of a money goal: month, filters, table -->
-  <script src="./js/goal-details.js?v=1.6.3" defer></script>
+  <script src="./data/translations-fallback.js?v=1.6.5"></script>
+  <script src="./data/quotes-fallback.js?v=1.6.5"></script>
+  <script src="./data/changelog-fallback.js?v=1.6.5"></script> <!-- copy of changelog.json for file:// -->
+  <script src="./js/app.js?v=1.6.5"></script> <!-- no defer: sets the theme before the page is drawn -->
+  <script src="./js/quote-widget.js?v=1.6.5" defer></script> <!-- quote of the day in the side menu -->
+  <script src="./js/onboarding.js?v=1.6.5" defer></script> <!-- example data, first steps, tour, help tips -->
+  <script src="./js/whats-new.js?v=1.6.5" defer></script> <!-- the "What's new" window after an update -->
+  <script src="./js/feedback.js?v=1.6.5" defer></script> <!-- "Leave feedback": the window, the Dashboard invitation -->
+  <script src="./js/tasks.js?v=1.6.5" defer></script>
+  <script src="./js/entry-form.js?v=1.6.5" defer></script> <!-- the entry form (shared with the Dashboard dialog) -->
+  <script src="./js/books.js?v=1.6.5" defer></script> <!-- "My books": the book shelf of a "Books" goal -->
+  <script src="./js/money-history.js?v=1.6.5" defer></script> <!-- "Operations history" of a money goal: month, filters, table -->
+  <script src="./js/projects.js?v=1.6.5" defer></script> <!-- "My projects": the project list of a "Projects" goal -->
+  <script src="./js/goal-details.js?v=1.6.5" defer></script>
 </head>
 <body>
   <a class="skip-link visually-hidden-focusable" href="#main-content" data-i18n="layout.skipToContent">Skip to content</a>
@@ -180,15 +181,15 @@
 
           <dl class="gd-stats">
             <div>
-              <dt data-i18n="details.current">Current</dt>
+              <dt id="details-current-title" data-i18n="details.current">Current</dt>
               <dd id="details-current"></dd>
             </div>
             <div>
-              <dt data-i18n="details.target">Target</dt>
+              <dt id="details-target-title" data-i18n="details.target">Target</dt>
               <dd id="details-target"></dd>
             </div>
             <div>
-              <dt data-i18n="wizard.values.deadline">Deadline</dt>
+              <dt id="details-deadline-title" data-i18n="wizard.values.deadline">Deadline</dt>
               <dd id="details-deadline"></dd>
               <dd class="gd-stat-note" id="details-days"></dd>
             </div>
@@ -219,6 +220,23 @@
           <button type="button" class="btn btn-tool books-more" id="books-more" aria-controls="books-list" aria-expanded="false" hidden>
             <i class="bi bi-chevron-down me-2" aria-hidden="true"></i><span></span>
           </button>
+        </section>
+
+        <!-- "My projects": only for a "Projects" goal with a project list (js/projects.js, docs/design/projects-cards.png):
+             the head with "Add a project", the filter with counters, the cards (4 / 2 / 1 in a row). -->
+        <section class="panel gd-projects" id="projects-panel" aria-labelledby="projects-title" hidden>
+          <div class="projects-head">
+            <h2 class="panel-title gd-icon-title" id="projects-title" tabindex="-1"><i class="bi bi-layers" aria-hidden="true"></i><span data-i18n="projects.title">My projects</span></h2>
+            <button type="button" class="btn btn-primary" id="project-add">
+              <i class="bi bi-plus-lg me-2" aria-hidden="true"></i><span data-i18n="projects.add">Add a project</span>
+            </button>
+          </div>
+          <div class="segmented projects-filter" id="projects-filter" role="group" data-i18n-aria-label="projects.filter.label" aria-label="Show projects"></div>
+          <ul class="projects-list" id="projects-list"></ul>
+          <div class="gd-empty" id="projects-empty" hidden>
+            <i class="bi bi-layers" aria-hidden="true"></i>
+            <span></span>
+          </div>
         </section>
 
         <!-- Row 1: the entry form | the history. A checklist goal has no entries: the checklist takes the whole row. -->

@@ -117,6 +117,10 @@ function cleanGoal(goal) {
   if ('books' in goal) clean.books = asArray(goal.books).filter(isPlainObject).map(cleanBook);
   // A book list counts the goal by itself: the number of finished books.
   if (hasBookList(clean)) clean.currentValue = countDoneBooks(goalBooks(clean));
+  // A project list (app.js cleanProject: texts of fixed length, known statuses, dates, only http(s) links)
+  if ('projectList' in goal) clean.projectList = goal.projectList === true;
+  if ('projects' in goal) clean.projects = asArray(goal.projects).filter(isPlainObject).map(cleanProject);
+  if (hasProjectList(clean)) clean.currentValue = countDoneProjects(goalProjects(clean));
   return clean;
 }
 
@@ -210,7 +214,8 @@ function sanitizeBackup(data) {
   });
   const clean = { ...data };
   if (Array.isArray(data.goals)) clean.goals = keep(data.goals, (goal) => cleanId(goal.id)).map(cleanGoal);
-  if (Array.isArray(data.tasks)) clean.tasks = keep(data.tasks, (task) => cleanId(task.id) && isIsoDate(task.date)).map(normalizeTask);
+  // A task of a project stage may have no date (1.6.5); other tasks without a date are dropped
+  if (Array.isArray(data.tasks)) clean.tasks = keep(data.tasks, (task) => cleanId(task.id) && (isIsoDate(task.date) || cleanId(task.projectId))).map(normalizeTask);
   if (Array.isArray(data.progress)) clean.progress = keep(data.progress, (entry) => isIsoDate(entry.date)).map(cleanEntry);
   if (Array.isArray(data.archive)) clean.archive = keep(data.archive, (year) => isIsoDate(year.yearStart) && isIsoDate(year.yearEnd)).map(cleanYear);
   if (isPlainObject(data.sport)) clean.sport = cleanSport(data.sport, keep);

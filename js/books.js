@@ -11,6 +11,7 @@ const BOOK_STATUS_TONE = { planned: '', reading: 'is-accent', done: 'is-success'
 const BOOK_ORDER = { reading: 0, planned: 1, done: 2 };
 const SHELF_PHONE_LIMIT = 6; // a phone shows 6 books, then "Show all"; a computer — 2 rows
 const SHELF_FLASH_MS = 1600; // a finished book only lights up when its cover is pressed
+const BOOK_UNDO_DELAY = 7000; // "Undo" after deleting a book
 
 /* ---------- Pure ---------- */
 
@@ -507,15 +508,30 @@ const BookShelf = {
     bootstrap.Modal.getOrCreateInstance(byId('book-delete-modal')).show();
   },
 
+  // Deleted at once, "Undo" for 7 seconds brings the book and its entries back (as for a project).
   confirmDelete() {
+    const goalId = this.goalId;
     const book = goalBooks(this.goal()).find((item) => item.id === this.deletingId);
-    const goal = book ? deleteBook(this.goalId, book.id) : null;
+    const result = book ? deleteBook(goalId, book.id) : null;
     this.deletingId = null;
     this.opener = byId('books-title'); // the card is gone
     bootstrap.Modal.getInstance(byId('book-delete-modal')).hide();
-    if (!goal) return;
-    showToast('books.toast.deleted', 'success', { title: bookTitle(book) });
+    if (!result) return;
+    showToast('books.toast.deleted', 'success', { title: bookTitle(book) }, {
+      delay: BOOK_UNDO_DELAY,
+      action: { labelKey: 'toast.undo', onClick: () => this.undoDelete(goalId, result.removed) }
+    });
     renderDetailsPage();
+  },
+
+  undoDelete(goalId, removed) {
+    if (!restoreBook(goalId, removed)) {
+      showToast('toast.undoFailed', 'warning');
+      return;
+    }
+    showToast('books.toast.restored', 'success');
+    renderDetailsPage();
+    byId('books-list').querySelector(`[data-book-menu="${CSS.escape(removed.book.id)}"]`)?.focus();
   },
 
   /* ----- Events ----- */
